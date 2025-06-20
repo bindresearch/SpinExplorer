@@ -2,7 +2,7 @@
 
 """MIT License
 
-Copyright (c) 2025 James Eaton
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
