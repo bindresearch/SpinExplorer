@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SpinExplorer"
+version = "1.2"
+authors = [{name="James Eaton"}]
+description = "A package for NMR processing and analysis"
+readme = "README.md"
+requires-python = ">3.11"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+    "wxPython >= 4.2.2",
+    "numpy == 2.3.0",
+    "matplotlib == 3.10.3",
+    "nmrglue == 0.11",
+    "scipy == 1.15.3",
+    "darkdetect == 0.8.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/james-eaton-1/SpinExplorer"
+Issues = "https://github.com/james-eaton-1/SpinExplorer/issues"
+
+[project.scripts]
+SpinConverter = "SpinExplorer.SpinConverter:main"
+SpinProcess = "SpinExplorer.SpinProcess:main"
+SpinView = "SpinExplorer.SpinView:main"
