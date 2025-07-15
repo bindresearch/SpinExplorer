@@ -21,11 +21,14 @@ dependencies = [
     "darkdetect == 0.8.0"
 ]
 
+[tool.setuptools]
+package-dir = { "" = "src" }
+
 [project.urls]
 Homepage = "https://github.com/james-eaton-1/SpinExplorer"
 Issues = "https://github.com/james-eaton-1/SpinExplorer/issues"
 
 [project.scripts]
-SpinConverter = "SpinExplorer.SpinConverter:main"
-SpinProcess = "SpinExplorer.SpinProcess:main"
-SpinView = "SpinExplorer.SpinView:main"
+SpinConverter = "SpinExplorer.SpinConverter.SpinConverter:main"
+SpinProcess = "SpinExplorer.SpinProcess.SpinProcess:main"
+SpinView = "SpinExplorer.SpinView.SpinView:main"
