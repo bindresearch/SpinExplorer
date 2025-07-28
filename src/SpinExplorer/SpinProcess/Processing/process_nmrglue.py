@@ -27,6 +27,7 @@ import numpy as np
 import nmrglue as ng
 import os
 import json
+import copy
 
 
 class ProcessNMRGlue:
@@ -62,7 +63,7 @@ class ProcessNMRGlue:
         # Process the data according to the user inputted processing parameters
 
         # Initial FID data
-        dic, data = self.nmr_data.dic, self.nmr_data.data
+        dic, data = copy.deepcopy(self.nmr_data.dic), copy.deepcopy(self.nmr_data.data)
 
         # Checking whether processing is required for second/third dimensions
         include_dim2, include_dim3 = self.checking_dimensions()
@@ -81,26 +82,33 @@ class ProcessNMRGlue:
                 return
             else:
                 if self.nmr_data.pseudo_axis == False:
-                    # data = data.T
-                    # dic = self.update_dictionary_from_transpose(dic)
                     dic, data = ng.pipe_proc.tp(dic, data)
                 elif self.nmr_data.pseudo_axis == True:
                     if self.nmr_data.index == 2:
                         dic, data = ng.pipe_proc.tp(dic, data)
                     elif self.nmr_data.index == 1:
                         # If the pseudo axis is the central axis then need to move the third axis
-                        dic, data = ng.pipe_proc.tp(dic, data)
+                        dic, data = self.transpose_3d(dic, data, auto=True)
+
                         dic, data = self.zero_transpose_3d(dic, data)
+
             dic, data = self.apply_dimension_processing(
                 dic, data, 1, self.dimension_tabs[1]
             )
-            # dic, data = ng.pipe_proc.tp(dic, data)
 
         if include_dim3:
             dic, data = self.zero_transpose_3d(dic, data)
             dic, data = self.apply_dimension_processing(
                 dic, data, 2, self.dimension_tabs[2]
             )
+            dic, data = self.zero_transpose_3d(dic, data)
+
+        if (
+            include_dim2 == True
+            and self.nmr_data.pseudo_axis == True
+            and self.nmr_data.index == 1
+        ):
+            dic, data = self.zero_transpose_3d(dic, data)
 
         self.write_output(dic, data)
 
@@ -156,49 +164,13 @@ class ProcessNMRGlue:
         dic["FDF1QUADFLAG"] = 1.0
         dic["FDF2QUADFLAG"] = 1.0
         dic["FDF3QUADFLAG"] = 1.0
-        dic["FDF3QUADFLAG"] = 1.0
         dic["FDQUADFLAG"] = 1.0
+        dic["FDFILECOUNT"] = 1
 
         data = data.real
         data = data.astype(np.float32)
 
         ng.pipe.write(nmrfile, dic, data, overwrite=True)
-
-    def update_dictionary_from_transpose(self, dic):
-
-        import copy
-
-        new_dic = copy.deepcopy(dic)
-
-        # Step 1: Swap FDF1* and FDF2* keys
-        for key in list(dic.keys()):
-            if key.startswith("FDF1"):
-                suffix = key[4:]
-                f1_key = f"FDF1{suffix}"
-                f2_key = f"FDF2{suffix}"
-                if f2_key in dic:
-                    new_dic[f1_key], new_dic[f2_key] = dic[f2_key], dic[f1_key]
-
-        # Step 2: Swap entries in FDDIMORDER
-        if "FDDIMORDER" in dic:
-            new_dic["FDDIMORDER"] = [
-                2.0 if x == 1.0 else 1.0 if x == 2.0 else x for x in dic["FDDIMORDER"]
-            ]
-
-        # Step 3: Swap individual FDDIMORDERn values
-        for i in range(1, 5):
-            key = f"FDDIMORDER{i}"
-            if key in dic:
-                val = dic[key]
-                if val == 1.0:
-                    new_dic[key] = 2.0
-                elif val == 2.0:
-                    new_dic[key] = 1.0
-
-        # Step 4: Set transpose flag
-        new_dic["FDTRANSPOSED"] = 1.0
-
-        return new_dic
 
     def check_nus(self, dimension) -> list[int]:
         """
@@ -351,24 +323,28 @@ class ProcessNMRGlue:
             check = tab.linear_prediction_checkbox.GetValue()
             if check == False:
                 return dic, data
+            option = tab.linear_prediction_options_selection
+            coefficient_option = tab.linear_prediction_coefficients_selection
         else:
             selection = tab.linear_prediction_radio_box_indirect.GetSelection()
             if selection != 1:
                 return dic, data
+            option = tab.linear_prediction_indirect_options_selection
+            coefficient_option = tab.linear_prediction_indirect_coefficients_selection
 
         # Apply linear prediction
 
-        if tab.linear_prediction_options_selection == 0:
+        if option == 0:
             append = "after"
         else:
             append = "before"
-        if tab.linear_prediction_coefficients_selection == 0:
+        if coefficient_option == 0:
             mode = "f"
-        elif tab.linear_prediction_coefficients_selection == 1:
+        elif coefficient_option == 1:
             mode = "b"
         else:
             mode = "fb"
-        dic, data = ng.pipe_proc.lp(dic, data, pred="default", mode=mode, append=append)
+        dic, data = self.lp(dic, data, pred="default", mode=mode, append=append)
 
         return dic, data
 
@@ -461,21 +437,21 @@ class ProcessNMRGlue:
             else:
                 round = False
             if tab.zero_filling_combobox_selection == 0:
-                dic, data = ng.pipe_proc.zf(
+                dic, data = self.zf(
                     dic,
                     data,
                     zf=int(tab.zero_filling_value_doubling_times),
                     auto=round,
                 )
             elif tab.zero_filling_combobox_selection == 1:
-                dic, data = ng.pipe_proc.zf(
+                dic, data = self.zf(
                     dic,
                     data,
                     pad=int(tab.zero_filling_value_zeros_to_add),
                     auto=round,
                 )
             elif tab.zero_filling_combobox_selection == 2:
-                dic, data = ng.pipe_proc.zf(
+                dic, data = self.zf(
                     dic,
                     data,
                     size=int(tab.zero_filling_value_final_data_size),
@@ -496,13 +472,19 @@ class ProcessNMRGlue:
 
         if tab.fourier_transform_checkbox.GetValue() == True:
             if tab.ft_method_selection == 0:
+                dic, data = ng.pipe_proc.ft(dic, data)
+            if tab.ft_method_selection == 1:
                 dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-            elif tab.ft_method_selection == 1:
-                dic, data = ng.pipe_proc.ft(dic, data, real=True)
             elif tab.ft_method_selection == 2:
-                dic, data = ng.pipe_proc.ft(dic, data, inv=True)
+                dic, data = ng.pipe_proc.ft(dic, data, real=True)
             elif tab.ft_method_selection == 3:
+                dic, data = ng.pipe_proc.ft(dic, data, inv=True)
+            elif tab.ft_method_selection == 4:
                 dic, data = ng.pipe_proc.ft(dic, data, alt=True)
+            elif tab.ft_method_selection == 5:
+                dic, data = ng.pipe_proc.ft(dic, data, neg=True)
+            elif tab.ft_method_selection == 6:
+                dic, data = ng.pipe_proc.ft(dic, data, alt=True, neg=True)
 
         if dimension == 0:
             digital_filter_removal = self.check_digital_filter_removal()
@@ -547,7 +529,6 @@ class ProcessNMRGlue:
         1 - checking if the phasing check box is ticked
         2 - if it is ticked, then perform the selected phasing
         """
-
         tab = dimension_tab.phasing
 
         if dimension == 0:
@@ -587,7 +568,7 @@ class ProcessNMRGlue:
         if tab.extraction_checkbox.GetValue() == True:
             # Find the indexes of the ppm values selected
             # Get the ppm values from the data
-            ppm_values = ng.pipe.make_uc(dic, data, dim=dimension)
+            ppm_values = ng.pipe.make_uc(dic, data, dim=len(data.shape) - 1)
             ppm_values = ppm_values.ppm_scale()
             x_initial = np.abs(
                 ppm_values - float(tab.extraction_ppm_start_textcontrol.GetValue())
@@ -600,8 +581,7 @@ class ProcessNMRGlue:
             # Change x_initial and x_final so that the difference is an even number
             if (x_final - x_initial + 1) % 2 != 0:
                 x_final += 1
-            dic, data = ng.pipe_proc.ext(dic, data, x1=x_initial, xn=x_final, sw=True)
-
+            dic, data = self.ext(dic, data, x1=x_initial, xn=x_final, sw=True)
         return dic, data
 
     def add_baseline_correction(self, dic, data, dimension, dimension_tab):
@@ -615,7 +595,7 @@ class ProcessNMRGlue:
         if tab.baseline_correction_checkbox.GetValue() == True:
             if tab.baseline_correction_radio_box_selection == 1:
                 # If POLY baseline correction is selected, this is not currently supported on nmrglue
-                message = "The selected baseline correction method is not supported for nmrglue processing. Continuing without baselining. Please use a machine containing nmrPipe or use a linear baselining method for polynomial baselining."
+                message = "The selected baseline correction method is not supported for nmrglue processing. Continuing without baselining. Please use a machine containing nmrPipe or use a linear baselining method."
                 dlg = wx.MessageDialog(
                     self.notebook, message, "Warning", wx.OK | wx.ICON_WARNING
                 )
@@ -633,14 +613,14 @@ class ProcessNMRGlue:
 
             # Convert nodes into points
             node_list_final = np.array(node_list_final)
-            node_list_final = (node_list_final / 100) * len(data)
+            node_list_final = (node_list_final / 100) * data.shape[-1]
             node_list_final = node_list_final.astype(int)
             # Replace any zeros with a number greater than 1 to allow the nmrglue baselining routines to work correctly
             node_list_final[node_list_final == 0] = (
                 int(tab.baseline_correction_nodes_textcontrol.GetValue()) + 1
             )
 
-            dic, data = ng.pipe_proc.base(
+            dic, data = self.base(
                 dic,
                 data,
                 nl=node_list_final,
@@ -969,681 +949,7 @@ class ProcessNMRGlue:
         result = np.moveaxis(result, -1, axis)
         return result
 
-    # def process_dimension_1(self, dic, data, dim):
-    #     # Process the first dimension
-    #     if self.tabDim1.solvent_suppression_checkbox.GetValue() == True:
-    #         # Apply solvent suppression
-    #         data_orgiginal = data
-    #         if self.tabDim1.solvent_suppression_filter_selection == 0:
-    #             filter_size = int(
-    #                 self.tabDim1.solvent_suppression_filter_length
-    #             )  # Larger filter in time domain is larger filter in the frequency domain
-    #             if (
-    #                 int(self.tabDim1.solvent_suppression_lowpass_shape_selection) + 1
-    #                 == 1
-    #             ):
-    #                 from scipy.signal.windows import boxcar
-
-    #                 filter = boxcar(filter_size)
-    #             elif (
-    #                 int(self.tabDim1.solvent_suppression_lowpass_shape_selection) + 1
-    #                 == 2
-    #             ):
-    #                 filter = np.cos(np.pi * np.linspace(-0.5, 0.5, filter_size))
-    #             else:
-    #                 filter = np.cos(np.pi * np.linspace(-0.5, 0.5, filter_size)) ** 2
-
-    #             data = self.sol_general(data, filter, w=filter_size, mode="same")
-    #             # data = self.suppress_solvent_3d(data,filter)
-    #             # dic,data = ng.pipe_proc.sol(dic,data_orgiginal, mode = 'low', fs=int(self.tabDim1.solvent_suppression_lowpass_shape_selection)+1)
-    #             # fl = 16
-    #             # fs = int(self.tabDim1.solvent_suppression_lowpass_shape_selection)+1
-    #             # import scipy.signal.windows
-    #             # if(fs == 1):
-    #             #     filter = scipy.signal.windows.boxcar(33)
-    #             #     data =  self.sol_general_nd(data, filter)
-
-    #             # try:
-    #             #     dic,data = ng.pipe_proc.sol(dic,data_orgiginal, mode = 'low', fs=int(self.tabDim1.solvent_suppression_lowpass_shape_selection)+1)
-    #             # except:
-    #             #     try:
-    #             #         fl = 16
-    #             #         fs = int(self.tabDim1.solvent_suppression_lowpass_shape_selection)+1
-    #             #         import scipy.signal.windows
-    #             #         if(fs == 1):
-    #             #             filter = scipy.signal.windows.boxcar(33)
-    #             #             data =  ng.proc_bl.sol_general(data, filter, w=33, mode='same')
-    #             #         else:
-    #             #             # Give a message saying the solvent suppression did not work correctly, the spectrum was processed without solvent suppression
-    #             #             dlg = wx.MessageDialog(self, 'The solvent suppression filter did not work correctly. Continuing without digital solvent suppression.', 'Warning', wx.OK | wx.ICON_WARNING)
-    #             #             self.Raise()
-    #             #             self.SetFocus()
-    #             #             result = dlg.ShowModal()
-    #             #             data = data_orgiginal
-    #             #     except:
-    #             #         # Give a message saying the solvent suppression did not work correctly, the spectrum was processed without solvent suppression
-    #             #         dlg = wx.MessageDialog(self, 'The solvent suppression filter did not work correctly. Continuing without digital solvent suppression.', 'Warning', wx.OK | wx.ICON_WARNING)
-    #             #         self.Raise()
-    #             #         self.SetFocus()
-    #             #         result = dlg.ShowModal()
-    #             #         data = data_orgiginal
-
-    #         else:
-    #             # Give an error saying that the selected solvent suppression filter is not supported for windows processing, please use a machine containing nmrPipe
-    #             dlg = wx.MessageDialog(
-    #                 self,
-    #                 "The selected solvent suppression filter is not supported for windows processing. Please change to low bandpass filter or use a machine containing nmrPipe.",
-    #                 "Warning",
-    #                 wx.OK | wx.ICON_WARNING,
-    #             )
-    #             self.Raise()
-    #             self.SetFocus()
-    #             result = dlg.ShowModal()
-    #             return
-    #     if self.tabDim1.linear_prediction_checkbox.GetValue() == True:
-    #         # Apply linear prediction
-    #         if self.tabDim1.linear_prediction_options_selection == 0:
-    #             if self.tabDim1.linear_prediction_options_selection == 0:
-    #                 append = "after"
-    #             else:
-    #                 append = "before"
-    #             if self.tabDim1.linear_prediction_coefficients_selection == 0:
-    #                 mode = "f"
-    #             elif self.tabDim1.linear_prediction_coefficients_selection == 1:
-    #                 mode = "b"
-    #             else:
-    #                 mode = "fb"
-    #             dic, data = ng.pipe_proc.lp(
-    #                 dic, data, pred="default", mode=mode, append=append
-    #             )
-
-    #     if self.tabDim1.apodization_checkbox.GetValue() == True:
-    #         # Apply apodization
-    #         if self.tabDim1.apodization_combobox_selection == 0:
-    #             dic, data = ng.pipe_proc.em(
-    #                 dic,
-    #                 data,
-    #                 lb=0.0,
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-    #         elif self.tabDim1.apodization_combobox_selection == 1:
-    #             dic, data = ng.pipe_proc.em(
-    #                 dic,
-    #                 data,
-    #                 lb=float(self.tabDim1.exponential_line_broadening),
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-    #         elif self.tabDim1.apodization_combobox_selection == 2:
-    #             dic, data = ng.pipe_proc.gm(
-    #                 dic,
-    #                 data,
-    #                 g1=float(self.tabDim1.g1),
-    #                 g2=float(self.tabDim1.g2),
-    #                 g3=float(self.tabDim1.g3),
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-    #         elif self.tabDim1.apodization_combobox_selection == 3:
-    #             dic, data = ng.pipe_proc.sp(
-    #                 dic,
-    #                 data,
-    #                 off=float(self.tabDim1.offset),
-    #                 end=float(self.tabDim1.end),
-    #                 pow=int(self.tabDim1.power),
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-    #         elif self.tabDim1.apodization_combobox_selection == 4:
-    #             dic, data = ng.pipe_proc.gmb(
-    #                 dic,
-    #                 data,
-    #                 lb=float(self.tabDim1.a),
-    #                 gb=float(self.tabDim1.b),
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-    #         elif self.tabDim1.apodization_combobox_selection == 5:
-    #             dic, data = ng.pipe_proc.tp(
-    #                 dic,
-    #                 data,
-    #                 t1=float(self.tabDim1.t1),
-    #                 t2=float(self.tabDim1.t2),
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-    #         elif self.tabDim1.apodization_combobox_selection == 6:
-    #             dic, data = ng.pipe_proc.tri(
-    #                 dic,
-    #                 data,
-    #                 loc=float(self.tabDim1.loc),
-    #                 c=float(self.tabDim1.apodization_first_point_scaling),
-    #             )
-
-    #     if self.tabDim1.zero_filling_checkbox.GetValue() == True:
-    #         if self.tabDim1.zero_filling_round_checkbox.GetValue() == True:
-    #             round = True
-    #         else:
-    #             round = False
-    #         if self.tabDim1.zero_filling_combobox_selection == 0:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 zf=int(self.tabDim1.zero_filling_value_doubling_times),
-    #                 auto=round,
-    #             )
-    #         elif self.tabDim1.zero_filling_combobox_selection == 1:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 pad=int(self.tabDim1.zero_filling_value_zeros_to_add),
-    #                 auto=round,
-    #             )
-    #         elif self.tabDim1.zero_filling_combobox_selection == 2:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 size=int(self.tabDim1.zero_filling_value_final_data_size),
-    #                 auto=round,
-    #             )
-
-    #     if self.tabDim1.fourier_transform_checkbox.GetValue() == True:
-    #         if self.tabDim1.ft_method_selection == 0:
-    #             dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-    #         elif self.tabDim1.ft_method_selection == 1:
-    #             dic, data = ng.pipe_proc.ft(dic, data, real=True)
-    #         elif self.tabDim1.ft_method_selection == 2:
-    #             dic, data = ng.pipe_proc.ft(dic, data, inv=True)
-    #         elif self.tabDim1.ft_method_selection == 3:
-    #             dic, data = ng.pipe_proc.ft(dic, data, alt=True)
-
-    #     dic_bruker, dat_bruker = ng.bruker.read("./")
-    #     data = self.remove_digital_filter(dic_bruker, data)
-
-    #     if self.tabDim1.phase_correction_checkbox.GetValue() == True:
-    #         dic, data = ng.pipe_proc.ps(
-    #             dic,
-    #             data,
-    #             p0=float(self.tabDim1.phase_correction_p0_textcontrol.GetValue()),
-    #             p1=float(self.tabDim1.phase_correction_p1_textcontrol.GetValue()),
-    #         )
-
-    #     if self.tabDim1.magnitude_mode_checkbox.GetValue() == True:
-    #         dic, data = ng.pipe_proc.mc(dic, data)
-
-    #     if self.tabDim1.extraction_checkbox.GetValue() == True:
-    #         # Find the indexes of the ppm values selected
-    #         # Get the ppm values from the data
-    #         ppm_values = ng.pipe.make_uc(dic, data, dim=dim)
-    #         ppm_values = ppm_values.ppm_scale()
-    #         x_initial = np.abs(
-    #             ppm_values
-    #             - float(self.tabDim1.extraction_ppm_start_textcontrol.GetValue())
-    #         ).argmin()
-    #         x_final = np.abs(
-    #             ppm_values
-    #             - float(self.tabDim1.extraction_ppm_end_textcontrol.GetValue())
-    #         ).argmin()
-    #         if x_initial > x_final:
-    #             x_initial, x_final = x_final, x_initial
-    #         # Change x_initial and x_final so that the difference is an even number
-    #         if (x_final - x_initial + 1) % 2 != 0:
-    #             x_final += 1
-    #         dic, data = ng.pipe_proc.ext(dic, data, x1=x_initial, xn=x_final, sw=True)
-
-    #     if self.tabDim1.baseline_correction_checkbox.GetValue() == True:
-    #         if self.tabDim1.baseline_correction_radio_box_selection == 1:
-    #             # If POLY baseline correction is selected, this is not currently supported on windows without nmrPipe
-    #             message = "The selected baseline correction method is not supported for windows processing. Please use a machine containing nmrPipe or use a linear baselining method."
-    #             dlg = wx.MessageDialog(
-    #                 self, message, "Warning", wx.OK | wx.ICON_WARNING
-    #             )
-    #             self.Raise()
-    #             self.SetFocus()
-    #             result = dlg.ShowModal()
-    #             return
-
-    #         # Split the node list
-    #         node_list = (
-    #             self.tabDim1.baseline_correction_node_list_textcontrol.GetValue()
-    #         )
-    #         node_list = node_list.split(",")
-    #         node_list_final = []
-    #         for node in node_list:
-    #             node_list_final.append(float(node))
-
-    #         # Convert nodes into points
-    #         node_list_final = np.array(node_list_final)
-    #         node_list_final = (node_list_final / 100) * len(data)
-    #         node_list_final = node_list_final.astype(int)
-    #         # Replace any zeros with a number greater than 1 to allow the nmrglue baselining routines to work correctly
-    #         node_list_final[node_list_final == 0] = (
-    #             int(self.tabDim1.baseline_correction_nodes_textcontrol.GetValue()) + 1
-    #         )
-
-    #         dic, data = ng.pipe_proc.base(
-    #             dic,
-    #             data,
-    #             nl=node_list_final,
-    #             nw=int(self.tabDim1.baseline_correction_nodes_textcontrol.GetValue()),
-    #         )
-
-    #     return dic, data
-
-    # def process_dimension_2(self, dic, data):
-    #     # Transpose to the second dimension
-    #     dic, data = ng.pipe_proc.tp(dic, data)
-
-    #     # Process the second dimension
-    #     if self.tabDim2.linear_prediction_radio_box_dim2_selection == 1:
-    #         # Apply linear prediction
-    #         if self.tabDim2.linear_prediction_dim2_options_selection == 0:
-    #             append = "after"
-    #         else:
-    #             append = "before"
-    #         if self.tabDim2.linear_prediction_dim2_coefficients_selection == 0:
-    #             mode = "f"
-    #         elif self.tabDim2.linear_prediction_dim2_coefficients_selection == 1:
-    #             mode = "b"
-    #         else:
-    #             mode = "fb"
-    #         dic, data = ng.pipe_proc.lp(
-    #             dic, data, pred="default", mode=mode, append=append
-    #         )
-
-    #     if self.tabDim2.apodization_checkbox_dim2.GetValue() == True:
-    #         # Apply apodization
-    #         if self.tabDim2.apodization_dim2_combobox_selection == 0:
-    #             dic, data = ng.pipe_proc.em(
-    #                 dic,
-    #                 data,
-    #                 lb=0.0,
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-    #         elif self.tabDim2.apodization_dim2_combobox_selection == 1:
-    #             dic, data = ng.pipe_proc.em(
-    #                 dic,
-    #                 data,
-    #                 lb=float(self.tabDim2.exponential_line_broadening_dim2),
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-    #         elif self.tabDim2.apodization_dim2_combobox_selection == 2:
-    #             dic, data = ng.pipe_proc.gm(
-    #                 dic,
-    #                 data,
-    #                 g1=float(self.tabDim2.g1_dim2),
-    #                 g2=float(self.tabDim2.g2_dim2),
-    #                 g3=float(self.tabDim2.g3_dim2),
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-    #         elif self.tabDim2.apodization_dim2_combobox_selection == 3:
-    #             dic, data = ng.pipe_proc.sp(
-    #                 dic,
-    #                 data,
-    #                 off=float(self.tabDim2.offset_dim2),
-    #                 end=float(self.tabDim2.end_dim2),
-    #                 pow=int(self.tabDim2.power_dim2),
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-    #         elif self.tabDim2.apodization_dim2_combobox_selection == 4:
-    #             dic, data = ng.pipe_proc.gmb(
-    #                 dic,
-    #                 data,
-    #                 lb=float(self.tabDim2.a_dim2),
-    #                 gb=float(self.tabDim2.b_dim2),
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-    #         elif self.tabDim2.apodization_dim2_combobox_selection == 5:
-    #             dic, data = ng.pipe_proc.tp(
-    #                 dic,
-    #                 data,
-    #                 t1=float(self.tabDim2.t1_dim2),
-    #                 t2=float(self.tabDim2.t2_dim2),
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-    #         elif self.tabDim2.apodization_dim2_combobox_selection == 6:
-    #             dic, data = ng.pipe_proc.tri(
-    #                 dic,
-    #                 data,
-    #                 loc=float(self.tabDim2.loc_dim2),
-    #                 c=float(self.tabDim2.apodization_first_point_scaling_dim2),
-    #             )
-
-    #     if self.tabDim2.zero_filling_checkbox_dim2.GetValue() == True:
-    #         if self.tabDim2.zero_filling_round_checkbox_dim2.GetValue() == True:
-    #             round = True
-    #         else:
-    #             round = False
-
-    #         if self.tabDim2.zero_filling_dim2_combobox_selection == 0:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 zf=int(self.tabDim2.zero_filling_dim2_value_doubling_times),
-    #                 auto=round,
-    #             )
-    #         elif self.tabDim2.zero_filling_dim2_combobox_selection == 1:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 pad=int(self.tabDim2.zero_filling_dim2_value_zeros_to_add),
-    #                 auto=round,
-    #             )
-    #         elif self.tabDim2.zero_filling_dim2_combobox_selection == 2:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 size=int(self.tabDim2.zero_filling_dim2_value_final_data_size),
-    #                 auto=round,
-    #             )
-
-    #     if self.tabDim2.fourier_transform_checkbox_dim2.GetValue() == True:
-    #         if self.tabDim2.ft_method_selection_dim2 == 0:
-    #             dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-    #         elif self.tabDim2.ft_method_selection_dim2 == 1:
-    #             dic, data = ng.pipe_proc.ft(dic, data, real=True)
-    #         elif self.tabDim2.ft_method_selection_dim2 == 2:
-    #             dic, data = ng.pipe_proc.ft(dic, data, inv=True)
-    #         elif self.tabDim2.ft_method_selection_dim2 == 3:
-    #             dic, data = ng.pipe_proc.ft(dic, data, alt=True)
-
-    #     if self.tabDim2.phase_correction_checkbox_dim2.GetValue() == True:
-    #         dic, data = ng.pipe_proc.ps(
-    #             dic,
-    #             data,
-    #             p0=float(self.tabDim2.phase_correction_p0_textcontrol_dim2.GetValue()),
-    #             p1=float(self.tabDim2.phase_correction_p1_textcontrol_dim2.GetValue()),
-    #         )
-
-    #     if self.tabDim2.extraction_checkbox_dim2.GetValue() == True:
-    #         # Find the indexes of the ppm values selected
-    #         # Get the ppm values from the data
-    #         ppm_values = ng.pipe.make_uc(dic, data, dim=1)
-    #         ppm_values = ppm_values.ppm_scale()
-    #         x_initial = np.abs(
-    #             ppm_values
-    #             - float(self.tabDim2.extraction_ppm_start_textcontrol_dim2.GetValue())
-    #         ).argmin()
-    #         x_final = np.abs(
-    #             ppm_values
-    #             - float(self.tabDim2.extraction_ppm_end_textcontrol_dim2.GetValue())
-    #         ).argmin()
-    #         if x_initial > x_final:
-    #             x_initial, x_final = x_final, x_initial
-
-    #         if (x_final - x_initial + 1) % 2 != 0:
-    #             x_final += 1
-    #         dic, data = ng.pipe_proc.ext(dic, data, x1=x_initial, xn=x_final, sw=True)
-
-    #     if self.tabDim2.baseline_correction_checkbox_dim2.GetValue() == True:
-    #         if self.tabDim2.baseline_correction_radio_box_selection_dim2 == 1:
-    #             # If POLY baseline correction is selected, this is not currently supported on windows without nmrPipe
-    #             message = "The selected baseline correction method is not supported for windows processing. Please use a machine containing nmrPipe or use a linear baselining method."
-    #             dlg = wx.MessageDialog(
-    #                 self, message, "Warning", wx.OK | wx.ICON_WARNING
-    #             )
-    #             self.Raise()
-    #             self.SetFocus()
-    #             result = dlg.ShowModal()
-    #             return
-
-    #         # Split the node list
-    #         node_list = (
-    #             self.tabDim2.baseline_correction_node_list_textcontrol_dim2.GetValue()
-    #         )
-    #         node_list = node_list.split(",")
-    #         node_list_final = []
-    #         for node in node_list:
-    #             node_list_final.append(float(node))
-
-    #         # Convert nodes into points
-    #         node_list_final = np.array(node_list_final)
-    #         node_list_final = (node_list_final / 100) * len(data)
-    #         node_list_final = node_list_final.astype(int)
-    #         # Replace any zeros with a number greater than 1 to allow the nmrglue baselining routines to work correctly
-    #         node_list_final[node_list_final == 0] = (
-    #             int(self.tabDim2.baseline_correction_nodes_textcontrol_dim2.GetValue())
-    #             + 1
-    #         )
-
-    #         dic, data = ng.pipe_proc.base(
-    #             dic,
-    #             data,
-    #             nl=node_list_final,
-    #             nw=int(
-    #                 self.tabDim2.baseline_correction_nodes_textcontrol_dim2.GetValue()
-    #             ),
-    #         )
-
-    #     return dic, data
-
-    # def process_dimension_3(self, dic, data):
-
-    #     # Process the second dimension
-    #     if self.tabDim3.linear_prediction_radio_box_dim3_selection == 1:
-    #         # Apply linear prediction
-    #         if self.tabDim3.linear_prediction_dim3_options_selection == 0:
-    #             append = "after"
-    #         else:
-    #             append = "before"
-    #         if self.tabDim3.linear_prediction_dim3_coefficients_selection == 0:
-    #             mode = "f"
-    #         elif self.tabDim3.linear_prediction_dim3_coefficients_selection == 1:
-    #             mode = "b"
-    #         else:
-    #             mode = "fb"
-    #         dic, data = ng.pipe_proc.lp(
-    #             dic, data, pred="default", mode=mode, append=append
-    #         )
-
-    #     if self.tabDim3.apodization_checkbox_dim3.GetValue() == True:
-    #         # Apply apodization
-    #         if self.tabDim3.apodization_dim3_combobox_selection == 0:
-    #             dic, data = ng.pipe_proc.em(
-    #                 dic,
-    #                 data,
-    #                 lb=0.0,
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-    #         elif self.tabDim3.apodization_dim3_combobox_selection == 1:
-    #             dic, data = ng.pipe_proc.em(
-    #                 dic,
-    #                 data,
-    #                 lb=float(self.tabDim3.exponential_line_broadening_dim3),
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-    #         elif self.tabDim3.apodization_dim3_combobox_selection == 2:
-    #             dic, data = ng.pipe_proc.gm(
-    #                 dic,
-    #                 data,
-    #                 g1=float(self.tabDim3.g1_dim3),
-    #                 g2=float(self.tabDim3.g2_dim3),
-    #                 g3=float(self.tabDim3.g3_dim3),
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-    #         elif self.tabDim3.apodization_dim3_combobox_selection == 3:
-    #             dic, data = ng.pipe_proc.sp(
-    #                 dic,
-    #                 data,
-    #                 off=float(self.tabDim3.offset_dim3),
-    #                 end=float(self.tabDim3.end_dim3),
-    #                 pow=int(self.tabDim3.power_dim3),
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-    #         elif self.tabDim3.apodization_dim3_combobox_selection == 4:
-    #             dic, data = ng.pipe_proc.gmb(
-    #                 dic,
-    #                 data,
-    #                 lb=float(self.tabDim3.a_dim3),
-    #                 gb=float(self.tabDim3.b_dim3),
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-    #         elif self.tabDim3.apodization_dim3_combobox_selection == 5:
-    #             dic, data = ng.pipe_proc.tp(
-    #                 dic,
-    #                 data,
-    #                 t1=float(self.tabDim3.t1_dim3),
-    #                 t2=float(self.tabDim3.t2_dim3),
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-    #         elif self.tabDim3.apodization_dim3_combobox_selection == 6:
-    #             dic, data = ng.pipe_proc.tri(
-    #                 dic,
-    #                 data,
-    #                 loc=float(self.tabDim3.loc_dim3),
-    #                 c=float(self.tabDim3.apodization_first_point_scaling_dim3),
-    #             )
-
-    #     if self.tabDim3.zero_filling_checkbox_dim3.GetValue() == True:
-    #         if self.tabDim3.zero_filling_round_checkbox_dim3.GetValue() == True:
-    #             round = True
-    #         else:
-    #             round = False
-
-    #         if self.tabDim3.zero_filling_dim3_combobox_selection == 0:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 zf=int(self.tabDim3.zero_filling_dim3_value_doubling_times),
-    #                 auto=round,
-    #             )
-    #         elif self.tabDim3.zero_filling_dim3_combobox_selection == 1:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 pad=int(self.tabDim3.zero_filling_dim3_value_zeros_to_add),
-    #                 auto=round,
-    #             )
-    #         elif self.tabDim3.zero_filling_dim3_combobox_selection == 2:
-    #             dic, data = ng.pipe_proc.zf(
-    #                 dic,
-    #                 data,
-    #                 size=int(self.tabDim3.zero_filling_dim3_value_final_data_size),
-    #                 auto=round,
-    #             )
-
-    #     if self.tabDim3.fourier_transform_checkbox_dim3.GetValue() == True:
-    #         if self.tabDim3.ft_method_selection_dim3 == 0:
-    #             dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-    #         elif self.tabDim3.ft_method_selection_dim3 == 1:
-    #             dic, data = ng.pipe_proc.ft(dic, data, real=True)
-    #         elif self.tabDim3.ft_method_selection_dim3 == 2:
-    #             dic, data = ng.pipe_proc.ft(dic, data, inv=True)
-    #         elif self.tabDim3.ft_method_selection_dim3 == 3:
-    #             dic, data = ng.pipe_proc.ft(dic, data, alt=True)
-
-    #     if self.tabDim3.phase_correction_checkbox_dim3.GetValue() == True:
-    #         dic, data = ng.pipe_proc.ps(
-    #             dic,
-    #             data,
-    #             p0=float(self.tabDim3.phase_correction_p0_textcontrol_dim3.GetValue()),
-    #             p1=float(self.tabDim3.phase_correction_p1_textcontrol_dim3.GetValue()),
-    #         )
-
-    #     if self.tabDim3.extraction_checkbox_dim3.GetValue() == True:
-    #         # Find the indexes of the ppm values selected
-    #         # Get the ppm values from the data
-    #         ppm_values = ng.pipe.make_uc(dic, data, dim=0)
-    #         ppm_values = ppm_values.ppm_scale()
-    #         x_initial = np.abs(
-    #             ppm_values
-    #             - float(self.tabDim3.extraction_ppm_start_textcontrol_dim3.GetValue())
-    #         ).argmin()
-    #         x_final = np.abs(
-    #             ppm_values
-    #             - float(self.tabDim3.extraction_ppm_end_textcontrol_dim3.GetValue())
-    #         ).argmin()
-    #         if x_initial > x_final:
-    #             x_initial, x_final = x_final, x_initial
-
-    #         if (x_final - x_initial + 1) % 2 != 0:
-    #             x_final += 1
-    #         dic, data = ng.pipe_proc.ext(dic, data, x1=x_initial, xn=x_final, sw=True)
-
-    #     if self.tabDim3.baseline_correction_checkbox_dim3.GetValue() == True:
-    #         if self.tabDim3.baseline_correction_radio_box_selection_dim3 == 1:
-    #             # If POLY baseline correction is selected, this is not currently supported on windows without nmrPipe
-    #             message = "The selected baseline correction method is not supported for windows processing. Please use a machine containing nmrPipe or use a linear baselining method."
-    #             dlg = wx.MessageDialog(
-    #                 self, message, "Warning", wx.OK | wx.ICON_WARNING
-    #             )
-    #             self.Raise()
-    #             self.SetFocus()
-    #             result = dlg.ShowModal()
-    #             return
-
-    #         # Split the node list
-    #         node_list = (
-    #             self.tabDim3.baseline_correction_node_list_textcontrol_dim3.GetValue()
-    #         )
-    #         node_list = node_list.split(",")
-    #         node_list_final = []
-    #         for node in node_list:
-    #             node_list_final.append(float(node))
-
-    #         # Convert nodes into points
-    #         node_list_final = np.array(node_list_final)
-    #         node_list_final = (node_list_final / 100) * len(data)
-    #         node_list_final = node_list_final.astype(int)
-    #         # Replace any zeros with a number greater than 1 to allow the nmrglue baselining routines to work correctly
-    #         node_list_final[node_list_final == 0] = (
-    #             int(self.tabDim3.baseline_correction_nodes_textcontrol_dim3.GetValue())
-    #             + 1
-    #         )
-
-    #         dic, data = ng.pipe_proc.base(
-    #             dic,
-    #             data,
-    #             nl=node_list_final,
-    #             nw=int(
-    #                 self.tabDim3.baseline_correction_nodes_textcontrol_dim3.GetValue()
-    #             ),
-    #         )
-
-    #     # dic, data = self.ztp(dic,data)
-
-    #     # dic['FDF1TDSIZE'] = data.shape[0]
-    #     # dic['FDF1FTSIZE'] = data.shape[0]
-    #     # dic['FDF1QUADFLAG'] = 1.0
-
-    #     # dic, data = self.ztp(dic,data)
-    #     # dic, data = ng.pipe_proc.tp(dic,data)
-
-    #     return dic, data
-
     # def zero_transpose_3d(self, dic, data):
-    #     # Transpose axes 0 and 1 in the 3D array
-    #     new_data = data.swapaxes(0, 1)
-
-    #     # Deep copy of the dictionary
-    #     import copy
-
-    #     new_dic = copy.deepcopy(dic)
-
-    #     # Swap all FDF1 and FDF2 values
-    #     for key in list(dic.keys()):
-    #         if key.startswith("FDF1"):
-    #             f1_key = key
-    #             f2_key = "FDF2" + key[4:]
-    #             if f2_key in dic:
-    #                 new_dic[f1_key], new_dic[f2_key] = dic[f2_key], dic[f1_key]
-
-    #     # Swap dimension order values
-    #     if "FDDIMORDER" in dic:
-    #         new_dic["FDDIMORDER"] = [
-    #             2.0 if x == 1.0 else 1.0 if x == 2.0 else x for x in dic["FDDIMORDER"]
-    #         ]
-
-    #     for i in range(1, 5):
-    #         key = f"FDDIMORDER{i}"
-    #         if key in dic:
-    #             val = dic[key]
-    #             if val == 1.0:
-    #                 new_dic[key] = 2.0
-    #             elif val == 2.0:
-    #                 new_dic[key] = 1.0
-
-    #     # Update the FDTRANSPOSED flag
-    #     new_dic["FDTRANSPOSED"] = 1.0
-
-    #     return new_dic, new_data
-
-    # def ztp(self, dic, data, nohdr=False):
     #     """
     #     Z-axis transpose (ZTP) for 3D+ NMRPipe data.
     #     Moves the last axis to the front, updates headers.
@@ -1664,39 +970,676 @@ class ProcessNMRGlue:
     #     data : ndarray
     #         Transposed data.
     #     """
-    #     print(dic)
     #     ndim = data.ndim
     #     if ndim < 3:
     #         raise ValueError("ZTP requires at least 3D data.")
 
-    #     # Rotate last axis to front
-    #     data = np.transpose(data, axes=(ndim - 1,) + tuple(range(ndim - 1)))
+    #     # data = np.transpose(data, axes=(ndim - 1,) + tuple(range(ndim - 1)))
+    #     data = np.transpose(data)
 
-    #     # --- Update FDDIMORDER (dimension order metadata)
-    #     # Shift dimensions left, move last to first
-    #     dim_keys = [dic.get(f"FDDIMORDER{i+1}", 0) for i in range(3)]
-    #     dim_keys = [dim_keys[-1]] + dim_keys[:-1]
-    #     dim_keys.append(4.0)
+    #     if dic["FDDIMORDER"] == [1.0, 2.0, 3.0, 4.0]:
+    #         dic["FDDIMORDER"] = [3.0, 2.0, 1.0, 4.0]
+    #     else:
+    #         dic["FDDIMORDER"] = [1.0, 2.0, 3.0, 4.0]
 
-    #     for i, key in enumerate(dim_keys):
-    #         dic[f"FDDIMORDER{i+1}"] = key
-    #     dic["FDDIMORDER"] = dim_keys
-
-    #     # --- Update QUADFLAGs
-    #     quad_keys = [dic.get(f"FDF{i+1}QUADFLAG", 0) for i in range(4)]
-    #     quad_keys = [quad_keys[-1]] + quad_keys[:-1]
-    #     for i, q in enumerate(quad_keys):
-    #         dic[f"FDF{i+1}QUADFLAG"] = q
-
-    #     # --- Update size metadata
-    #     dic["FDSIZE"] = data.shape[1]  # second axis after transpose
-    #     dic["FDSLICECOUNT"] = data.shape[0]
-    #     dic["FDSPECNUM"] = data.shape[0]
-
-    #     if not nohdr:
-    #         dic["FDTRANSPOSED"] = (dic.get("FDTRANSPOSED", 0) + 1) % 2
-
-    #     dic = ng.pipe_proc.clean_minmax(dic)
-    #     print("\n\n\n")
-    #     print(dic)
     #     return dic, data
+
+    def zero_transpose_3d(self, dic, data):
+        """
+        Transpose NMRPipe-style data from (X, Y, Z) to (Z, Y, X),
+        including correct updates to the NMRPipe dictionary.
+
+        Parameters:
+            dic (dict): NMRPipe dictionary
+            data (ndarray): NMRPipe data, assumed shape (X, Y, Z)
+
+        Returns:
+            new_dic (dict): Transposed dictionary
+            new_data (ndarray): Transposed data, shape (Z, Y, X)
+        """
+        # Transpose data from (X, Y, Z) to (Z, Y, X)
+        new_data = np.transpose(data, axes=(2, 1, 0))
+
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+        fn3 = "FDF" + str(int(dic["FDDIMORDER"][2]))  # F1, F2, etc
+
+        # Create new dictionary
+        new_dic = dic.copy()
+
+        # for i, new_i in enumerate(
+        #     new_axis_order
+        # ):  # i = new dim index, new_i = old dim index
+        #     for key in dic:
+        #         if key.startswith(axis_keys[new_i]):
+        #             # e.g., FDF1SW -> FDF1SW, becomes FDF3SW when i == 0 (Z)
+        #             suffix = key[len(axis_keys[new_i]) :]  # e.g. SW, ORIG
+        #             new_key = axis_keys[i] + suffix  # FDF1SW, FDF2SW, etc.
+        #             new_dic[new_key] = dic[key]
+
+        # swapping the FDDIMORDER1 and FDDIMORDER3 values
+        order1 = dic["FDDIMORDER1"]
+        order3 = dic["FDDIMORDER3"]
+        new_dic["FDDIMORDER1"] = order3
+        new_dic["FDDIMORDER3"] = order1
+        new_dic["FDDIMORDER"][0] = order3
+        new_dic["FDDIMORDER"][2] = order1
+
+        new_dic["FDSLICECOUNT"] = new_data.shape[-2]
+        new_dic["FDSPECNUM"] = new_dic["FDSLICECOUNT"]
+        new_dic["FDSIZE"] = new_data.shape[-1]
+
+        if dic[fn3 + "QUADFLAG"] != 1:
+            # unpack complex as needed
+            new_data = np.array(ng.proc_base.c2ri(new_data), dtype="complex64")
+            new_dic[fn3 + "SIZE"] = int(new_dic[fn3 + "SIZE"] / 2)
+
+        return new_dic, new_data
+
+    def transpose_3d(
+        self, dic, data, hyper=False, nohyper=False, auto=False, nohdr=False
+    ):
+        """
+        Transpose data (2D).
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        hyper : bool
+            True to perform hypercomplex transpose.
+        nohyper : bool
+            True to suppress hypercomplex transpose.
+        auto : bool
+            True to choose transpose mode automatically.
+        nohdr : bool
+            True to not update the transpose parameters in ndic.
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Array of NMR data which has been transposed.
+
+        """
+        # XXX test if works with TPPI
+        if nohyper:
+            hyper = False
+
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+        fn2 = "FDF" + str(int(dic["FDDIMORDER"][1]))  # F1, F2, etc
+
+        if auto:
+            if (dic[fn + "QUADFLAG"] != 1) and (dic[fn2 + "QUADFLAG"] != 1):
+                hyper = True
+            else:
+                hyper = False
+
+        if hyper:  # Hypercomplex transpose need type recast
+            data = np.array(ng.proc_base.tp_hyper(data), dtype="complex64")
+        else:
+            data = np.transpose(data, axes=(0, 2, 1))
+            if dic[fn2 + "QUADFLAG"] != 1 and nohyper is False:
+                # unpack complex as needed
+                data = np.array(ng.proc_base.c2ri(data), dtype="complex64")
+
+        # update the dimensionality and order
+        dic["FDSLICECOUNT"] = data.shape[-2]
+        if (data.dtype == "float32") and (nohyper is True):
+            # when nohyper is True and the new last dimension was complex
+            # prior to transposing then FDSIZE is set as if the dimension was
+            # converted to complex data, that is half the actual size.
+            dic["FDSIZE"] = data.shape[-1] / 2
+        else:
+            dic["FDSIZE"] = data.shape[-1]
+
+        dic["FDSPECNUM"] = dic["FDSLICECOUNT"]
+        dic["FDDIMORDER1"], dic["FDDIMORDER2"] = (
+            dic["FDDIMORDER2"],
+            dic["FDDIMORDER1"],
+        )
+        dic["FDDIMORDER"] = [
+            dic["FDDIMORDER1"],
+            dic["FDDIMORDER2"],
+            dic["FDDIMORDER3"],
+            dic["FDDIMORDER4"],
+        ]
+
+        if dic["FD2DPHASE"] == 0:
+            dic["FDF1QUADFLAG"], dic["FDF2QUADFLAG"] = (
+                dic["FDF2QUADFLAG"],
+                dic["FDF1QUADFLAG"],
+            )
+
+        if nohdr is not True:
+            dic["FDTRANSPOSED"] = (dic["FDTRANSPOSED"] + 1) % 2
+
+        dic = ng.pipe_proc.clean_minmax(dic)
+        return dic, data
+
+    def ext(self, dic, data, x1, xn, sw):
+        """
+        Extract a region. Adapted from nmrglue
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        x1 : int or 'default'
+            Starting point of the X-axis extraction. 'default' will start the
+            extraction at the first point.
+        xn : int or 'default'
+            Ending point of the X-axis extraction. 'default' will stop the
+            extraction at the last point.
+        sw : bool
+            True to update the sweep width and ppm calibration parameters,
+            recommended.
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Extracted region of NMR data.
+
+        """
+
+        # store old sizes
+        old_x = float(data.shape[-1])
+
+        # slice find limits
+        if x1 == "default":
+            x_min = 0
+        else:
+            x_min = np.round(x1) - 1
+
+        if xn == "default":
+            x_max = data.shape[-1]
+        else:
+            x_max = np.round(xn)
+
+        r_x = 1
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))
+
+        # round size to be multiple of r_x when axis is cut
+        if x1 != "default" or xn != "default":
+            remain_x = (x_min - x_max) % r_x  # -len_x%r_x
+            x_min = x_min - np.floor(remain_x / 2)
+            x_max = x_max + remain_x - np.floor(remain_x / 2)
+
+        if x_min < 0:
+            x_max = x_max - x_min
+            x_min = 0.0
+
+        if x_max > data.shape[-1]:
+            x_min = x_min - (x_max - data.shape[-1])
+            x_max = data.shape[-1]
+
+        no_of_dimensions = len(data.shape)
+        if no_of_dimensions == 1:  # 1D Array
+            data = data[int(x_min) : int(x_max)]
+            dic["FDSIZE"] = x_max - x_min
+            dic[fn + "SIZE"] = x_max - x_min
+            dic[fn + "FTSIZE"] = x_max - x_min
+            dic[fn + "TDSIZE"] = x_max - x_min
+            dic[fn + "APODSIZE"] = x_max - x_min
+        else:
+            data = data[..., int(x_min) : int(x_max)]
+            dic["FDSIZE"] = x_max - x_min
+            dic[fn + "SIZE"] = x_max - x_min
+            dic[fn + "FTSIZE"] = x_max - x_min
+            dic[fn + "TDSIZE"] = x_max - x_min
+            dic[fn + "APODSIZE"] = x_max - x_min
+
+        # adjust sweep width and ppm calibration
+        if sw:
+            fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+            s = data.shape[-1]
+
+            if dic[fn + "FTFLAG"] == 0:  # time domain
+                dic[fn + "CENTER"] = float(int(s / 2.0 + 1))
+                dic[fn + "APOD"] = s
+                dic[fn + "TDSIZE"] = s
+                dic = ng.pipe_proc.recalc_orig(dic, data, fn)
+            else:  # freq domain
+                dic[fn + "X1"] = x_min + 1
+                dic[fn + "XN"] = x_max
+                dic[fn + "APOD"] = np.floor(dic[fn + "APOD"] * s / old_x)
+                dic[fn + "CENTER"] = dic[fn + "CENTER"] - x_min
+                dic[fn + "SW"] = dic[fn + "SW"] * s / old_x
+                dic = ng.pipe_proc.recalc_orig(dic, data, fn)
+
+        dic = ng.pipe_proc.update_minmax(dic, data)
+        return dic, data
+
+    def base(self, dic, data, nl=None, nw=0):
+        """
+        Linear baseline correction.
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        nl : list
+            List of baseline node points.
+        nw : int
+            Node width in points.
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Array of NMR data with a linear baseline correction applied.
+
+        """
+
+        # change values in node list to start at 0
+        nl = [i - 1 for i in nl]
+
+        data = self.base2(data, nl, nw)
+        dic = ng.pipe_proc.update_minmax(dic, data)
+        return dic, data
+
+    def base2(self, data, nl, nw=0):
+        """
+        Linear (first-order) baseline correction based on node list.
+
+        Parameters
+        ----------
+        data : 1D or 2D ndarray
+            Array of 1D or 2D NMR data.
+        nl : list
+            List of baseline nodes.
+        nw : float, optional
+            Node half-width in points.
+
+        Returns
+        -------
+        ndata : ndarray
+            NMR data with first order baseline correction applied.  For 2D data
+            baseline correction is applied for each trace along the last
+            dimension.
+
+        """
+        if data.ndim == 1:
+            data = data - ng.proc_bl.calc_bl_linear(data, nl, nw)
+        elif data.ndim == 2:  # for 2D array loop over traces
+            for i, vec in enumerate(data):
+                data[i] = data[i] - ng.proc_bl.calc_bl_linear(vec, nl, nw)
+
+        else:
+            for i, vec in enumerate(data):
+                for j, vec2 in enumerate(vec):
+                    data[i][j] = data[i][j] - ng.proc_bl.calc_bl_linear(vec2, nl, nw)
+
+        return data
+
+    def lp(
+        self,
+        dic,
+        data,
+        pred="default",
+        x1="default",
+        xn="default",
+        ord=8,
+        mode="f",
+        append="after",
+        bad_roots="auto",
+        mirror=None,
+        fix_mode="on",
+        method="tls",
+    ):
+        """
+        Linear Prediction
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        pred : int
+            Number of points to predict, "default" chooses the vector size for
+            forward prediction, 1 for backward prediction
+        x1 : int or 'default'
+            First point in 1D vector to use to extract LP filter. 'default' will
+            use the first or last point depending on the mode.
+        xn : int or 'default'
+            Last point in 1D vector to use to extract LP filter. 'default' will use
+            the first or last point depending on the mode.
+        ord : int
+            Prediction order, number of LP coefficients used in prediction.
+        mode : {'f', 'b', 'fb'}
+            Mode to generate LP filter, 'f' for forward,'b' for backward, 'fb' for
+            forward-backward.
+        append : {'before' or 'after'}
+            Location to append predicted data, 'before' or 'after' the existing
+            data.
+        bad_roots {'incr', 'decr', None, 'auto'} :
+            Type of roots which are will be marked as bad and stabilized. Choices
+            are 'incr' for increasing roots, 'decr' for decreasing roots, or None
+            for not root stabilization. The default 'auto' will set this parameter
+            based upon the LP `mode` parameter: 'f' and 'fb' will results in an
+            'incr' parameter. 'b' in 'decr'.
+        mirror : {'90-180', '0-0', None}
+            Mirror mode, option are '90-180' for a one point shifted mirror image,
+            '0-0' for an exact mirror image, and None for no mirror imaging of the
+            data.
+        fix_mode : {'on', 'reflect'}
+            Method used to stabilize bad roots, 'on' moves bad roots onto the unit
+            circle, 'reflect' reflect bad roots across the unit circle.
+        method : {'svd', 'qr', 'choleskey', 'tls'}
+            Method to use to calculate the LP filter.
+
+        Notes
+        -----
+        The results from this function do not match NMRPipe's LP function.  Also
+        some additional parameter and different parameter in this function.
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Array of NMR data with linear prediction applied.
+
+        """
+        # check parameter
+        if mirror not in [None, "90-180", "0-0"]:
+            raise ValueError("mirror must be None, '90-180' or '0-0'")
+
+        # pred default values
+        if pred == "default":
+            if mode == "f" or mode == "fb":
+                pred = data.shape[-1]  # double the number of points
+            else:
+                pred = 1  # predict 1 point before the data
+
+        # remove first pred points if appending before data
+        if append == "before":
+            data = data[..., pred:]
+
+        # create slice object
+        if x1 == "default":
+            x_min = 0
+        elif mode == "before":
+            x_min = x1 - pred - 1
+        else:
+            x_min = x1 - 1
+
+        if xn == "default":
+            x_max = data.shape[-1]
+        else:
+            x_max = xn - 1
+        sl = slice(x_min, x_max)
+
+        # mirror mode (remap to proc_lp names
+        mirror = {None: None, "90-180": "180", "0-0": "0"}[mirror]
+
+        # mode, append, bad_roots, fix_mode, and method are passed unchanged
+        # use LP-TLS for best results
+        data = self.lp2(
+            data, pred, sl, ord, mode, append, bad_roots, fix_mode, mirror, method
+        )
+
+        # calculation for dictionary updates
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+        s = data.shape[-1]
+        s2 = s / 2.0 + 1
+
+        # update the dictionary
+        dic[fn + "CENTER"] = s2
+        if dic["FD2DPHASE"] == 1 and fn != "FDF2":  # TPPI data
+            dic[fn + "CENTER"] = np.round(s2 / 2.0 + 0.001)
+        dic = ng.pipe_proc.recalc_orig(dic, data, fn)
+        dic["FDSIZE"] = s
+        dic[fn + "SIZE"] = s
+        dic[fn + "APOD"] = s
+        dic[fn + "TDSIZE"] = s
+
+        dic = ng.pipe_proc.update_minmax(dic, data)
+        return dic, data
+
+    def lp2(
+        self,
+        data,
+        pred=1,
+        slice=slice(None),
+        order=8,
+        mode="f",
+        append="after",
+        bad_roots="auto",
+        fix_mode="on",
+        mirror=None,
+        method="svd",
+    ):
+        """
+        Linear prediction extrapolation of 1D or 2D data.
+
+        Parameters
+        ----------
+        data : ndarray
+            1D or 2D NMR data with the last (-1) axis in the time domain.
+        pred : int
+            Number of points to predict along the last axis.
+        slice : slice object, optional
+            Slice object which selects the region along the last axis to use in LP
+            equation.  The default (slice(None)) will use all points.
+        order : int
+            Prediction order, number of LP coefficients calculated.
+        mode : {'f', 'b', 'fb' or 'bf'}
+            Mode to generate LP filter. 'f' for forward,'b' for backward, fb for
+            'forward-backward and 'bf' for backward-forward.
+        append : {'before', 'after'}
+            Location to append the data, either 'before' the current data, or
+            'after' the existing data. This is independent of the `mode` parameter.
+        bad_roots : {'incr', 'decr', None, 'auto'}
+            Type of roots which to consider bad and to stabilize.  Option are those
+            with increasing signals 'incr' or decreasing signals 'decr'.  None will
+            perform no root stabilizing.  The default ('auto') will set the
+            parameter based on the `mode` parameter.  'f' or 'fb' `mode` will
+            results in a 'incr' `bad_roots` parameter, 'b' or 'bf` in 'decr'
+        fix_mode : {'on', 'reflect'}
+            Method used to stabilize bad roots, 'on' to move the roots onto the
+            unit circle, 'reflect' to reflect bad roots across the unit circle.
+            This parameter is ignored when `bad_roots` is None.
+        mirror : {None, '0', '180'}
+            Mode to form mirror image of data before processing.  None will
+            process the data trace as provided (no mirror image). '0' or '180'
+            forms a mirror image of the sliced trace to calculate the LP filter.
+            '0' should be used with data with no delay, '180' with data
+            with an initial half-point delay.
+        method : {'svd', 'qr', 'choleskey', 'tls'}
+            Method to use to calculate the LP filter. Choices are a SVD ('svd'), QR
+            ('qr'), or Choleskey ('choleskey') decomposition, or Total Least
+            Squares ('tls').
+
+        Returns
+        -------
+        ndata : ndarray
+            NMR data with `pred` number of points linear predicted and appended to
+            the original data.
+
+        Notes
+        -----
+        When given 2D data a series of 1D linear predictions are made to
+        each row in the array, extending each by pred points. To perform a 2D
+        linear prediction using a 2D prediction matrix use :py:func:`lp2d`.
+
+        In forward-backward or backward-forward mode root stabilizing is done
+        on both sets of signal roots as calculated in the first mode direction.
+        After averaging the coefficient the roots are again stabilized.
+
+        When the append parameter does not match the LP mode, for example
+        if a backward linear prediction (mode='b') is used to predict points
+        after the trace (append='after'), any root fixing is done before reversing
+        the filter.
+
+        """
+        if data.ndim == 1:
+            return ng.proc_lp.lp_1d(
+                data,
+                pred,
+                slice,
+                order,
+                mode,
+                append,
+                bad_roots,
+                fix_mode,
+                mirror,
+                method,
+            )
+        elif data.ndim == 2:
+            # create empty array to hold output
+            s = list(data.shape)
+            s[-1] = s[-1] + pred
+            new = np.empty(s, dtype=data.dtype)
+            # vector-wise 1D LP
+            for i, trace in enumerate(data):
+                new[i] = ng.proc_lp.lp_1d(
+                    trace,
+                    pred,
+                    slice,
+                    order,
+                    mode,
+                    append,
+                    bad_roots,
+                    fix_mode,
+                    mirror,
+                    method,
+                )
+            return new
+        else:
+            # create empty array to hold output
+            s = list(data.shape)
+            s[-1] = s[-1] + pred
+            new = np.empty(s, dtype=data.dtype)
+            # vector-wise 1D LP
+            for i, trace in enumerate(data):
+                for j, trace2 in enumerate(trace):
+                    new[i][j] = ng.proc_lp.lp_1d(
+                        trace2,
+                        pred,
+                        slice,
+                        order,
+                        mode,
+                        append,
+                        bad_roots,
+                        fix_mode,
+                        mirror,
+                        method,
+                    )
+            return new
+
+    def zf(
+        self,
+        dic,
+        data,
+        zf=1,
+        pad="auto",
+        size="auto",
+        mid=False,
+        inter=False,
+        auto=False,
+        inv=False,
+    ):
+        """
+        Zero fill
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        zf : int, optional.
+            Number of times to double the current dimensions size.
+        pad : int
+            Number of zeros to pad the data with.
+        size : int
+            Desired final size of the current dimension.
+        mid : bool
+            True to zero fill in the middle of the current dimension
+        inter : bool
+            True to zero fill between points.
+        auto : bool
+            True to round final size to nearest power of two.
+        inv : bool
+            True to extract the time domain data (remove zero filling).
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Array of NMR data which has zero filled.
+
+        Notes
+        -----
+        Only one of the `zf`, `pad` and `size` parameter should be used, the other
+        should be left as the default value.  If any of the `mid`, `inter`, `auto`
+        and `inv` parameters are True other parameter may be ignored.
+
+        """
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+
+        if inv:  # recover original time domain points
+            # calculation for dictionary updates
+            s = dic[fn + "TDSIZE"]
+            s2 = s / 2.0 + 1
+
+            # update the dictionary
+            dic[fn + "ZF"] = -1.0 * s
+            dic[fn + "CENTER"] = s2
+            dic = ng.pipe_proc.recalc_orig(dic, data, fn)
+            dic["FDSIZE"] = s
+            return dic, data[..., : int(s)]
+
+        if inter:  # zero filling between points done first
+            data = ng.proc_base.zf_inter(data, zf)
+            dic[fn + "SW"] = dic[fn + "SW"] * (zf + 1)
+            zf = 0
+            pad = 0  # NMRPipe ignores pad after a inter zf
+
+        # set zpad, the number of zeros to be padded
+        zpad = data.shape[-1] * 2**zf - data.shape[-1]
+
+        if pad != "auto":
+            zpad = pad
+        if size != "auto":
+            zpad = size - data.shape[-1]
+
+        # auto is applied on top of other parameters:
+        if auto:
+            fsize = data.shape[-1] + zpad
+            fsize = 2 ** (np.ceil(np.log(fsize) / np.log(2)))
+            zpad = fsize - data.shape[-1]
+
+        if zpad < 0:
+            zpad = 0
+
+        data = ng.proc_base.zf_pad(data, pad=zpad, mid=mid)
+
+        # calculation for dictionary updates
+        s = data.shape[-1]
+        s2 = s / 2.0 + 1
+
+        # update the dictionary
+        dic[fn + "ZF"] = -1.0 * s
+        dic[fn + "SIZE"] = s
+        dic[fn + "TDSIZE"] = s
+        dic[fn + "APODSIZE"] = s
+        dic[fn + "CENTER"] = s2
+        if dic["FD2DPHASE"] == 1 and fn != "FDF2":  # TPPI data
+            dic[fn + "CENTER"] = np.round(s2 / 2.0 + 0.001)
+        dic = ng.pipe_proc.recalc_orig(dic, data, fn)
+        dic["FDSIZE"] = s
+        dic = ng.pipe_proc.update_minmax(dic, data)
+        return dic, data

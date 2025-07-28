@@ -457,7 +457,15 @@ class Populate_dictionary_global:
         dimension_dictionary["Fourier transform"]["Fourier transform flag"] = ft_flag
 
         ft_option = int(dimension_tab.fourier_transform.ft_method_selection)
-        methods = ["Auto", "Real", "Inverse", "Sign alternation", "Negative"]
+        methods = [
+            "Standard",
+            "Auto (not recommended)",
+            "Real",
+            "Inverse",
+            "Sign alternation (alt)",
+            "Negate imaginaries (neg)",
+            "alt + neg",
+        ]
         dimension_dictionary["Fourier transform"][
             "Fourier transform method selection"
         ] = ft_option
@@ -471,7 +479,7 @@ class Populate_dictionary_global:
         self, dimension_dictionary: Dict[str, Any], dimension: int, dimension_tab
     ) -> Dict[str, Any]:
         """
-        Adding the current phasinf parameters in SpinProcess
+        Adding the current phasing parameters in SpinProcess
         to the dictionary for dimension. If dimension is 0 (direct),
         then have an extra magnitude mode option. If dimension is
         greater than 0 (indirect), then there is an extra F1180 option.

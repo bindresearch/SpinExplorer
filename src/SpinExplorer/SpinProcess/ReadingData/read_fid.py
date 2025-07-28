@@ -28,6 +28,7 @@ import wx
 import os
 import nmrglue as ng
 from typing import Union
+import json
 
 
 class ReadFID:
@@ -45,6 +46,7 @@ class ReadFID:
         self.read_fid()
         self.get_dimensions()
         self.find_pseudo_axes()
+        self.guessing_FT_modes()
         self.find_sweep_widths()
 
     def find_fid(self) -> None:
@@ -78,6 +80,43 @@ class ReadFID:
         Reading the nmrPipe FID file using nmrglue
         """
         self.dic, self.data = ng.pipe.read(self.fid_file)
+
+    def guessing_FT_modes(self) -> None:
+        """
+        This function will guess the Fourier transform modes
+        for the indirect dimensions depending on the acquisition
+        modes in parameters.json.
+
+        By default the selection will be 0 (normal fourier transform)
+        If acquisition mode:
+        = TPPI - selection is 1 (real fourier transform)
+        = States-TPPI - selection is 4 (sign alternation Fourier transform)
+
+        Direct dimension will always be 0
+        """
+
+        self.ft_options = [0]
+        if len(self.data.shape) > 1:
+            try:
+                with open("parameters.json", "r") as file:
+                    acqusition_modes = json.load(file)["conversion"][
+                        "spectral parameters"
+                    ]["acqusition modes"]["indirect"]["mode"]
+                    size = len(self.data.shape) - 1
+                    for i in range(size):
+                        mode = acqusition_modes[i]
+                        if self.pseudo_axis == True:
+                            if i == self.index and len(self.data.shape) == 3:
+                                continue
+                        if mode == "TPPI":
+                            self.ft_options.append(1)
+                        elif mode == "States-TPPI":
+                            self.ft_options.append(4)
+                        else:
+                            self.ft_options.append(0)
+            except:
+                for i in range(len(self.data.shape) - 1):
+                    self.ft_options.append(0)
 
     def get_dimensions(self):
         """

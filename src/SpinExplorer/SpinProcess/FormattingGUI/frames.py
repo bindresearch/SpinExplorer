@@ -118,6 +118,7 @@ class DirectDimensionFrame(wx.Panel):
             self,
             self.info_buttons,
         )
+
         self.phasing = p.PhasingDirect(
             self.app, self.nmr_data, self, self.info_buttons, self.apodization
         )
@@ -233,6 +234,7 @@ class IndirectDimensionFrame(wx.Panel):
             self,
             self.info_buttons,
         )
+
         self.phasing = p.PhasingIndirect(
             self.app, self.nmr_data, self, self.info_buttons, self.apodization
         )

@@ -193,6 +193,9 @@ class InputParameters:
         dimension_tab.solvent_suppression.solvent_suppression_checkbox.SetValue(
             suppression_flag
         )
+        dimension_tab.solvent_suppression.solvent_suppression_checkbox_value = (
+            suppression_flag
+        )
 
         filter_choice = int(dictionary["Solvent Suppression"]["Filter Selection"][0])
         dimension_tab.solvent_suppression.solvent_suppression_filter_selection = (
@@ -258,10 +261,14 @@ class InputParameters:
                     1
                 )
 
+                dimension_tab.linear_prediction.on_linear_prediction_radio_box_indirect(
+                    wx.EVT_RADIOBOX
+                )
+
                 predicted_points_selection = int(
                     dictionary["Linear Prediction"][key]["Add predicted points"][0]
                 )
-                dimension_tab.linear_prediction.linear_prediction_combobox_indirect.SetSelection(
+                dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(
                     predicted_points_selection
                 )
 
@@ -280,7 +287,7 @@ class InputParameters:
                     predicted_coefficients_selection
                 )
 
-                dimension_tab.linear_prediction.on_linear_prediction_coefficients_combobox(
+                dimension_tab.linear_prediction.on_linear_prediction_combobox_coefficients_indirect(
                     wx.EVT_COMBOBOX
                 )
 

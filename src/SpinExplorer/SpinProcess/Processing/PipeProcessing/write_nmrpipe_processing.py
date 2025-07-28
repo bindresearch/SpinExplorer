@@ -217,16 +217,18 @@ class WriteNMRPipeProcessing:
         """
         dimension_tab = self.dimension_tabs[dimension]
         fourier_transform_line = "| nmrPipe -fn FT"
-        if dimension_tab.fourier_transform.ft_method_selection == 0:
+        if dimension_tab.fourier_transform.ft_method_selection == 1:
             fourier_transform_line += " -auto"
-        elif dimension_tab.fourier_transform.ft_method_selection == 1:
-            fourier_transform_line += " -real"
         elif dimension_tab.fourier_transform.ft_method_selection == 2:
-            fourier_transform_line += " -inv"
+            fourier_transform_line += " -real"
         elif dimension_tab.fourier_transform.ft_method_selection == 3:
-            fourier_transform_line += " -alt"
+            fourier_transform_line += " -inv"
         elif dimension_tab.fourier_transform.ft_method_selection == 4:
+            fourier_transform_line += " -alt"
+        elif dimension_tab.fourier_transform.ft_method_selection == 5:
             fourier_transform_line += " -neg"
+        elif dimension_tab.fourier_transform.ft_method_selection == 5:
+            fourier_transform_line += " -alt -neg"
         nmrproc_com.write(fourier_transform_line + " \\\n")
 
         return nmrproc_com

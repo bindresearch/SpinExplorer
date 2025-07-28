@@ -38,12 +38,21 @@ class Convert_nmrglue:
         self.params = params
         self.nmrdata = nmrdata
 
+        sizes = []
+        for i, box in enumerate(self.app.format.N_complex_boxes):
+            size = int(box.GetValue())
+            if i == 0:
+                size = int(size / 2)
+            sizes.append(size)
+
+        sizes.reverse()
+
         C = ng.convert.converter()
         # Obtain first guesses of dictionary values
         if self.nmrdata.spectrometer == "Bruker":
-            dic, data = ng.fileio.bruker.read("./")
+            dic, data = ng.fileio.bruker.read("./", shape=tuple(sizes))
         else:
-            dic, data = ng.fileio.varian.read("./")
+            dic, data = ng.fileio.varian.read("./", shape=tuple(sizes))
 
         u = self.create_conversion_dictionary()
 
@@ -316,7 +325,6 @@ class Convert_nmrglue:
 
         # Creating an empty array to store the reshuffled data
         shuffled_data = np.empty(data.shape, data.dtype)
-
         # If final dimension is Rance-Kay/Echo-AntiEcho
         if rance_kay_dimensions == [0]:
             for i in range(0, data.shape[0], 2):

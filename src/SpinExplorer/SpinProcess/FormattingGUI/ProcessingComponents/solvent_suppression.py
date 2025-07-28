@@ -46,30 +46,13 @@ class SolventSuppression:
         Setting the initial solvent suppression processing parameters in the
         graphical interface to default values
         """
-        if (
-            self.nmr_data.axislabels[0] == "H1"
-            or self.nmr_data.axislabels[0] == "1H"
-            or self.nmr_data.axislabels[0] == "H"
-        ):
-            self.direct_solvent_suppression = True
-        else:
-            self.direct_solvent_suppression = False
-
-        self.include_direct_linear_prediction = False
-
+        self.solvent_suppression_checkbox_value = True
         self.solvent_suppression_filter_selection = 0
         self.solvent_suppression_lowpass_shape_selection = 0
         self.solvent_suppression_filter_length = 32
         self.solvent_suppression_polynomial_order = 2
         self.solvent_suppression_spline_noise = 1.0
         self.solvent_suppression_spline_smoothfactor = 1.1
-
-    def load_solvent_suppression_variables(self, parameter_dictionary: Dict):
-        """
-        Function to load saved solvent suppression processing parameters
-        into the graphical interface
-        """
-        pass
 
     def create_solvent_suppression_sizer(self, parent):
         # Create a box for solvent suppression options
@@ -80,7 +63,9 @@ class SolventSuppression:
         self.solvent_suppression_checkbox = wx.CheckBox(
             parent, -1, "Apply solvent suppression"
         )
-        self.solvent_suppression_checkbox.SetValue(self.direct_solvent_suppression)
+        self.solvent_suppression_checkbox.SetValue(
+            self.solvent_suppression_checkbox_value
+        )
         self.solvent_suppression_sizer.Add(
             self.solvent_suppression_checkbox, 0, wx.ALIGN_CENTER_VERTICAL
         )
@@ -227,3 +212,13 @@ class SolventSuppression:
         self.solvent_suppression_lowpass_shape_selection = int(
             self.lowpass_shape_radio_box.GetSelection()
         )
+
+    def on_solvent_suppression_checkbox(self, event):
+        """
+        Change the checkbox value parameter if the checkbox
+        is clicked.
+        """
+        if self.solvent_suppression_checkbox.GetValue() == True:
+            self.solvent_suppression_checkbox_value = True
+        else:
+            self.solvent_suppression_checkbox_value = False

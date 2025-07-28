@@ -94,7 +94,7 @@ class FourierTransform:
         implementation
         """
         self.fourier_transform_advanced_options_window = wx.Frame(
-            self.parent, -1, "Fourier Transform Advanced Options", size=(700, 400)
+            self.parent, -1, "Fourier Transform Advanced Options", size=(700, 600)
         )
 
         self.fourier_transform_advanced_options_window_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -118,8 +118,16 @@ class FourierTransform:
             wx.RadioBox(
                 self.fourier_transform_advanced_options_window,
                 -1,
-                choices=["Auto", "Real", "Inverse", "Sign Alternation", "Negative"],
-                style=wx.RA_SPECIFY_COLS,
+                choices=[
+                    "Standard",
+                    "Auto (not recommended)",
+                    "Real",
+                    "Inverse",
+                    "Sign alternation (alt)",
+                    "Negate imaginaries (neg)",
+                    "alt + neg",
+                ],
+                style=wx.RA_SPECIFY_ROWS,
             )
         )
         self.fourier_transform_auto_real_inverse_sign_alternation_radio_box.SetSelection(
@@ -132,11 +140,12 @@ class FourierTransform:
         )
         self.fourier_transform_advanced_options_sizer.AddSpacer(10)
 
-        self.ft_method_text = """Auto: The auto method will automatically select the 
-        best method for the fourier transform of the FID. \n\nReal: The Fourier Transform 
-        will be applied to the real part of the FID only. \n\nInverse: The inverse Fourier 
-        Transform will be applied to the FID. \n\nSign Alternation: The sign alternation 
-        method will be applied to the FID. \n\n"""
+        self.ft_method_text = """        Standard: Perform a standard Fourier transform. \n\n
+        Auto: The auto method will automatically select the best method for the fourier transform of the FID. \n\n
+        Real: The Fourier Transform will be applied to the real part of the FID only. (For TPPI) \n\n
+        Inverse: The inverse Fourier  Transform will be applied to the FID. \n\n
+        Sign Alternation: The sign alternation method will be applied to the FID. (For States-TPPI) \n\n
+        Negate imaginaries: Chnage sign of imaginaries before Fourier Transform\n\n"""
 
         self.ft_method_info = wx.StaticText(
             self.fourier_transform_advanced_options_window, -1, self.ft_method_text

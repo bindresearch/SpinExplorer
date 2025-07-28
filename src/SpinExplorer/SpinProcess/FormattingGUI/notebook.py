@@ -129,6 +129,9 @@ class NotebookProcess(wx.Notebook):
                 self.tabDim3, "Dimension 3 (" + self.nmr_data.axislabels[2] + ")"
             )
 
+        # Setting the fourier transform modes to the guessed values
+        self.add_ft_mode_guess()
+
         # read previously saved parameters
         self.on_read_processing()
 
@@ -288,4 +291,23 @@ class NotebookProcess(wx.Notebook):
         Read a previous parameters.json file and load these values into
         the graphical interface for SpinProcess.
         """
+
         self.read = Read_json(self, self.nmr_data, self.tabs)
+
+    def add_ft_mode_guess(self):
+        """
+        Setting the fourier transform modes for the indirect dimensions
+        to the values guessed from the conversion acquisition modes if
+        there are more than 2 complex dimensions.
+        """
+        dimensions = len(self.nmr_data.data.shape)
+        if dimensions > 1:
+            if dimensions == 2 and self.nmr_data.pseudo_axis == True:
+                return
+            else:
+                indirect_modes = self.nmr_data.ft_options[1:]
+                for i, mode in enumerate(indirect_modes):
+                    try:
+                        self.tabs[i + 1].fourier_transform.ft_method_selection = mode
+                    except:
+                        pass
