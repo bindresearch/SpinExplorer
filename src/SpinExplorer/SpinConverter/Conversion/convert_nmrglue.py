@@ -58,6 +58,25 @@ class Convert_nmrglue:
 
         self.perform_conversion(C, u, dic, data)
 
+        # Give an output to say that the conversion was successful
+        self.success_output_message()
+
+    def success_output_message(self):
+        """
+        Provides an output message to the user to say that the
+        conversion is complete.
+        """
+        dlg = wx.MessageDialog(
+            self.app,
+            "Data conversion to nmrPipe format using nmrglue is complete.",
+            "Complete",
+            wx.OK,
+        )
+        self.app.Raise()
+        self.app.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
     def perform_conversion(self, C, u, dic, data):
         """
         Performing any necessary data reshuffling and then

@@ -25,6 +25,7 @@ SOFTWARE."""
 import wx
 import matplotlib.pyplot as plt
 import numpy as np
+import copy
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 
@@ -705,7 +706,7 @@ class Apodization:
             else:
                 self.data = self.data[0][0]
 
-        data = self.data
+        data = copy.deepcopy(self.data)
 
         x = np.linspace(
             0,
@@ -910,23 +911,29 @@ class Apodization:
                 int(self.nmr_data.number_of_points[0] / 2),
             )
         else:
-            if self.dimension_index == 0:
-                x = np.linspace(
-                    0, (len(data)) / self.nmr_data.spectral_width[0], int(len(data))
-                )
-            else:
-                # x = np.linspace(
-                #     0,
-                #     (self.nmr_data.number_of_points[self.dimension_index])
-                #     / self.nmr_data.spectral_width[self.dimension_index],
-                #     self.nmr_data.number_of_points[self.dimension_index],
-                # )
-                x = np.linspace(
-                    0,
-                    (self.nmr_data.number_of_points[self.dimension_index] / 2)
-                    / self.nmr_data.spectral_width[self.dimension_index],
-                    int(self.nmr_data.number_of_points[self.dimension_index] / 2),
-                )
+            x = np.linspace(
+                0,
+                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                / self.nmr_data.spectral_width[self.dimension_index],
+                int(self.nmr_data.number_of_points[self.dimension_index] / 2),
+            )
+            # if self.dimension_index == 0:
+            #     x = np.linspace(
+            #         0, (len(data)) / self.nmr_data.spectral_width[0], int(len(data))
+            #     )
+            # else:
+            #     # x = np.linspace(
+            #     #     0,
+            #     #     (self.nmr_data.number_of_points[self.dimension_index])
+            #     #     / self.nmr_data.spectral_width[self.dimension_index],
+            #     #     self.nmr_data.number_of_points[self.dimension_index],
+            #     # )
+            #     x = np.linspace(
+            #         0,
+            #         (self.nmr_data.number_of_points[self.dimension_index] / 2)
+            #         / self.nmr_data.spectral_width[self.dimension_index],
+            #         int(self.nmr_data.number_of_points[self.dimension_index] / 2),
+            #     )
 
         try:
             c = float(self.apodization_first_point_textcontrol.GetValue())
@@ -1016,8 +1023,9 @@ class Apodization:
             self.g3 = g3
             e = (
                 np.pi
-                * (self.nmr_data.number_of_points[0] / 2)
-                / self.nmr_data.spectral_width[0]
+                * self.nmr_data.number_of_points[self.dimension_index]
+                / 2
+                / self.nmr_data.spectral_width[self.dimension_index]
                 * self.g1
             )
             g = (
@@ -1027,13 +1035,14 @@ class Apodization:
                 * (
                     self.g3
                     * (
-                        (self.nmr_data.number_of_points[0] / 2)
-                        / self.nmr_data.spectral_width[0]
+                        (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                        / self.nmr_data.spectral_width[self.dimension_index]
                         - 1
                     )
                     - x
                 )
             )
+
             func = np.exp(e - g * g)
             self.line1.set_ydata(func)
 

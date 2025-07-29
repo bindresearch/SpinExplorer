@@ -100,9 +100,6 @@ class SpinProcess(wx.Frame):
         self.width = 0.8 * self.monitorWidth
         self.height = 0.75 * self.monitorHeight
 
-        # Read the NMR data in the current directory
-        self.nmr_data = ReadFID(self)
-
         # Initially set the reprocessing flag to False
         self.reprocess = reprocess
         self.original_frame = original_frame
@@ -114,6 +111,9 @@ class SpinProcess(wx.Frame):
         self.main_window = wx.Frame.__init__(
             self, None, title="SpinProcess", size=(self.width, self.height)
         )
+
+        # Read the NMR data in the current directory
+        self.nmr_data = ReadFID(self)
 
         self.notebook = NotebookProcess(self, self.nmr_data)
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)

@@ -10403,7 +10403,14 @@ class SpinBore(wx.Frame):
         self.ppms_2 = self.main_frame.ppms_2
 
         self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-
+        self.ax_bore_3.set_xlim(max(self.ppms_0), min(self.ppms_0))
+        self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
+        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
+        if self.Xstrip.shape != self.bore_data_strip1.shape:
+            self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
+            self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
+            self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
+            self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
         self.ax_bore_3.contour(
             self.Xstrip,
             self.Ystrip,
@@ -10423,9 +10430,6 @@ class SpinBore(wx.Frame):
         self.line3 = self.ax_bore_3.axvline(
             x=self.bore_initial[0], color="black", linewidth=0.5
         )
-        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-        self.ax_bore_3.set_xlim(max(self.ppms_0), min(self.ppms_0))
-        self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
 
         self.ax_bore_3.set_title("Strip Plot")
 
@@ -10499,12 +10503,17 @@ class SpinBore(wx.Frame):
                 # Get the ppm values for the strip plot
                 self.ppms_2 = self.main_frame.ppms_2
 
-                self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-
                 title = self.ax_bore_3.get_title()
                 xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
                 self.ax_bore_3.clear()
 
+                self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
+                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+                if self.Xstrip.shape != self.bore_data_strip1.shape:
+                    self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
+                    self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
+                    self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
+                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
                 self.ax_bore_3.contour(
                     self.Xstrip,
                     self.Ystrip,
@@ -10525,7 +10534,6 @@ class SpinBore(wx.Frame):
                 self.line3 = self.ax_bore_3.axvline(
                     x=self.bore_initial[0], color="black", linewidth=0.5
                 )
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
                 self.ax_bore_3.set_xlim(xlim3)
                 self.ax_bore_3.set_title(title)
                 self.ax_bore_3.set_ylim(ylim3)
@@ -10577,6 +10585,12 @@ class SpinBore(wx.Frame):
                 self.ppms_2 = self.main_frame.ppms_2
 
                 self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
+                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+                if self.Xstrip.shape != self.bore_data_strip1.shape:
+                    self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
+                    self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
+                    self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
+                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
 
                 title = self.ax_bore_3.get_title()
                 xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
@@ -10602,7 +10616,6 @@ class SpinBore(wx.Frame):
                 self.line3 = self.ax_bore_3.axvline(
                     x=self.bore_initial[1], color="black", linewidth=0.5
                 )
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
                 self.ax_bore_3.set_xlim(xlim3)
                 self.ax_bore_3.set_title(title)
                 self.ax_bore_3.set_ylim(ylim3)
@@ -10690,7 +10703,7 @@ class SpinBore(wx.Frame):
         )
         self.ax_bore_3.set_xlim(xlim3)
         self.ax_bore_3.set_ylim(ylim3)
-        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+        self.ax_bore_3.set_xlabel(xlabel)
         self.ax_bore_3.set_title(title)
         self.UpdateBoreFrame()
 
