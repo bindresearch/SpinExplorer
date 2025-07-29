@@ -26,7 +26,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                         SpinProcess                         ")
 print("-------------------------------------------------------------")
-print("                (version 1.2) 20th June 2025                 ")
+print("                (version 2.0) 29th July 2025                 ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                        MIT License                          ")
 print("-------------------------------------------------------------")
