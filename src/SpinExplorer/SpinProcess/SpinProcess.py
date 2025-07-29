@@ -3,6 +3,7 @@
 """MIT License
 
 Copyright (c) 2025 James Eaton, Andrew Baldwin
+              2025, Bind Research
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +29,7 @@ print("                         SpinProcess                         ")
 print("-------------------------------------------------------------")
 print("                (version 2.0) 29th July 2025                 ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
+print("                     2025, Bind Research                     ")
 print("                        MIT License                          ")
 print("-------------------------------------------------------------")
 print("                     Processing NMR Data                     ")
