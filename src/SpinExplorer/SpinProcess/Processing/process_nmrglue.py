@@ -53,6 +53,24 @@ class ProcessNMRGlue:
 
         self.on_run_processing_nmrglue()
 
+        self.success_output_message()
+
+    def success_output_message(self):
+        """
+        Provides an output message to the user to say that the
+        conversion is complete.
+        """
+        dlg = wx.MessageDialog(
+            self.notebook,
+            "Data processing using nmrglue is complete.",
+            "Complete",
+            wx.OK,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
     def on_run_processing_nmrglue(self):
         """
         Apply the processing parameters to the data
@@ -304,7 +322,7 @@ class ProcessNMRGlue:
         ng.pipe.write(name, dic0, data0, overwrite=True)
 
         dic1, data1 = self.zero_transpose_3d(dic, data)
-        data1 = np.max(data1, axis=0)
+        data1_1 = np.max(data1, axis=0)
         dic1 = copy.deepcopy(dic1)
 
         dim_1 = dic1["FDDIMORDER"][2]
@@ -321,12 +339,12 @@ class ProcessNMRGlue:
 
         name = dic1["FDF3LABEL"] + "." + dic1["FDF2LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic1, data1, overwrite=True)
+        ng.pipe.write(name, dic1, data1_1, overwrite=True)
 
         dic2, data2 = self.transpose_3d(dic, data)
         dic2, data2 = self.zero_transpose_3d(dic2, data2)
 
-        data2 = np.max(data2, axis=0)
+        data2_1 = np.max(data2, axis=0)
         dic2 = copy.deepcopy(dic2)
 
         dim_2 = dic2["FDDIMORDER"][2]
@@ -343,7 +361,7 @@ class ProcessNMRGlue:
 
         name = dic2["FDF1LABEL"] + "." + dic2["FDF3LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic2, data2, overwrite=True)
+        ng.pipe.write(name, dic2, data2_1, overwrite=True)
 
         # front = np.max(data, axis=1)
         # side = np.max(data, axis=2)
