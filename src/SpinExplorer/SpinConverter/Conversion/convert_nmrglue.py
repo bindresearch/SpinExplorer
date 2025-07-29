@@ -2,7 +2,7 @@
 
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,8 @@ SOFTWARE."""
 
 import numpy as np
 import nmrglue as ng
+from typing import Dict
+from numpy.typing import NDArray
 
 
 class Convert_nmrglue:
@@ -36,12 +38,21 @@ class Convert_nmrglue:
         self.params = params
         self.nmrdata = nmrdata
 
+        sizes = []
+        for i, box in enumerate(self.app.format.N_complex_boxes):
+            size = int(box.GetValue())
+            if i == 0:
+                size = int(size / 2)
+            sizes.append(size)
+
+        sizes.reverse()
+
         C = ng.convert.converter()
         # Obtain first guesses of dictionary values
         if self.nmrdata.spectrometer == "Bruker":
-            dic, data = ng.fileio.bruker.read("./")
+            dic, data = ng.fileio.bruker.read("./", shape=tuple(sizes))
         else:
-            dic, data = ng.fileio.varian.read("./")
+            dic, data = ng.fileio.varian.read("./", shape=tuple(sizes))
 
         u = self.create_conversion_dictionary()
 
@@ -99,7 +110,141 @@ class Convert_nmrglue:
 
         ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
 
-    def add_intensity_scaling(self, pdata):
+    def create_conversion_dictionary(self) -> Dict:
+        """
+        Create a conversion dictionary based on the relevant current parameters
+        in the SpinConverter GUI
+        """
+
+        # Initially, the Rance-Kay (Echo-AntiEcho) flag is set to falso
+        self.rance_kay = False
+
+        if len(self.app.format.N_complex_boxes) == 1:
+            # Create a generic 1D conversion dictionary
+            u = {}
+            u["ndim"] = 1
+            u[0] = {}
+            u[0]["time"] = True
+            u[0]["freq"] = False
+
+            # Input values into the dictionary
+            u = self.populate_conversion_dictionary(u["ndim"], u, 0)
+
+        elif len(self.app.format.N_complex_boxes) == 2:
+            # Create a generic 2D conversion dictionary
+            u = {}
+            u["ndim"] = 2
+            for i in range(2):
+                u[i] = {}
+                u[i]["time"] = True
+                u[i]["freq"] = False
+
+            # Input conversion parameters into the dictionary
+            u = self.populate_conversion_dictionary(u["ndim"], u, 0)
+            u = self.populate_conversion_dictionary(u["ndim"], u, 1)
+
+        else:
+            # Create a generic 3D conversion dictionary
+            u = {}
+            u["ndim"] = 3
+            for i in range(3):
+                u[i] = {}
+                u[i]["time"] = True
+                u[i]["freq"] = False
+
+            # Input conversion parameters into the dictionary
+            u = self.populate_conversion_dictionary(u["ndim"], u, 0)
+            u = self.populate_conversion_dictionary(u["ndim"], u, 1)
+            u = self.populate_conversion_dictionary(u["ndim"], u, 2)
+
+        return u
+
+    def populate_conversion_dictionary(
+        self, dimensions: int, u: Dict, index: int
+    ) -> dict:
+        """
+        This function populates the conversion dictionary (u) for
+        the current dimension index
+        """
+
+        dict_index = dimensions - 1 - index
+
+        if index == 0:
+            u[dict_index]["size"] = int(
+                int(self.app.format.N_complex_boxes[index].GetValue().strip()) / 2
+            )
+            if (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "Real"
+            ):
+                u[dict_index]["complex"] = False
+            else:
+                u[dict_index]["complex"] = True
+
+            u[dict_index]["encoding"] = "direct"
+        else:
+            u[dict_index]["size"] = int(
+                self.app.format.N_complex_boxes[index].GetValue().strip()
+            )
+            if (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "Real"
+            ):
+                u[dict_index]["encoding"] = "real"
+                u[dict_index]["complex"] = False
+            elif (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "Complex"
+            ):
+                u[dict_index]["encoding"] = "complex"
+                u[dict_index]["complex"] = True
+            elif (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "States"
+            ):
+                u[dict_index]["encoding"] = "states"
+                u[dict_index]["complex"] = True
+            elif (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "TPPI"
+            ):
+                u[dict_index]["encoding"] = "tppi"
+                u[dict_index]["complex"] = True
+            elif (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "States-TPPI"
+            ):
+                u[dict_index]["encoding"] = "states-tppi"
+                u[dict_index]["complex"] = True
+            elif (
+                self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "Echo-Antiecho"
+                or self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "Echo-AntiEcho"
+                or self.app.format.acqusition_combo_boxes[index].GetValue().strip()
+                == "Rance-Kay"
+            ):
+                u[dict_index]["encoding"] = "complex"
+                u[dict_index]["complex"] = True
+                self.rance_kay = True
+
+        u[dict_index]["sw"] = float(
+            self.app.format.sweep_width_boxes[index].GetValue().strip()
+        )
+        u[dict_index]["obs"] = float(
+            self.app.format.nuclei_frequency_boxes[index].GetValue().strip()
+        )
+        u[dict_index]["car"] = (
+            float(self.app.format.carrier_frequency_boxes[index].GetValue().strip())
+            * u[dict_index]["obs"]
+        )
+        u[dict_index]["label"] = (
+            self.app.format.nucleus_type_boxes[index].GetValue().strip()
+        )
+
+        return u
+
+    def add_intensity_scaling(self, pdata: NDArray) -> NDArray:
         """
         If the intensity scaling box is not equal to 1 then the FID data
         needs to be scaled by the scaling box number
@@ -112,7 +257,7 @@ class Convert_nmrglue:
             # Multiplication by scaling number did not work
             return pdata
 
-    def reshape_nus_data(self, data):
+    def reshape_nus_data(self, data: NDArray) -> NDArray:
         """
         Reshaping the NUS FID to the correct order and inserting
         zeros into the missing gaps.
@@ -133,7 +278,7 @@ class Convert_nmrglue:
         data = ng.proc_base.expand_nus(data, shape, nuslist_tuple)
         return data
 
-    def remove_digital_filter_fid(self, data):
+    def remove_digital_filter_fid(self, data: NDArray) -> NDArray:
         """
         Removing the Bruker digital filter before Fourier transform
         (post_proc=False). This amounts to a circular shift of the
@@ -143,272 +288,7 @@ class Convert_nmrglue:
         dspfvs = int(self.app.format.dspfvs_textbox.GetValue())
         grpdly = float(self.app.format.grpdly_textbox.GetValue())
         data = ng.bruker.rm_dig_filter(data, decim, dspfvs, grpdly, post_proc=False)
-
-    def create_conversion_dictionary(self):
-        self.rance_kay = False
-        if len(self.app.format.N_complex_boxes) == 1:
-            u = {
-                "ndim": 1,
-                0: {
-                    "sw": 0,
-                    "complex": True,
-                    "obs": 0,
-                    "car": 0,
-                    "size": 0,
-                    "label": "",
-                    "encoding": "direct",
-                    "time": True,
-                    "freq": False,
-                },
-            }
-            u["ndim"] = 1
-            u[0]["size"] = int(
-                int(self.app.format.N_complex_boxes[0].GetValue().strip()) / 2
-            )
-            if self.app.format.acqusition_combo_boxes[0].GetValue().strip() == "Real":
-                u[0]["complex"] = False
-            else:
-                u[0]["complex"] = True
-            u[0]["encoding"] = "direct"
-            u[0]["sw"] = float(self.app.format.sweep_width_boxes[0].GetValue().strip())
-            u[0]["obs"] = float(
-                self.app.format.nuclei_frequency_boxes[0].GetValue().strip()
-            )
-            u[0]["car"] = (
-                float(self.app.format.carrier_frequency_boxes[0].GetValue().strip())
-                * u[0]["obs"]
-            )
-            u[0]["label"] = self.app.format.nucleus_type_boxes[0].GetValue().strip()
-
-        elif len(self.app.format.N_complex_boxes) == 2:
-            u = {
-                "ndim": 2,
-                0: {
-                    "sw": 0,
-                    "complex": True,
-                    "obs": 0,
-                    "car": 0,
-                    "size": 0,
-                    "label": "",
-                    "encoding": "direct",
-                    "time": True,
-                    "freq": False,
-                },
-                1: {
-                    "sw": 0,
-                    "complex": True,
-                    "obs": 0,
-                    "car": 0,
-                    "size": 0,
-                    "label": "",
-                    "encoding": "direct",
-                    "time": True,
-                    "freq": False,
-                },
-            }
-            u[1]["size"] = int(
-                int(self.app.format.N_complex_boxes[0].GetValue().strip()) / 2
-            )
-            if self.app.format.acqusition_combo_boxes[0].GetValue().strip() == "Real":
-                u[1]["complex"] = False
-            else:
-                u[1]["complex"] = True
-            u[1]["encoding"] = "direct"
-            u[1]["sw"] = float(self.app.format.sweep_width_boxes[0].GetValue().strip())
-            u[1]["obs"] = float(
-                self.app.format.nuclei_frequency_boxes[0].GetValue().strip()
-            )
-            u[1]["car"] = (
-                float(self.app.format.carrier_frequency_boxes[0].GetValue().strip())
-                * u[1]["obs"]
-            )
-            u[1]["label"] = self.app.format.nucleus_type_boxes[0].GetValue().strip()
-
-            u[0]["size"] = int(self.app.format.N_complex_boxes[1].GetValue().strip())
-            if self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "Real":
-                u[0]["complex"] = False
-            else:
-                u[0]["complex"] = True
-            if self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "Real":
-                u[0]["encoding"] = "real"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Complex"
-            ):
-                u[0]["encoding"] = "complex"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "States"
-            ):
-                u[0]["encoding"] = "states"
-            elif self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "TPPI":
-                u[0]["encoding"] = "tppi"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "States-TPPI"
-            ):
-                u[0]["encoding"] = "states-tppi"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Echo-Antiecho"
-                or self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Echo-AntiEcho"
-                or self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Rance-Kay"
-            ):
-                u[0]["encoding"] = "complex"
-                self.rance_kay = True
-            u[0]["sw"] = float(self.app.format.sweep_width_boxes[1].GetValue().strip())
-            u[0]["obs"] = float(
-                self.app.format.nuclei_frequency_boxes[1].GetValue().strip()
-            )
-            u[0]["car"] = (
-                float(self.app.format.carrier_frequency_boxes[1].GetValue().strip())
-                * u[0]["obs"]
-            )
-            u[0]["label"] = self.app.format.nucleus_type_boxes[1].GetValue().strip()
-
-        else:
-            u = {
-                "ndim": 3,
-                0: {
-                    "sw": 0,
-                    "complex": True,
-                    "obs": 0,
-                    "car": 0,
-                    "size": 0,
-                    "label": "",
-                    "encoding": "direct",
-                    "time": True,
-                    "freq": False,
-                },
-                1: {
-                    "sw": 0,
-                    "complex": True,
-                    "obs": 0,
-                    "car": 0,
-                    "size": 0,
-                    "label": "",
-                    "encoding": "direct",
-                    "time": True,
-                    "freq": False,
-                },
-                2: {
-                    "sw": 0,
-                    "complex": True,
-                    "obs": 0,
-                    "car": 0,
-                    "size": 0,
-                    "label": "",
-                    "encoding": "direct",
-                    "time": True,
-                    "freq": False,
-                },
-            }
-            u[2]["size"] = int(
-                int(self.app.format.N_complex_boxes[0].GetValue().strip()) / 2
-            )
-            if self.app.format.acqusition_combo_boxes[0].GetValue().strip() == "Real":
-                u[2]["complex"] = False
-            else:
-                u[2]["complex"] = True
-            u[2]["encoding"] = "direct"
-            u[2]["sw"] = float(self.app.format.sweep_width_boxes[0].GetValue().strip())
-            u[2]["obs"] = float(
-                self.app.format.nuclei_frequency_boxes[0].GetValue().strip()
-            )
-            u[2]["car"] = (
-                float(self.app.format.carrier_frequency_boxes[0].GetValue().strip())
-                * u[2]["obs"]
-            )
-            u[2]["label"] = self.app.format.nucleus_type_boxes[0].GetValue().strip()
-
-            u[1]["size"] = int(self.app.format.N_complex_boxes[1].GetValue().strip())
-            if self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "Real":
-                u[1]["complex"] = False
-            else:
-                u[1]["complex"] = True
-            if self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "Real":
-                u[1]["encoding"] = "real"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Complex"
-            ):
-                u[1]["encoding"] = "complex"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "States"
-            ):
-                u[1]["encoding"] = "states"
-            elif self.app.format.acqusition_combo_boxes[1].GetValue().strip() == "TPPI":
-                u[1]["encoding"] = "tppi"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "States-TPPI"
-            ):
-                u[1]["encoding"] = "states-tppi"
-            elif (
-                self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Echo-Antiecho"
-                or self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Echo-AntiEcho"
-                or self.app.format.acqusition_combo_boxes[1].GetValue().strip()
-                == "Rance-Kay"
-            ):
-                u[1]["encoding"] = "complex"
-                self.rance_kay = True
-            u[1]["sw"] = float(self.app.format.sweep_width_boxes[1].GetValue().strip())
-            u[1]["obs"] = float(
-                self.app.format.nuclei_frequency_boxes[1].GetValue().strip()
-            )
-            u[1]["car"] = (
-                float(self.app.format.carrier_frequency_boxes[1].GetValue().strip())
-                * u[1]["obs"]
-            )
-            u[1]["label"] = self.app.format.nucleus_type_boxes[1].GetValue().strip()
-
-            u[0]["size"] = int(self.app.format.N_complex_boxes[2].GetValue().strip())
-            if self.app.format.acqusition_combo_boxes[2].GetValue().strip() == "Real":
-                u[0]["complex"] = False
-            else:
-                u[0]["complex"] = True
-            if self.app.format.acqusition_combo_boxes[2].GetValue().strip() == "Real":
-                u[0]["encoding"] = "real"
-            elif (
-                self.app.format.acqusition_combo_boxes[2].GetValue().strip()
-                == "Complex"
-            ):
-                u[0]["encoding"] = "complex"
-            elif (
-                self.app.format.acqusition_combo_boxes[2].GetValue().strip() == "States"
-            ):
-                u[0]["encoding"] = "states"
-            elif self.app.format.acqusition_combo_boxes[2].GetValue().strip() == "TPPI":
-                u[0]["encoding"] = "tppi"
-            elif (
-                self.app.format.acqusition_combo_boxes[2].GetValue().strip()
-                == "States-TPPI"
-            ):
-                u[0]["encoding"] = "states-tppi"
-            elif (
-                self.app.format.acqusition_combo_boxes[2].GetValue().strip()
-                == "Echo-Antiecho"
-                or self.app.format.acqusition_combo_boxes[2].GetValue().strip()
-                == "Echo-AntiEcho"
-                or self.app.format.acqusition_combo_boxes[2].GetValue().strip()
-                == "Rance-Kay"
-            ):
-                u[0]["encoding"] = "complex"
-                self.rance_kay = True
-            u[0]["sw"] = float(self.app.format.sweep_width_boxes[2].GetValue().strip())
-            u[0]["obs"] = float(
-                self.app.format.nuclei_frequency_boxes[2].GetValue().strip()
-            )
-            u[0]["car"] = (
-                float(self.app.format.carrier_frequency_boxes[2].GetValue().strip())
-                * u[0]["obs"]
-            )
-            u[0]["label"] = self.app.format.nucleus_type_boxes[2].GetValue().strip()
-
-        return u
+        return data
 
     def rancekay_shuffling(self, dic, data, udic, rotate_phase=True, **kwargs):
         """
@@ -445,7 +325,6 @@ class Convert_nmrglue:
 
         # Creating an empty array to store the reshuffled data
         shuffled_data = np.empty(data.shape, data.dtype)
-
         # If final dimension is Rance-Kay/Echo-AntiEcho
         if rance_kay_dimensions == [0]:
             for i in range(0, data.shape[0], 2):

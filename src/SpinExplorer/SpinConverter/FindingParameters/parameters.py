@@ -3,7 +3,7 @@
 
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -222,13 +222,15 @@ class FindingParameters:
             # Extracting spectrum dimensions
             self.params.find_size_bruker()
             # Determine if any axis is a pseudo (non-complex) axis
-            self.params.find_pseudo_axis_bruker()
+            self.params.find_acquisition_modes_bruker()
             # Finding the spectrum sweep widths
             self.params.find_sw_bruker()
             # Finding the nucleus spectrometer frequencies
             self.params.find_nucleus_frequencies_bruker()
             # Finding the dimension labels
             self.params.find_labels_bruker()
+            # Find the acquisition order
+            self.params.find_aqseq()
             # Finding the temperature the experiment was performed at
             self.params.find_temperature_bruker()
             # Finding the carrier frequency of each dimension

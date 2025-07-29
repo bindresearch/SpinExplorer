@@ -1,13 +1,19 @@
 A python-based graphical interface package to perform NMR data processing and analysis.
 
-Full processing functionality is enabled through nmrPipe installation: https://www.ibbr.umd.edu/nmrpipe/install.html  
-In the absence of nmrPipe (e.g. windows systems), NMR processing is performed using nmrglue.
+Processing can be performed using nmrglue or nmrPipe. All processing except SMILE NUS reconstruction can be performed using nmrglue.
 
 Full documentation provided at "https://github.com/james-eaton-1/SpinExplorer" in Documentation.pdf
 
-Once installed, the commands SpinConverter, SpinProcess and SpinView can be ran from a terminal in a directory containing raw NMR data to perform NMR data conversion, processing, and viewing/analysis, respectively. 
+Once installed, the commands SpinConverter, SpinProcess and SpinView can be ran from a terminal in a directory containing raw NMR data to perform NMR data conversion, processing, and viewing/analysis, respectively.
 
-Installation (macOS/Linux):
+Installation from GitHub:
+- Clone the GitHub repository
+- Create a virtual environment containing python3>=3.11 (see PyPi installation instructions)
+- Activate the virtual environment
+- From the main package directory (containing README.md) run the command "pip install -e ."
+
+
+Installation from PyPi (macOS/Linux):
 - Ensure python3 version is greater than 3.10 (package not tested on python<3.10)
 - It is recommended to create a python3 virtual environment in the terminal using the command:  
 "python3 -m venv ~/SpinEnv"    
@@ -25,7 +31,7 @@ More details and fixes at https://wxpython.org/pages/downloads/
 Currently, wxPython needs to be build from source for Linux systems without x86_64 architecture.  
 More details at https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html
 
-Installation (Windows):
+Installation from PyPi (Windows):
 - Using py (py-launcher) is recommended for windows systems  
 If py is not present, download latest python from https://www.python.org, and ensure install py-launcher is ticked
 - If desired, a virtual environment for the package can be created according to https://docs.python.org/3/tutorial/venv.html

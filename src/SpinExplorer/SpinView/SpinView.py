@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                          SpinView                           ")
 print("-------------------------------------------------------------")
-print("                (version 1.2) 20th June 2025                 ")
+print("                (version 2.0) 29th July 2025                 ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                        MIT License                          ")
 print("-------------------------------------------------------------")
@@ -97,7 +97,7 @@ class GetData:
             self.get_filename()
         self.read_data()
         self.dim = self.get_dimensions()
-        if(self.file != "."):
+        if self.file != ".":
             # NMRPipe data
             self.get_axislabels_nmrglue()
         else:
@@ -253,8 +253,6 @@ class GetData:
     #         self.axislabels.append(self.dic['FDF2LABEL'])
     #         self.axislabels.append(self.dic['FDF3LABEL'])
 
-        
-
     #     # # Try the command showhdr to get the axis labels
     #     # command = "showhdr " + self.file
     #     # # output = subprocess.check_output(command)
@@ -305,20 +303,18 @@ class GetData:
 
         self.axislabels = []
 
-        if(self.dim == 1):
+        if self.dim == 1:
             # If 1D take FDF1LABEL
             self.axislabels.append(self.dic["FDF1LABEL"])
-        elif(self.dim == 2):
+        elif self.dim == 2:
             # If 2D take FDF2LABEL as direct and FDF1LABEL as indirect
-            self.axislabels.append(self.dic['FDF1LABEL'])
-            self.axislabels.append(self.dic['FDF2LABEL'])
+            self.axislabels.append(self.dic["FDF1LABEL"])
+            self.axislabels.append(self.dic["FDF2LABEL"])
         else:
-            # If 3D take FDF3LABEL as direct, FDF2LABEL as indirect1 and FDF3LABEL as indirect3
-            self.axislabels.append(self.dic['FDF1LABEL'])
-            self.axislabels.append(self.dic['FDF2LABEL'])
-            self.axislabels.append(self.dic['FDF3LABEL'])
-
-
+            # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
+            self.axislabels.append(self.dic["FDF3LABEL"])
+            self.axislabels.append(self.dic["FDF2LABEL"])
+            self.axislabels.append(self.dic["FDF1LABEL"])
 
     def generic_labels_bruker(self):
         """
@@ -441,7 +437,7 @@ class ChooseFile(wx.Dialog):
         if self.session_choice == False:
             self.parent.read_data()
             self.parent.dim = self.parent.get_dimensions()
-            self.parent.get_axislabels()
+            self.parent.get_axislabels_nmrglue()
 
 
 # This class creates sliders which can contain floating point values
@@ -4457,7 +4453,7 @@ class TwoDViewer(wx.Panel):
         # Open an instance of SpinProcess
         if self.parent.path != "":
             os.chdir(self.parent.path)
-        from SpinExplorer.SpinProcess import SpinProcess
+        from SpinExplorer.SpinProcess.SpinProcess import SpinProcess
 
         reprocessing_frame = SpinProcess(self)
         reprocessing_frame.reprocess = True
@@ -7106,7 +7102,7 @@ class ThreeDViewer(wx.Panel):
         # Open an instance of SpinProcess
         if self.parent.path != "":
             os.chdir(self.parent.path)
-        from SpinExplorer.SpinProcess import SpinProcess
+        from SpinExplorer.SpinProcess.SpinProcess import SpinProcess
 
         reprocessing_frame = SpinProcess(self)
         reprocessing_frame.reprocess = True

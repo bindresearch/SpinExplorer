@@ -1,6 +1,6 @@
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ from typing import Union, Dict, Any
 class Read_json:
     def __init__(self, params, nmrdata, app):
         """
-        This class will read a converter.json file and ensure that all of the
+        This class will read a parameter.json file and ensure that all of the
         parameters are valid (if not will go back to original read parameters).
         It will then load all the correct parameters etc into the
         SpinConverter app.

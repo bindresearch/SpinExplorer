@@ -2,7 +2,7 @@
 
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,7 @@ class FormatParametersBruker:
                         labelval = self.params.labels_correct_order[i]
                     size = str(self.params.indirect_sizes_dict[labelval])
                 except:
+                    size_indirect = self.params.size_indirect.reverse()
                     size = str(self.params.size_indirect[i - 1])
                 self.N_complex_boxes.append(
                     wx.TextCtrl(self.app, value=size, size=(200, 20))
@@ -124,45 +125,23 @@ class FormatParametersBruker:
                 if i == 0:
                     self.N_real_boxes.append(
                         wx.TextCtrl(
-                            self.app, value=str(self.params.size_direct), size=(200, 20)
+                            self.app,
+                            value=str(int(self.params.size_direct / 2)),
+                            size=(200, 20),
                         )
                     )
                 else:
-                    if i in self.params.pseudo_flag:
-                        try:
-                            if self.params.labels_correct_order[i] == "ID":
-                                labelval = "off"
-                            else:
-                                labelval = self.params.labels_correct_order[i]
-                            size = str(self.params.indirect_sizes_dict[labelval])
-                        except:
-                            size = str(self.params.size_indirect[i - 1])
-                        self.N_real_boxes.append(
-                            wx.TextCtrl(self.app, value=size), size=(200, 20)
-                        )
+                    if (
+                        self.params.acqusition_modes_indirect[i - 1] == 0
+                        or self.params.acqusition_modes_indirect[i - 1] == 1
+                    ):
+                        # pseudo (real) axis
+                        real_size = str(self.params.size_indirect[i - 1])
                     else:
-                        try:
-                            if self.params.labels_correct_order[i] == "ID":
-                                labelval = "off"
-                            else:
-                                labelval = self.params.labels_correct_order[i]
-                            size = str(self.params.indirect_sizes_dict[labelval])
-                        except:
-                            size = str(int(self.params.size_indirect[i - 1] / 2))
-                        self.N_real_boxes.append(
-                            wx.TextCtrl(
-                                self.app,
-                                value=str(
-                                    int(
-                                        self.nmrdata.nmr_data.shape[
-                                            self.nmrdata.data_dimensions - 1 - i
-                                        ]
-                                        / 2
-                                    )
-                                ),
-                                size=(200, 20),
-                            )
-                        )
+                        real_size = str(int(self.params.size_indirect[i - 1] / 2))
+                    self.N_real_boxes.append(
+                        wx.TextCtrl(self.app, value=real_size, size=(200, 20))
+                    )
 
         self.N_real_sizer.AddSpacer(20)
         self.N_real_sizer.Add(self.N_real_txt)
@@ -172,6 +151,42 @@ class FormatParametersBruker:
             self.N_real_sizer.AddSpacer(20)
         self.app.menu_bar.AddSpacer(10)
         self.app.menu_bar.Add(self.N_real_sizer)
+
+        # if i in range(self.params.pseudo_flag):
+        #     try:
+        #         if self.params.labels_correct_order[i] == "ID":
+        #             labelval = "off"
+        #         else:
+        #             labelval = self.params.labels_correct_order[i]
+        #         size = str(self.params.indirect_sizes_dict[labelval])
+        #     except:
+        #         size = str(self.params.size_indirect[i - 1])
+        #     self.N_real_boxes.append(
+        #         wx.TextCtrl(self.app, value=size), size=(200, 20)
+        #     )
+        # else:
+        #     try:
+        #         if self.params.labels_correct_order[i] == "ID":
+        #             labelval = "off"
+        #         else:
+        #             labelval = self.params.labels_correct_order[i]
+        #         size = str(self.params.indirect_sizes_dict[labelval])
+        #     except:
+        #         size = str(int(self.params.size_indirect[i - 1] / 2))
+        #     self.N_real_boxes.append(
+        #         wx.TextCtrl(
+        #             self.app,
+        #             value=str(
+        #                 int(
+        #                     self.nmrdata.nmr_data.shape[
+        #                         self.nmrdata.data_dimensions - 1 - i
+        #                     ]
+        #                     / 2
+        #                 )
+        #             ),
+        #             size=(200, 20),
+        #         )
+        #     )
 
     def input_acquisition_modes_bruker(self) -> None:
         """
@@ -185,6 +200,16 @@ class FormatParametersBruker:
             self.app, label="Acquisition mode:           "
         )
         self.acquisition_mode_options_direct = ["DQD", "Complex", "Sequential", "Real"]
+        if self.params.acqusition_mode_direct == 3:
+            choice_direct = 0
+        elif self.params.acqusition_mode_direct == 1:
+            choice_direct = 2
+        else:
+            choice_direct = 1
+
+        # mapping between FnMODE and options list
+        indirect_mapping = {0: 5, 1: 5, 3: 3, 4: 4, 5: 1, 6: 2}
+
         self.acquisition_mode_options_indirect = [
             "Complex",
             "States-TPPI",
@@ -200,7 +225,7 @@ class FormatParametersBruker:
                 self.acqusition_combo_boxes.append(
                     wx.ComboBox(
                         self.app,
-                        value=self.acquisition_mode_options_direct[0],
+                        value=self.acquisition_mode_options_direct[choice_direct],
                         choices=self.acquisition_mode_options_direct,
                         size=(200, 20),
                         style=wx.CB_READONLY,
@@ -210,61 +235,69 @@ class FormatParametersBruker:
                     wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                 )
             else:
-                if self.params.acqusition_modes[i - 1] == "QF":
-                    self.acqusition_combo_boxes.append(
-                        wx.ComboBox(
-                            self.app,
-                            value=self.acquisition_mode_options_indirect[5],
-                            choices=self.acquisition_mode_options_indirect,
-                            size=(200, 20),
-                            style=wx.CB_READONLY,
-                        )
+                self.acqusition_combo_boxes.append(
+                    wx.ComboBox(
+                        self.app,
+                        value=self.acquisition_mode_options_indirect[
+                            indirect_mapping[
+                                self.params.acqusition_modes_indirect[i - 1]
+                            ]
+                        ],
+                        choices=self.acquisition_mode_options_indirect,
+                        size=(200, 20),
+                        style=wx.CB_READONLY,
                     )
+                )
+                if (
+                    self.params.acqusition_modes_indirect[i - 1] == 0
+                    or self.params.acqusition_modes_indirect[i - 1] == 1
+                ):
                     self.N_real_boxes[i].SetValue(
                         str(self.N_complex_boxes[i].GetValue())
                     )
-                    self.params.sw_indirect[i - 1] = 0
-                    self.acqusition_combo_boxes[i].Bind(
-                        wx.EVT_COMBOBOX, self.shared_format.on_acquisition_mode_change
-                    )
-                else:
-                    determined_value = self.params.acqusition_modes[i - 1]
-                    detected_value = ""
-                    for j in range(len(self.acquisition_mode_options_indirect)):
-                        if (
-                            self.acquisition_mode_options_indirect[j].upper()
-                            == determined_value.upper()
-                        ):
-                            detected_value = self.acquisition_mode_options_indirect[j]
-                            break
-                    if detected_value == "":
-                        self.acqusition_combo_boxes.append(
-                            wx.ComboBox(
-                                self.app,
-                                value=self.acquisition_mode_options_indirect[0],
-                                choices=self.acquisition_mode_options_indirect,
-                                size=(200, 20),
-                                style=wx.CB_READONLY,
-                            )
-                        )
-                        self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX,
-                            self.app.shared_format.on_acquisition_mode_change,
-                        )
-                    else:
-                        self.acqusition_combo_boxes.append(
-                            wx.ComboBox(
-                                self.app,
-                                value=detected_value,
-                                choices=self.acquisition_mode_options_indirect,
-                                size=(200, 20),
-                                style=wx.CB_READONLY,
-                            )
-                        )
-                        self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX,
-                            self.app.shared_format.on_acquisition_mode_change,
-                        )
+                    self.params.sw_indirect[i - 1] = 1
+                self.acqusition_combo_boxes[i].Bind(
+                    wx.EVT_COMBOBOX,
+                    self.app.shared_format.on_acquisition_mode_change,
+                )
+                # else:
+                #     determined_value = self.params.acqusition_modes[i - 1]
+                #     detected_value = ""
+                #     for j in range(len(self.acquisition_mode_options_indirect)):
+                #         if (
+                #             self.acquisition_mode_options_indirect[j].upper()
+                #             == determined_value.upper()
+                #         ):
+                #             detected_value = self.acquisition_mode_options_indirect[j]
+                #             break
+                #     if detected_value == "":
+                #         self.acqusition_combo_boxes.append(
+                #             wx.ComboBox(
+                #                 self.app,
+                #                 value=self.acquisition_mode_options_indirect[0],
+                #                 choices=self.acquisition_mode_options_indirect,
+                #                 size=(200, 20),
+                #                 style=wx.CB_READONLY,
+                #             )
+                #         )
+                #         self.acqusition_combo_boxes[i].Bind(
+                #             wx.EVT_COMBOBOX,
+                #             self.app.shared_format.on_acquisition_mode_change,
+                #         )
+                #     else:
+                #         self.acqusition_combo_boxes.append(
+                #             wx.ComboBox(
+                #                 self.app,
+                #                 value=detected_value,
+                #                 choices=self.acquisition_mode_options_indirect,
+                #                 size=(200, 20),
+                #                 style=wx.CB_READONLY,
+                #             )
+                #         )
+                #         self.acqusition_combo_boxes[i].Bind(
+                #             wx.EVT_COMBOBOX,
+                #             self.app.shared_format.on_acquisition_mode_change,
+                #         )
 
         self.acquisition_mode_sizer.AddSpacer(20)
         self.acquisition_mode_sizer.Add(self.acquisition_mode_txt)
@@ -477,17 +510,25 @@ class FormatParametersBruker:
                 )
                 id_columns += 1
             else:
+                nuc_type = self.nucleus_type_boxes[i].GetValue()
+                main_index = i - 1
+                for k, reference_label in enumerate(
+                    self.params.references_other_labels
+                ):
+                    if nuc_type in reference_label:
+                        main_index = k
+
                 self.carrier_frequency_boxes.append(
                     wx.TextCtrl(
                         self.app,
-                        value=str(self.params.references_other[i - 1]),
+                        value=str(self.params.references_other[main_index]),
                         size=(200, 20),
                     )
                 )
                 self.carrier_combo_boxes.append(
                     wx.ComboBox(
                         self.app,
-                        value=self.params.references_other_labels[i - 1],
+                        value=self.params.references_other_labels[main_index],
                         choices=self.options_other_dimensions,
                         size=(200, 20),
                         style=wx.CB_READONLY,

@@ -2,7 +2,7 @@
 
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -273,6 +273,7 @@ class ParameterExtractorBruker:
         Reading through the Bruker acqus file to find the sweep widths
         for each spectrum dimension.
         """
+        self.sw_indirect = []
         for i in range(len(self.size_indirect) + 1):
             if i == 0:
                 for j in range(len(self.acqus_file_lines)):
@@ -282,7 +283,6 @@ class ParameterExtractorBruker:
                         break
             if i == 1:
                 try:
-                    self.sw_indirect = []
                     file = open("acqu2s", "r")
                     file_lines = file.readlines()
                     file.close()
@@ -430,6 +430,55 @@ class ParameterExtractorBruker:
                                 else:
                                     self.labels_correct_order.append(key)
 
+    def find_aqseq(self) -> None:
+        """
+        The aqseq parameter determines the acquisition order. For 3D or pseudo3D
+        data this is essential because the order of acquisition matters for the
+        conversion of the data. It can be either 321 or 312 for 3D data and can
+        be found in the pulseprogram or pulseprogram.precomp file.
+        """
+
+        aqseq_value = 0
+        try:
+            with open("pulseprogram") as file:
+                lines = file.readlines()
+                for line in lines:
+                    if "aqseq" in line:
+                        if line.split()[0] == "aqseq":
+                            aqseq_value = line.split()[1]
+        except:
+            try:
+                with open("pulseprogram.precomp") as file:
+                    lines = file.readlines()
+                    for line in lines:
+                        if line.split()[0] == "aqseq":
+                            aqseq_value = line.split()[1]
+
+            except:
+                print("Unable to find acquisition order. Using standard ordering.")
+
+        if aqseq_value == "312":
+            # The indirect dimensions need reversing
+            self.reverse_indirect_dimension_parameters()
+
+    def reverse_indirect_dimension_parameters(self) -> None:
+        """
+        If aqseq = 312 then the indirect dimension parameters need to
+        be reversed.
+        """
+
+        self.size_indirect.reverse()
+        self.sw_indirect.reverse()
+        freq1 = self.nucleus_frequencies[-1]
+        freq2 = self.nucleus_frequencies[-2]
+        self.nucleus_frequencies[-1] = freq2
+        self.nucleus_frequencies[-2] = freq1
+        self.acqusition_modes_indirect.reverse()
+        lab1 = self.labels_correct_order[-1]
+        lab2 = self.labels_correct_order[-2]
+        self.labels_correct_order[-1] = lab2
+        self.labels_correct_order[-2] = lab1
+
     def find_gamma_bruker(self) -> None:
         """
         Producing a dictionary containing the gyromagnetic ratio of most NMR
@@ -490,175 +539,217 @@ class ParameterExtractorBruker:
         self.gamma["205Tl"] = 15.58829e7
         self.gamma["207Pb"] = 5.64661e7
 
-    def find_pseudo_axis_bruker(self) -> None:
+    def find_acquisition_modes_bruker(self) -> None:
         """
-        Function to try to determine if a spectrum has a pseudo (non-complex)
-        dimension. Read pulseprogram.precomp (or pulseprogram) file to see if the data
-        has a pseudo axis. If pseudo, it should have a QF in the acqusition
-        mode of that dimension. Note: this is not general, especially for
-        custom written pulse sequences.
+        Function to try to determine the acquisition modes of the bruker
+        data using the acqus files from the AQ_Mod for the direct dimension
+        in acqus and FnMode for the indirect dimensions in acqu2s and acqu3s
+        etc.
+
+        For the direct dimension acquisition mode:
+        AQ_mod = 0, 1, 2, 3 for QF, QSEQ, QSIM, DQD
+
+        For the indirect dimension acqusition modes:
+        FnMode:
+        0 = undefined (real),
+        1 = QF (real),
+        2 = QSED,
+        3 = TPPI,
+        4 = States,
+        5 = States-TPPI,
+        6 = Echo-AntiEcho
         """
-        self.acqusition_modes = []
+
+        self.acqusition_mode_direct = 3  # setting the default value
+        self.acqusition_modes_indirect = []
         self.pseudo_flag = 0
+
+        for line in self.acqus_file_lines:
+            if "##$AQ_mod=" in line:
+                line = line.split()[1]
+                self.acqusition_mode_direct = int(line)
+
         if self.nmrdata.data_dimensions > 1 or self.size_indirect != []:
             self.pseudo_flag = 0
-            try:
-                self.pulseprogram_file = open("pulseprogram.precomp", "r")
-                self.pulseprogram_file_lines = self.pulseprogram_file.readlines()
-                self.pulseprogram_file.close()
-            except:
-                try:
-                    self.pulseprogram_file = open("pulseprogram", "r")
-                    self.pulseprogram_file_lines = self.pulseprogram_file.readlines()
-                    self.pulseprogram_file.close()
-                except:
-                    dlg = wx.MessageDialog(
-                        self.tempframe,
-                        "Error: TD not found in acqus file. Unable to determine size of data for direct dimension. Unable to convert data to NMRPipe format. Please check the acqus file and try again.",
-                        "Error",
-                        wx.OK | wx.ICON_ERROR,
-                    )
-                    self.tempframe.Raise()
-                    self.tempframe.SetFocus()
-                    dlg.ShowModal()
-                    dlg.Destroy()
 
-            count = 0
-            try:
+            # Try to read through acqu2s and acqu3s to find the FnMODE parameter
 
-                for i in range(len(self.pulseprogram_file_lines)):
-                    if "AQ_mode" in self.pulseprogram_file_lines[i]:
-                        line = self.pulseprogram_file_lines[i].split()
-                        # Find the index of AQ_mode and delete everything before it
-                        for j in range(len(line)):
-                            if line[j] == "AQ_mode":
-                                index = j
-                        line = line[index + 1 :]
-                        # Remove any terms containing brackets
-                        new_line = []
-                        for j in range(len(line)):
-                            if "(" not in line[j]:
-                                new_line.append(line[j])
-                        break
+            with open("acqu2s", "r") as file:
+                file_lines = file.readlines()
+                for line in file_lines:
+                    if "##$FnMODE=" in line:
+                        line = line.split()[1]
+                        self.acqusition_modes_indirect.append(int(line))
+                        if int(line) == 0 or int(line) == 1:
+                            self.pseudo_flag += 1
 
-                if new_line.count("QF") > 0:
-                    # Then at least one of the dimensions is a pseudo axis
-                    if new_line.count("QF") == 1:
-                        # Then there is only one pseudo axis
-                        self.pseudo_flag = 1
-                    else:
-                        # Then there are multiple pseudo axes
-                        for i in range(len(new_line)):
-                            if new_line[i] == "QF":
-                                count += 1
-                        self.pseudo_flag = count
+            if len(self.size_indirect) > 1:
+                with open("acqu3s", "r") as file:
+                    file_lines = file.readlines()
+                    for line in file_lines:
+                        if "##$FnMODE=" in line:
+                            line = line.split()[1]
+                            self.acqusition_modes_indirect.append(int(line))
+                            if int(line) == 0 or int(line) == 1:
+                                self.pseudo_flag += 1
 
-                self.acqusition_modes = new_line
+            # try:
+            #     self.pulseprogram_file = open("pulseprogram.precomp", "r")
+            #     self.pulseprogram_file_lines = self.pulseprogram_file.readlines()
+            #     self.pulseprogram_file.close()
+            # except:
+            #     try:
+            #         self.pulseprogram_file = open("pulseprogram", "r")
+            #         self.pulseprogram_file_lines = self.pulseprogram_file.readlines()
+            #         self.pulseprogram_file.close()
+            #     except:
+            #         dlg = wx.MessageDialog(
+            #             self.tempframe,
+            #             "Error: TD not found in acqus file. Unable to determine size of data for direct dimension. Unable to convert data to NMRPipe format. Please check the acqus file and try again.",
+            #             "Error",
+            #             wx.OK | wx.ICON_ERROR,
+            #         )
+            #         self.tempframe.Raise()
+            #         self.tempframe.SetFocus()
+            #         dlg.ShowModal()
+            #         dlg.Destroy()
 
-            except:
-                try:
-                    self.pseudo_flag = 0
-                    # Read pulseprogram file to see if there is an FnMode option to input the acqusition mode
-                    # This can be used as a guess for the acquisition modes
-                    for i in range(len(self.pulseprogram_file_lines)):
-                        if "FnMODE" in self.pulseprogram_file_lines[i]:
-                            line = (
-                                self.pulseprogram_file_lines[i]
-                                .split("\n")[0]
-                                .split("FnMODE:")[1]
-                                .strip()
-                            )
-                            if len(line.split()) > 1:
-                                self.acqusition_modes = line.split()
-                            elif line.lower() == "echo-antiecho":
-                                self.acqusition_modes = ["Echo-Antiecho"]
-                            elif line.lower() == "complex":
-                                self.acqusition_modes = ["Complex"]
-                            elif line.lower() == "tppi":
-                                self.acqusition_modes = ["TPPI"]
-                            elif line.lower() == "qf":
-                                self.acqusition_modes = ["QF"]
+            # count = 0
+            # try:
 
-                except:
-                    try:
-                        self.pseudo_flag = 0
-                        self.acqusition_modes = []
-                        for line in self.pulseprogram_file_lines:
-                            if (
-                                "define list<frequency>" in line
-                                or "define list<delay>" in line
-                            ):
-                                self.pseudo_flag = 1
-                                self.acqusition_modes = ["QF"]
+            #     for i in range(len(self.pulseprogram_file_lines)):
+            #         if "AQ_mode" in self.pulseprogram_file_lines[i]:
+            #             line = self.pulseprogram_file_lines[i].split()
+            #             # Find the index of AQ_mode and delete everything before it
+            #             for j in range(len(line)):
+            #                 if line[j] == "AQ_mode":
+            #                     index = j
+            #             line = line[index + 1 :]
+            #             # Remove any terms containing brackets
+            #             new_line = []
+            #             for j in range(len(line)):
+            #                 if "(" not in line[j]:
+            #                     new_line.append(line[j])
+            #             break
 
-                                break
+            #     if new_line.count("QF") > 0:
+            #         # Then at least one of the dimensions is a pseudo axis
+            #         if new_line.count("QF") == 1:
+            #             # Then there is only one pseudo axis
+            #             self.pseudo_flag = 1
+            #         else:
+            #             # Then there are multiple pseudo axes
+            #             for i in range(len(new_line)):
+            #                 if new_line[i] == "QF":
+            #                     count += 1
+            #             self.pseudo_flag = count
 
-                    except:
-                        self.pseudo_flag = 0
-                        self.acqusition_modes = ["Complex"]
+            #     self.acqusition_modes = new_line
 
-            while len(self.acqusition_modes) < len(self.size_indirect):
-                for i in range(len(self.size_indirect) - len(self.acqusition_modes)):
-                    self.acqusition_modes.append("Complex")
+            # except:
+            #     try:
+            #         self.pseudo_flag = 0
+            #         # Read pulseprogram file to see if there is an FnMode option to input the acqusition mode
+            #         # This can be used as a guess for the acquisition modes
+            #         for i in range(len(self.pulseprogram_file_lines)):
+            #             if "FnMODE" in self.pulseprogram_file_lines[i]:
+            #                 line = (
+            #                     self.pulseprogram_file_lines[i]
+            #                     .split("\n")[0]
+            #                     .split("FnMODE:")[1]
+            #                     .strip()
+            #                 )
+            #                 if len(line.split()) > 1:
+            #                     self.acqusition_modes = line.split()
+            #                 elif line.lower() == "echo-antiecho":
+            #                     self.acqusition_modes = ["Echo-Antiecho"]
+            #                 elif line.lower() == "complex":
+            #                     self.acqusition_modes = ["Complex"]
+            #                 elif line.lower() == "tppi":
+            #                     self.acqusition_modes = ["TPPI"]
+            #                 elif line.lower() == "qf":
+            #                     self.acqusition_modes = ["QF"]
 
-            if len(self.size_indirect) == 1:
-                if self.pseudo_flag == 0:
-                    if self.size_indirect[0] == 1:
-                        self.pseudo_flag = 1
-                        self.acqusition_modes[-1] = "QF"
-            elif len(self.size_indirect) == 2:
-                if self.pseudo_flag == 0:
-                    if self.size_indirect[0] == 1:
-                        self.pseudo_flag += 1
-                        self.acqusition_modes[-2] = "QF"
-                    if self.size_indirect[1] == 1:
-                        self.pseudo_flag += 1
-                        self.acqusition_modes[-1] = "QF"
+            #     except:
+            #         try:
+            #             self.pseudo_flag = 0
+            #             self.acqusition_modes = []
+            #             for line in self.pulseprogram_file_lines:
+            #                 if (
+            #                     "define list<frequency>" in line
+            #                     or "define list<delay>" in line
+            #                 ):
+            #                     self.pseudo_flag = 1
+            #                     self.acqusition_modes = ["QF"]
 
-            # If there is a pseudo axis, then the number of real points in that dimension is the same as the number of complex points
-            if self.pseudo_flag == 1:
-                sizes = []
-                keys = []
-                for key in self.udic:
-                    if key == "ndim":
-                        continue
-                    else:
-                        keys.append(key)
-                        sizes.append(self.udic[key]["size"])
+            #                     break
 
-                # Find the index of the minimum size (this is default set to the pseudo axis)
-                index = sizes.index(min(sizes))
-                self.udic[keys[index]]["complex"] = False
-                self.udic[keys[index]]["encoding"] = "Real"
-                self.udic[keys[index]]["obs"] = 0
-                self.udic[keys[index]]["sw"] = 0
-                self.udic[keys[index]]["car"] = 0
+            #         except:
+            #             self.pseudo_flag = 0
+            #             self.acqusition_modes = ["Complex"]
 
-            elif self.pseudo_flag == 2:
-                sizes = []
-                keys = []
-                for key in self.udic:
-                    if key == "ndim":
-                        continue
-                    else:
-                        keys.append(key)
-                        sizes.append(self.udic[key]["size"])
+            # while len(self.acqusition_modes) < len(self.size_indirect):
+            #     for i in range(len(self.size_indirect) - len(self.acqusition_modes)):
+            #         self.acqusition_modes.append("Complex")
 
-                # Find the index of the minimum size (this is default set to the pseudo axis)
-                index = sizes.index(min(sizes))
-                self.udic[keys[index]]["encoding"] = "Real"
-                self.udic[keys[index]]["complex"] = False
-                self.udic[keys[index]]["obs"] = 1
-                self.udic[keys[index]]["sw"] = 1
-                self.udic[keys[index]]["car"] = 1
-                # Then find the next smallest size and set this to the pseudo axis
-                sizes[index] = max(sizes)
-                index = sizes.index(min(sizes))
-                self.udic[keys[index]]["encoding"] = "Real"
-                self.udic[keys[index]]["complex"] = False
-                self.udic[keys[index]]["obs"] = 1
-                self.udic[keys[index]]["sw"] = 1
-                self.udic[keys[index]]["car"] = 1
+            # if len(self.size_indirect) == 1:
+            #     if self.pseudo_flag == 0:
+            #         if self.size_indirect[0] == 1:
+            #             self.pseudo_flag = 1
+            #             self.acqusition_modes[-1] = "QF"
+            # elif len(self.size_indirect) == 2:
+            #     if self.pseudo_flag == 0:
+            #         if self.size_indirect[0] == 1:
+            #             self.pseudo_flag += 1
+            #             self.acqusition_modes[-2] = "QF"
+            #         if self.size_indirect[1] == 1:
+            #             self.pseudo_flag += 1
+            #             self.acqusition_modes[-1] = "QF"
+
+            # # If there is a pseudo axis, then the number of real points in that dimension is the same as the number of complex points
+            # if self.pseudo_flag == 1:
+            #     sizes = []
+            #     keys = []
+            #     for key in self.udic:
+            #         if key == "ndim":
+            #             continue
+            #         else:
+            #             keys.append(key)
+            #             sizes.append(self.udic[key]["size"])
+
+            #     # Find the index of the minimum size (this is default set to the pseudo axis)
+            #     index = sizes.index(min(sizes))
+            #     self.udic[keys[index]]["complex"] = False
+            #     self.udic[keys[index]]["encoding"] = "Real"
+            #     self.udic[keys[index]]["obs"] = 0
+            #     self.udic[keys[index]]["sw"] = 0
+            #     self.udic[keys[index]]["car"] = 0
+
+            # elif self.pseudo_flag == 2:
+            #     sizes = []
+            #     keys = []
+            #     for key in self.udic:
+            #         if key == "ndim":
+            #             continue
+            #         else:
+            #             keys.append(key)
+            #             sizes.append(self.udic[key]["size"])
+
+            #     # Find the index of the minimum size (this is default set to the pseudo axis)
+            #     index = sizes.index(min(sizes))
+            #     self.udic[keys[index]]["encoding"] = "Real"
+            #     self.udic[keys[index]]["complex"] = False
+            #     self.udic[keys[index]]["obs"] = 1
+            #     self.udic[keys[index]]["sw"] = 1
+            #     self.udic[keys[index]]["car"] = 1
+            #     # Then find the next smallest size and set this to the pseudo axis
+            #     sizes[index] = max(sizes)
+            #     index = sizes.index(min(sizes))
+            #     self.udic[keys[index]]["encoding"] = "Real"
+            #     self.udic[keys[index]]["complex"] = False
+            #     self.udic[keys[index]]["obs"] = 1
+            #     self.udic[keys[index]]["sw"] = 1
+            #     self.udic[keys[index]]["car"] = 1
 
     def find_temperature_bruker(self) -> None:
         """

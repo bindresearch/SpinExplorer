@@ -1,6 +1,6 @@
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin
+Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,8 +47,7 @@ class Save_json:
                 # checking to see if processing parameters are saved
                 # as well as conversion parameters
                 saved_processing_params = self.check_saved_processing_params()
-                if type(saved_processing_params) == Dict[str, Any]:
-                    parameter_dictionary["processing"] = saved_processing_params
+                parameter_dictionary["processing"] = saved_processing_params
 
         self.write_json(parameter_dictionary)
 
