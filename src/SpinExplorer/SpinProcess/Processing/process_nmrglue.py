@@ -3,6 +3,7 @@
 """MIT License
 
 Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
+              2025, Bind Research
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -726,7 +727,7 @@ class ProcessNMRGlue:
         return dic, data
 
     """
-    Obtained from the nmrglue code nmrglue/nmrglue/fileio/bruker.py for customisation
+    Obtained from nmrglue followed by customisation
     
     Copyright Notice and Statement for the nmrglue Project
     Copyright (c) 2010-2015 Jonathan J. Helmus
@@ -781,7 +782,7 @@ class ProcessNMRGlue:
         return self.rm_dig_filter(data, decim, dspfvs, grpdly, truncate)
 
     """
-    Obtained from the nmrglue code nmrglue/nmrglue/fileio/bruker.py for customisation
+    Obtained from nmrglue followed by customisation
     
     Copyright Notice and Statement for the nmrglue Project
     Copyright (c) 2010-2015 Jonathan J. Helmus
@@ -939,6 +940,14 @@ class ProcessNMRGlue:
         pdata = pdata.astype(data.dtype)
         return pdata
 
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
     def sol_general_nd(self, data, filter, axis=-1, mode="same"):
         """
         Generalized solvent suppression filter for N-D data.
@@ -986,6 +995,14 @@ class ProcessNMRGlue:
 
         return filtered_data
 
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
     def sol_general(self, data, filter, w=16, mode="same"):
         """
         Solvent filter with generic filter.
@@ -1020,6 +1037,14 @@ class ProcessNMRGlue:
             filter = filter.reshape((1, 1, -1))  # apply along axis=2
         return data - scipy.signal.convolve(data, filter, mode=mode) / A
 
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
     def suppress_solvent_3d(self, data, filt, axis=-1, mode="same"):
         """
         Applies 1D solvent suppression filter along one axis of 3D data.
@@ -1044,41 +1069,6 @@ class ProcessNMRGlue:
         # Move axis back to original position
         result = np.moveaxis(result, -1, axis)
         return result
-
-    # def zero_transpose_3d(self, dic, data):
-    #     """
-    #     Z-axis transpose (ZTP) for 3D+ NMRPipe data.
-    #     Moves the last axis to the front, updates headers.
-
-    #     Parameters
-    #     ----------
-    #     dic : dict
-    #         Dictionary of NMRPipe parameters.
-    #     data : ndarray
-    #         NMR data array.
-    #     nohdr : bool, optional
-    #         If True, do not update header metadata.
-
-    #     Returns
-    #     -------
-    #     dic : dict
-    #         Updated NMRPipe dictionary.
-    #     data : ndarray
-    #         Transposed data.
-    #     """
-    #     ndim = data.ndim
-    #     if ndim < 3:
-    #         raise ValueError("ZTP requires at least 3D data.")
-
-    #     # data = np.transpose(data, axes=(ndim - 1,) + tuple(range(ndim - 1)))
-    #     data = np.transpose(data)
-
-    #     if dic["FDDIMORDER"] == [1.0, 2.0, 3.0, 4.0]:
-    #         dic["FDDIMORDER"] = [3.0, 2.0, 1.0, 4.0]
-    #     else:
-    #         dic["FDDIMORDER"] = [1.0, 2.0, 3.0, 4.0]
-
-    #     return dic, data
 
     def zero_transpose_3d(self, dic, data):
         """
@@ -1130,6 +1120,14 @@ class ProcessNMRGlue:
             new_dic[fn3 + "SIZE"] = int(new_dic[fn3 + "SIZE"] / 2)
 
         return new_dic, new_data
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
 
     def transpose_3d(
         self, dic, data, hyper=False, nohyper=False, auto=False, nohdr=False
@@ -1214,6 +1212,14 @@ class ProcessNMRGlue:
 
         dic = ng.pipe_proc.clean_minmax(dic)
         return dic, data
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
 
     def ext(self, dic, data, x1, xn, sw):
         """
@@ -1312,6 +1318,14 @@ class ProcessNMRGlue:
         dic = ng.pipe_proc.update_minmax(dic, data)
         return dic, data
 
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
     def base(self, dic, data, nl=None, nw=0):
         """
         Linear baseline correction.
@@ -1342,6 +1356,14 @@ class ProcessNMRGlue:
         data = self.base2(data, nl, nw)
         dic = ng.pipe_proc.update_minmax(dic, data)
         return dic, data
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
 
     def base2(self, data, nl, nw=0):
         """
@@ -1376,6 +1398,14 @@ class ProcessNMRGlue:
                     data[i][j] = data[i][j] - ng.proc_bl.calc_bl_linear(vec2, nl, nw)
 
         return data
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
 
     def lp(
         self,
@@ -1502,6 +1532,14 @@ class ProcessNMRGlue:
 
         dic = ng.pipe_proc.update_minmax(dic, data)
         return dic, data
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
 
     def lp2(
         self,
@@ -1633,6 +1671,14 @@ class ProcessNMRGlue:
                         method,
                     )
             return new
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
 
     def zf(
         self,
