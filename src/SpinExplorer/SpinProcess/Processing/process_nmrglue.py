@@ -81,7 +81,7 @@ class ProcessNMRGlue:
                 self.nus_nmrglue_error()
                 return
             else:
-                if self.nmr_data.pseudo_axis == False:
+                if self.nmr_data.pseudo_axis == False and include_dim3 == False:
                     dic, data = ng.pipe_proc.tp(dic, data)
                 elif self.nmr_data.pseudo_axis == True:
                     if self.nmr_data.index == 2:
@@ -91,6 +91,9 @@ class ProcessNMRGlue:
                         dic, data = self.transpose_3d(dic, data, auto=True)
 
                         dic, data = self.zero_transpose_3d(dic, data)
+                else:
+                    # If the pseudo axis is the central axis then need to move the third axis
+                    dic, data = self.transpose_3d(dic, data, auto=True)
 
             dic, data = self.apply_dimension_processing(
                 dic, data, 1, self.dimension_tabs[1]
@@ -102,6 +105,9 @@ class ProcessNMRGlue:
                 dic, data, 2, self.dimension_tabs[2]
             )
             dic, data = self.zero_transpose_3d(dic, data)
+            dic1 = copy.deepcopy(dic)
+            data1 = copy.deepcopy(data)
+            self.create_3D_projections(dic1, data1)
 
         if (
             include_dim2 == True
@@ -109,6 +115,9 @@ class ProcessNMRGlue:
             and self.nmr_data.index == 1
         ):
             dic, data = self.zero_transpose_3d(dic, data)
+            dic1 = copy.deepcopy(dic)
+            data1 = copy.deepcopy(data)
+            self.create_3D_projections(dic1, data1)
 
         self.write_output(dic, data)
 
@@ -269,6 +278,75 @@ class ProcessNMRGlue:
         if self.notebook.parent.original_frame.parent.cwd != "":
             app.path = path
             app.cwd = cwd
+
+    def create_3D_projections(self, dic, data):
+        """
+        This function will form skyline projections over the data along a given
+        axis. e.g. a HNCO will have H-N, H-CO, N-CO planes.
+        """
+        data0 = np.max(data, axis=0)
+        dic0 = copy.deepcopy(dic)
+
+        dim_0 = dic["FDDIMORDER"][2]
+        fn = "FDF" + str(int(dim_0))
+        dic0["FDDIMCOUNT"] = 2
+        dic0[fn + "SIZE"] = 0
+        dic0[fn + "TDSIZE"] = 0
+        dic0[fn + "FTSIZE"] = 0
+        dic0[fn + "APOD"] = 0
+        dic0[fn + "APODSIZE"] = 0
+        dic0[fn + "SW"] = 0
+        dic0[fn + "CENTER"] = 0
+        # dic0[fn + "LABEL"] = ""
+
+        name = dic0["FDF1LABEL"] + "." + dic0["FDF2LABEL"] + ".dat"
+
+        ng.pipe.write(name, dic0, data0, overwrite=True)
+
+        dic1, data1 = self.zero_transpose_3d(dic, data)
+        data1 = np.max(data1, axis=0)
+        dic1 = copy.deepcopy(dic1)
+
+        dim_1 = dic1["FDDIMORDER"][2]
+        fn = "FDF" + str(int(dim_1))
+        dic1["FDDIMCOUNT"] = 2
+        dic1[fn + "SIZE"] = 0
+        dic1[fn + "TDSIZE"] = 0
+        dic1[fn + "FTSIZE"] = 0
+        dic1[fn + "APOD"] = 0
+        dic1[fn + "APODSIZE"] = 0
+        dic1[fn + "SW"] = 0
+        dic1[fn + "CENTER"] = 0
+        # dic1[fn + "LABEL"] = ""
+
+        name = dic1["FDF3LABEL"] + "." + dic1["FDF2LABEL"] + ".dat"
+
+        ng.pipe.write(name, dic1, data1, overwrite=True)
+
+        dic2, data2 = self.transpose_3d(dic, data)
+        dic2, data2 = self.zero_transpose_3d(dic2, data2)
+
+        data2 = np.max(data2, axis=0)
+        dic2 = copy.deepcopy(dic2)
+
+        dim_2 = dic2["FDDIMORDER"][2]
+        fn = "FDF" + str(int(dim_2))
+        dic2["FDDIMCOUNT"] = 2
+        dic2[fn + "SIZE"] = 0
+        dic2[fn + "TDSIZE"] = 0
+        dic2[fn + "FTSIZE"] = 0
+        dic2[fn + "APOD"] = 0
+        dic2[fn + "APODSIZE"] = 0
+        dic2[fn + "SW"] = 0
+        dic2[fn + "CENTER"] = 0
+        # dic2[fn + "LABEL"] = ""
+
+        name = dic2["FDF1LABEL"] + "." + dic2["FDF3LABEL"] + ".dat"
+
+        ng.pipe.write(name, dic2, data2, overwrite=True)
+
+        # front = np.max(data, axis=1)
+        # side = np.max(data, axis=2)
 
     def add_solvent_suppression(self, dic, data, dimension, dimension_tab):
         """

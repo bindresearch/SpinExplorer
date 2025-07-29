@@ -311,10 +311,10 @@ class GetData:
             self.axislabels.append(self.dic["FDF1LABEL"])
             self.axislabels.append(self.dic["FDF2LABEL"])
         else:
-            # If 3D take FDF3LABEL as direct, FDF2LABEL as indirect1 and FDF3LABEL as indirect3
-            self.axislabels.append(self.dic["FDF1LABEL"])
-            self.axislabels.append(self.dic["FDF2LABEL"])
+            # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
             self.axislabels.append(self.dic["FDF3LABEL"])
+            self.axislabels.append(self.dic["FDF2LABEL"])
+            self.axislabels.append(self.dic["FDF1LABEL"])
 
     def generic_labels_bruker(self):
         """
@@ -4975,7 +4975,6 @@ class TwoDViewer(wx.Panel):
             np.arange(self.contour_num)
         )
 
-        print(self.nmrdata.dic)
         # Get ppm values for x and y axis
         if self.nmrdata.file != ".":
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
