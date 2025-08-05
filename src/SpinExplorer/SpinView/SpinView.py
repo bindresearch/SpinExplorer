@@ -315,9 +315,9 @@ class GetData:
             self.axislabels.append(self.dic["FDF2LABEL"])
         else:
             # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
-            self.axislabels.append(self.dic["FDF3LABEL"])
-            self.axislabels.append(self.dic["FDF2LABEL"])
             self.axislabels.append(self.dic["FDF1LABEL"])
+            self.axislabels.append(self.dic["FDF2LABEL"])
+            self.axislabels.append(self.dic["FDF3LABEL"])
 
     def generic_labels_bruker(self):
         """

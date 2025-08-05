@@ -60,11 +60,11 @@ class ParameterExtractorBruker:
         # Look for TD in the acqus file
         self.size_direct, self.size_direct_complex = self.find_direct_bruker()
         # Create an array of initial guess for the indirect dimension sizes
-        self.size_indirect = self.find_indirect_bruker()
+        self.find_indirect_bruker()
         # Checking that the direct dimension TD value agrees with the data size
         self.checking_direct_bruker()
-        # Checking the indirect dimension
-        self.checking_indirect_bruker()
+        # # Checking the indirect dimension
+        # self.checking_indirect_bruker()
 
     def find_direct_bruker(self) -> List[int]:
         """
@@ -87,9 +87,10 @@ class ParameterExtractorBruker:
             if len(self.nmrdata.nmr_data.shape) == 1:
                 self.size_1 = max(self.nmrdata.nmr_data.shape)
                 self.size_2 = self.size_1
-                for i in range(len(self.size_indirect)):
-                    self.size_2 = self.size_2 / self.size_indirect[i]
-                self.size_direct_complex = int(self.size_2 * 2)
+                for i in range(len(self.size_indirect_non_reduced)):
+                    self.size_2 = self.size_2 / self.size_indirect_non_reduced[i]
+                if self.size_direct_complex < int(self.size_2 * 2):
+                    self.size_direct_complex = int(self.size_2 * 2)
             else:
                 # Sometimes have the issue where stored complex data size is larger than TD, this ensures that the direct dimension
                 # size is altered to the larger size to correctly be read
@@ -112,77 +113,90 @@ class ParameterExtractorBruker:
             dlg.Destroy()
             exit()
 
-    def find_indirect_bruker(self) -> List:
-        """
-        Looking for initial guesses for the size of the Bruker indirect dimensions
-        """
-        size_indirect = []
-        found_indirect_sizes = False
-        for i in range(len(self.acqus_file_lines)):
-            if "##$TD_INDIRECT" in self.acqus_file_lines[i]:
-                found_indirect_sizes = True
-                continue
-            if found_indirect_sizes == True:
-                line = self.acqus_file_lines[i].split()
-                for j in range(len(line)):
-                    if line[j] == "0":
-                        pass
-                    else:
-                        size_indirect.append(int(line[j]))
-                break
+    # def find_indirect_bruker(self) -> List:
+    #     """
+    #     Looking for initial guesses for the size of the Bruker indirect dimensions
+    #     """
+    #     size_indirect = []
+    #     found_indirect_sizes = False
+    #     for i in range(len(self.acqus_file_lines)):
+    #         if "##$TD_INDIRECT" in self.acqus_file_lines[i]:
+    #             found_indirect_sizes = True
+    #             continue
+    #         if found_indirect_sizes == True:
+    #             line = self.acqus_file_lines[i].split()
+    #             for j in range(len(line)):
+    #                 if line[j] == "0":
+    #                     pass
+    #                 else:
+    #                     size_indirect.append(int(line[j]))
+    #             break
 
-        return size_indirect
+    #     return size_indirect
 
-    def checking_indirect_bruker(self) -> None:
+    def find_indirect_bruker(self) -> None:
         """
         If have not found TD_INDIRECT values, check through acqu2s and acqu3s
         so see if there are any values present. If no other values can be
         found, the spectrum will be assumed to be 1D.
         """
         # Look to see if there is an acqu2s/acqu3s file
-        if len(self.size_indirect) == 0:
-            # Checking other spectrometer files if TD_INDIRECT is empty
-            if "acqu2s" in os.listdir("./"):
-                self.sizes_dim2 = []
-                self.sizes_dim2_nus = []
-                # Look for TD in the acqu2s file
-                with open("acqu2s", "r") as file:
-                    file_lines = file.readlines()
-                    for i in range(len(file_lines)):
-                        if "##$NUSTD=" in file_lines[i]:
-                            line = file_lines[i].split("\n")[0].split()
-                            self.sizes_dim2_nus = int(line[1])
-                            break
-                        if "##$TD=" in file_lines[i]:
-                            line = file_lines[i].split()
-                            self.sizes_dim2 = int(line[1])
-                            break
+        self.size_indirect = []
+        self.size_indirect_non_reduced = (
+            []
+        )  # values without substracting -1 in the case of odd numbers
+        # Checking other spectrometer files if TD_INDIRECT is empty
+        if "acqu2s" in os.listdir("./"):
+            self.sizes_dim2 = []
+            self.sizes_dim2_nus = []
+            # Look for TD in the acqu2s file
+            with open("acqu2s", "r") as file:
+                file_lines = file.readlines()
+                for i in range(len(file_lines)):
+                    if "##$NUSTD=" in file_lines[i] or "##$NusTD=" in file_lines[i]:
+                        line = file_lines[i].split("\n")[0].split()
+                        self.sizes_dim2_nus = int(line[1])
+                    if "##$TD=" in file_lines[i]:
+                        line = file_lines[i].split()
+                        self.sizes_dim2 = int(line[1])
+            if (
+                self.sizes_dim2 != []
+                and self.sizes_dim2 < self.sizes_dim2_nus
+                and self.sizes_dim2 != 1
+            ):
+                if self.sizes_dim2 % 2 != 0:
+                    self.sizes_dim2 -= 1
+                    self.size_indirect_non_reduced.append(self.sizes_dim2 + 1)
+                self.size_indirect.append(self.sizes_dim2)
+            else:
+                self.size_indirect.append(self.sizes_dim2_nus)
+                self.size_indirect_non_reduced.append(self.sizes_dim2_nus)
 
-                if self.sizes_dim2_nus != []:
-                    self.size_indirect.append(self.sizes_dim2_nus)
-                else:
-                    self.size_indirect.append(self.sizes_dim2)
-
-            if "acqu3s" in os.listdir("./"):
-                self.sizes_dim3 = []
-                self.sizes_dim3_nus = []
-                # Look for TD in the acqu3s file
-                with open("acqu3s", "r") as file:
-                    file_lines = file.readlines()
-                    for i in range(len(file_lines)):
-                        if "##$NUSTD=" in file_lines[i]:
-                            line = file_lines[i].split("\n")[0].split()
-                            self.sizes_dim3_nus = int(line[1])
-                            break
-                        if "##$TD=" in file_lines[i]:
-                            line = file_lines[i].split()
-                            self.sizes_dim3 = int(line[1])
-                            break
-
-                if self.sizes_dim3_nus != []:
-                    self.size_indirect.append(self.sizes_dim3_nus)
-                else:
-                    self.size_indirect.append(self.sizes_dim3)
+        if "acqu3s" in os.listdir("./"):
+            self.sizes_dim3 = []
+            self.sizes_dim3_nus = []
+            # Look for TD in the acqu3s file
+            with open("acqu3s", "r") as file:
+                file_lines = file.readlines()
+                for i in range(len(file_lines)):
+                    if "##$NUSTD=" in file_lines[i] or "##$NusTD=" in file_lines[i]:
+                        line = file_lines[i].split("\n")[0].split()
+                        self.sizes_dim3_nus = int(line[1])
+                    if "##$TD=" in file_lines[i]:
+                        line = file_lines[i].split()
+                        self.sizes_dim3 = int(line[1])
+            if (
+                self.sizes_dim3 != []
+                and self.sizes_dim3 < self.sizes_dim3_nus
+                and self.sizes_dim3 != 1
+            ):
+                if self.sizes_dim3 % 2 != 0:
+                    self.sizes_dim3 -= 1
+                    self.size_indirect_non_reduced.append(self.sizes_dim3 + 1)
+                self.size_indirect.append(self.sizes_dim3)
+            else:
+                self.size_indirect.append(self.sizes_dim3_nus)
+                self.size_indirect_non_reduced.append(self.sizes_dim3)
 
         try:
             self.size_indirect
@@ -215,6 +229,7 @@ class ParameterExtractorBruker:
         if "acqu2s" in os.listdir("./"):
             # Look for TD in the acqu2s file
             nus = False
+            td = False
             with open("acqu2s", "r") as file:
                 file_lines = file.readlines()
 
@@ -224,6 +239,7 @@ class ParameterExtractorBruker:
                         line = file_lines[i].split("\n")[0].split()
                         self.sizes_dim2_nus = int(line[1])
                     if "##$TD=" in file_lines[i]:
+                        td = True
                         line = file_lines[i].split()
                         self.sizes_dim2 = int(line[1])
                     if "##$NUC1=" in file_lines[i]:
@@ -231,7 +247,13 @@ class ParameterExtractorBruker:
                         nuc = line.split("<")[1].split(">")[0]
 
             try:
-                if nus == False:
+                if (
+                    td == True
+                    and self.sizes_dim2 < self.sizes_dim2_nus
+                    and self.sizes_dim2 != 1
+                ):
+                    if self.sizes_dim2 % 2 != 0:
+                        self.sizes_dim2 -= 1
                     self.indirect_sizes_dict[nuc] = self.sizes_dim2
                 else:
                     self.indirect_sizes_dict[nuc] = self.sizes_dim2_nus
@@ -241,6 +263,7 @@ class ParameterExtractorBruker:
         if "acqu3s" in os.listdir("./"):
             # Look for TD in the acqu2s file
             nus = False
+            td = False
             with open("acqu3s", "r") as file:
                 file_lines = file.readlines()
                 for i in range(len(file_lines)):
@@ -249,6 +272,7 @@ class ParameterExtractorBruker:
                         line = file_lines[i].split("\n")[0].split()
                         self.sizes_dim3_nus = int(line[1])
                     if "##$TD=" in file_lines[i]:
+                        td = True
                         line = file_lines[i].split()
                         self.sizes_dim3 = int(line[1])
                     if "##$NUC1=" in file_lines[i]:
@@ -256,11 +280,20 @@ class ParameterExtractorBruker:
                         nuc = line.split("<")[1].split(">")[0]
 
             try:
-                if nus == False:
+                if (
+                    td == True
+                    and self.sizes_dim3 < self.sizes_dim3_nus
+                    and self.sizes_dim3 != 1
+                ):
                     if nuc not in self.indirect_sizes_dict.keys():
+                        if self.sizes_dim3 % 2 != 0:
+                            self.sizes_dim3 -= 1
                         self.indirect_sizes_dict[nuc] = self.sizes_dim3
                     else:
+                        if self.sizes_dim3 % 2 != 0:
+                            self.sizes_dim3 -= 1
                         self.indirect_sizes_dict[nuc + "_1"] = self.sizes_dim3
+
                 else:
                     if nuc not in self.indirect_sizes_dict.keys():
                         self.indirect_sizes_dict[nuc] = self.sizes_dim3_nus
@@ -452,7 +485,7 @@ class ParameterExtractorBruker:
                 with open("pulseprogram.precomp") as file:
                     lines = file.readlines()
                     for line in lines:
-                        if line.split()[0] == "aqseq":
+                        if "aqseq" in line:
                             aqseq_value = line.split()[1]
 
             except:
@@ -835,26 +868,62 @@ class ParameterExtractorBruker:
 
             # Calculate carrier frequencies based on O2/BF2, O3/BF3
 
-            for j in range(len(self.acqus_file_lines)):
-                if "##$O2=" in self.acqus_file_lines[j]:
-                    line = self.acqus_file_lines[j].split()
-                    self.O2 = float(line[1])
-                    break
-            for j in range(len(self.acqus_file_lines)):
-                if "##$O3=" in self.acqus_file_lines[j]:
-                    line = self.acqus_file_lines[j].split()
-                    self.O3 = float(line[1])
-                    break
-            for j in range(len(self.acqus_file_lines)):
-                if "##$BF2=" in self.acqus_file_lines[j]:
-                    line = self.acqus_file_lines[j].split()
-                    self.BF2 = float(line[1])
-                    break
-            for j in range(len(self.acqus_file_lines)):
-                if "##$BF3=" in self.acqus_file_lines[j]:
-                    line = self.acqus_file_lines[j].split()
-                    self.BF3 = float(line[1])
-                    break
+            # Search through acqu2s and acqu3s files to find O1 and BF1 values to get chemical shifts
+            try:
+                with open("acqu2s", "r") as file:
+                    file_lines = file.readlines()
+                    for i in range(len(file_lines)):
+                        if "##$BF1=" in file_lines[i]:
+                            line = file_lines[i].split("\n")[0].split()
+                            self.BF2 = float(line[1])
+                        if "##$O1=" in file_lines[i]:
+                            line = file_lines[i].split("\n")[0].split()
+                            self.O2 = float(line[1])
+
+            except:
+                for j in range(len(self.acqus_file_lines)):
+                    if "##$O2=" in self.acqus_file_lines[j]:
+                        line = self.acqus_file_lines[j].split()
+                        self.O2 = float(line[1])
+                    if "##$BF2=" in self.acqus_file_lines[j]:
+                        line = self.acqus_file_lines[j].split()
+                        self.BF2 = float(line[1])
+
+            try:
+                with open("acqu3s", "r") as file:
+                    file_lines = file.readlines()
+                    for i in range(len(file_lines)):
+                        if "##$BF1=" in file_lines[i]:
+                            line = file_lines[i].split("\n")[0].split()
+                            self.BF3 = float(line[1])
+                        if "##$O1=" in file_lines[i]:
+                            line = file_lines[i].split("\n")[0].split()
+                            self.O3 = float(line[1])
+
+            except:
+                for j in range(len(self.acqus_file_lines)):
+                    if "##$O3=" in self.acqus_file_lines[j]:
+                        line = self.acqus_file_lines[j].split()
+                        self.O3 = float(line[1])
+                    if "##$BF3=" in self.acqus_file_lines[j]:
+                        line = self.acqus_file_lines[j].split()
+                        self.BF3 = float(line[1])
+
+            # for j in range(len(self.acqus_file_lines)):
+            #     if "##$O3=" in self.acqus_file_lines[j]:
+            #         line = self.acqus_file_lines[j].split()
+            #         self.O3 = float(line[1])
+            #         break
+            # for j in range(len(self.acqus_file_lines)):
+            #     if "##$BF2=" in self.acqus_file_lines[j]:
+            #         line = self.acqus_file_lines[j].split()
+            #         self.BF2 = float(line[1])
+            #         break
+            # for j in range(len(self.acqus_file_lines)):
+            #     if "##$BF3=" in self.acqus_file_lines[j]:
+            #         line = self.acqus_file_lines[j].split()
+            #         self.BF3 = float(line[1])
+            #         break
             # Calculate the carrier frequency
             self.carrier_frequency_2 = self.O2 / self.BF2
             self.carrier_frequency_3 = self.O3 / self.BF3

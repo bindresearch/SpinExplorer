@@ -228,7 +228,7 @@ class WriteNMRPipeProcessing:
             fourier_transform_line += " -alt"
         elif dimension_tab.fourier_transform.ft_method_selection == 5:
             fourier_transform_line += " -neg"
-        elif dimension_tab.fourier_transform.ft_method_selection == 5:
+        elif dimension_tab.fourier_transform.ft_method_selection == 6:
             fourier_transform_line += " -alt -neg"
         nmrproc_com.write(fourier_transform_line + " \\\n")
 
