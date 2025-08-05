@@ -72,7 +72,7 @@ class FormatParametersBruker:
                         labelval = self.params.labels_correct_order[i]
                     size = str(self.params.indirect_sizes_dict[labelval])
                 except:
-                    size_indirect = self.params.size_indirect.reverse()
+                    # size_indirect = self.params.size_indirect.reverse()
                     size = str(self.params.size_indirect[i - 1])
                 self.N_complex_boxes.append(
                     wx.TextCtrl(self.app, value=size, size=(200, 20))

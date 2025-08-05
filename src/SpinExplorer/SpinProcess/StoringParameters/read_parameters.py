@@ -292,7 +292,7 @@ class InputParameters:
                     wx.EVT_COMBOBOX
                 )
 
-            elif key == "NUS reconstruction":
+            elif key == "NUS Reconstruction":
                 dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(
                     2
                 )
@@ -310,21 +310,10 @@ class InputParameters:
                 )
 
                 dimension_tab.linear_prediction.nuslist_name_indirect = nusfile
-                dimension_tab.linear_prediction.smile_nus_file_textcontrol_indirect.SetValue(
-                    nusfile
-                )
                 dimension_tab.linear_prediction.smile_data_extension_number_indirect = (
                     nus_extension
                 )
-                dimension_tab.linear_prediction.smile_nus_extension_textcontrol_indirect.SetValue(
-                    nus_extension
-                )
-                dimension_tab.linear_prediction.smile_data_extension_number_indirect = (
-                    nus_cpu
-                )
-                dimension_tab.linear_prediction.smile_nus_cpu_textcontrol_indirect.SetValue(
-                    nus_cpu
-                )
+                dimension_tab.linear_prediction.number_of_nus_CPU_indirect = nus_cpu
                 dimension_tab.linear_prediction.nus_iterations_indirect = nus_iterations
                 dimension_tab.linear_prediction.smile_nus_iterations_textcontrol_indirect = (
                     nus_iterations
