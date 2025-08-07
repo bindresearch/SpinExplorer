@@ -134,6 +134,24 @@ class Convert_pipe:
         p = subprocess.Popen(command, shell=True)
         p.wait()
 
+        self.completion_notification()
+
+    def completion_notification(self):
+        """
+        This function provides the user with a message saying
+        that the conversion of the NMR data to NMRPipe format
+        was successful
+        """
+        dlg = wx.MessageDialog(
+            self.notebook,
+            "Conversion was completed",
+            "Completion",
+            wx.OK,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        result = dlg.ShowModal()
+
 
 class WritePipe:
     def __init__(self, app, params, nmrdata) -> None:

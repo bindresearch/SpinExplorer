@@ -280,7 +280,10 @@ class InputParameters:
                 self.app.format.carrier_combo_boxes[i].GetId(),
             )
             evt.SetEventObject(self.app.format.carrier_combo_boxes[i])
-            self.app.format.on_carrier_combo_box_change(evt)
+            if(self.parameter_dictionary["general"]["spectrometer"] == "Bruker"):
+                self.app.format.on_carrier_combo_box_change(evt)
+            else:
+                self.app.format.on_carrier_combo_box_change_varian(evt)
             self.app.format.carrier_frequency_boxes[i].SetValue(str(frequency))
 
     def input_complex_sizes(self):

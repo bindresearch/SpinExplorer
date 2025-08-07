@@ -49,6 +49,7 @@ import wx
 import numpy as np
 import matplotlib
 from scipy.optimize import leastsq
+import pathlib
 
 matplotlib.use("wxAgg")
 from matplotlib.figure import Figure
@@ -172,7 +173,7 @@ class GetData:
                 # Give a popout saying the NMRPipe file has not been read properly. Retry processing
                 dlg = wx.MessageDialog(
                     self.tempframe,
-                    "Data file was read but data array is empty. Ensure raw data is downloaded to local device.",
+                    "Data file was read but data array is empty. Ensure raw data is downloaded to the local device.",
                     "Error",
                     wx.OK | wx.ICON_INFORMATION,
                 )
@@ -529,11 +530,14 @@ class MyApp(wx.Frame):
         self.height = int(0.875 * sizes[0][1])
         self.reprocess = False
 
+        # Get the title for the panels
+        self.title = self.GetTitle()
+
         self.app_frame = wx.Frame.__init__(
             self,
             None,
             wx.ID_ANY,
-            "SpinView",
+            self.title,
             wx.DefaultPosition,
             size=(int(self.width), int(self.height)),
         )
@@ -577,6 +581,35 @@ class MyApp(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.OnSizeFrame)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def GetTitle(self):
+        """
+        Finding an appropriate title for the panel.
+        The title for the panel is:
+        SpinView + the current working directory (last 3 elements)
+        + the title + pulseprogram (for Bruker data)
+        """
+        title = "SpinView: "
+        p = pathlib.Path.cwd()
+        dirs = p.parts[-3:]
+        last_directories_path = pathlib.Path(*dirs)
+        title = title + "/" + str(last_directories_path)
+
+        # If pdata/1/title exists, add this title too
+        try:
+            with open("pdata/1/title") as file:
+                lines = file.readlines()
+                title = title + " ("
+                for line in lines:
+                    line = line.split("\n")[0]
+                    line = line + " "
+                    title += line
+
+                title += ")"
+        except:
+            pass
+
+        return title
 
     def OnClose(self, event):
         # Save the session file if the user wants to save it
@@ -5478,9 +5511,13 @@ class TwoDViewer(wx.Panel):
                 else:
                     self.continue_window.Destroy()
             if self.transposed2D == False:
-                self.stacks = Stack2D(title="Stacked Slices", parent=self)
+                self.stacks = Stack2D(
+                    title="Stacked Slices - " + self.parent.title, parent=self
+                )
             else:
-                self.stacks = Stack2D(title="Stacked Slices", parent=self)
+                self.stacks = Stack2D(
+                    title="Stacked Slices - " + self.parent.title, parent=self
+                )
         else:
             # Pop up a window to say that this feature is not available in multiplot mode
             self.error_window = wx.MessageDialog(
@@ -5509,7 +5546,9 @@ class TwoDViewer(wx.Panel):
                     return
                 else:
                     self.continue_window.Destroy()
-            self.diffusion = DiffusionFit(title="Diffusion Fit", parent=self)
+            self.diffusion = DiffusionFit(
+                title="Diffusion Fit - " + self.parent.title, parent=self
+            )
         else:
             # Pop up a window to say that this feature is not available in multiplot mode
             self.error_window = wx.MessageDialog(
@@ -5596,7 +5635,9 @@ class TwoDViewer(wx.Panel):
             return
 
         self.CEST = CESTFrame(
-            title="CEST", parent=self, CESTArrayOrder=self.CESTArrayOrder
+            title="CEST - " + self.parent.title,
+            parent=self,
+            CESTArrayOrder=self.CESTArrayOrder,
         )
 
     def OnFitRelaxButton(self, event):
@@ -5616,7 +5657,9 @@ class TwoDViewer(wx.Panel):
                     return
                 else:
                     self.continue_window.Destroy()
-            self.RelaxFit = RelaxFit(title="Relaxation Fit", parent=self)
+            self.RelaxFit = RelaxFit(
+                title="Relaxation Fit - " + self.parent.title, parent=self
+            )
         else:
             # Pop up a window to say that this feature is not available in multiplot mode
             self.error_window = wx.MessageDialog(
@@ -7166,7 +7209,9 @@ class ThreeDViewer(wx.Panel):
             dlg.Destroy()
             return
 
-        frame = SpinBore(title="SpinBore", projection=projection, parent=self)
+        frame = SpinBore(
+            title="SpinBore - " + self.parent.title, projection=projection, parent=self
+        )
         frame.Show()
 
     def OnOrientationCombo(self, event):
@@ -7670,7 +7715,9 @@ class ThreeDViewer(wx.Panel):
 
     def OnProjectionButton(self, event):
         # Make projection window
-        self.projection_window = ProjectionFrame(parent=self, title="Projections")
+        self.projection_window = ProjectionFrame(
+            parent=self, title="Projections - " + self.parent.title
+        )
 
     def OnPlot3DButton(self, event):
         # Make a 3D plot window
@@ -7682,7 +7729,9 @@ class ThreeDViewer(wx.Panel):
         )
         self.threeD_warning.ShowModal()
         if self.threeD_warning.ShowModal() == wx.ID_YES:
-            self.plot3D_window = Plot3DFrame(parent=self, title="3D Plot")
+            self.plot3D_window = Plot3DFrame(
+                parent=self, title="3D Plot - " + self.parent.title
+            )
             self.threeD_warning.Destroy()
         else:
             self.threeD_warning.Destroy()
@@ -7716,7 +7765,9 @@ class ThreeDViewer(wx.Panel):
             else:
                 visible = "line3"
             self.waterfall_window = WaterfallFrame(
-                parent=self, title="Waterfall Plot", visible=visible
+                parent=self,
+                title="Waterfall Plot - " + self.parent.title,
+                visible=visible,
             )
             self.waterfall_warning.Destroy()
         else:

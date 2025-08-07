@@ -294,7 +294,7 @@ class ParameterExtractorVarian:
             dlg.Destroy()
             self.labels_indirect = ["2", "3", "4"]
 
-        if self.converter.other_params == True:
+        if self.pseudo_flag == True:
             self.labels_correct_order = (
                 [self.labels_indirect[0]]
                 + [self.converter.arrayed_parameter]
@@ -404,7 +404,7 @@ class ParameterExtractorVarian:
         """
         self.phase = False
         self.phase2 = False
-        self.other_params = False
+        self.pseudo_flag = False
 
         self.found_array = False
         for i, line in enumerate(self.procpar_file_lines):
@@ -427,13 +427,13 @@ class ParameterExtractorVarian:
             self.phase2 = True
             count += 1
         if count != len(array):
-            self.other_params = True
+            self.pseudo_flag = True
 
         # Delete phase and phase2 from array
         self.found_arrayed_parameter = False
         self.number_of_arrayed_parameters = 0
         self.phases = []
-        if self.other_params == True:
+        if self.pseudo_flag == True:
             if self.phase == True:
                 array.remove("phase")
                 self.phases.append("phase")
@@ -496,7 +496,7 @@ class ParameterExtractorVarian:
     def find_varian_scaling_parameters(self):
         found_nt = False
         self.include_scaling = False
-        for i, line in enumerate(self.nmrdata.procpar_file_lines):
+        for i, line in enumerate(self.procpar_file_lines):
             if found_nt == True:
                 self.NS = int(line.split()[1])
                 self.include_scaling = True
