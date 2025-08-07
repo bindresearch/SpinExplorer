@@ -4235,9 +4235,7 @@ class TwoDViewer(wx.Panel):
         self.intensity_sizer.AddSpacer(5)
 
         # Create a sizer for multiplying the 2D data by a constant, this is useful when overlaying different datasets with different intensities
-        self.multiply_label = wx.StaticBox(
-            self, -1, "Multiply 2D Data by " + "n\u207f" + ":"
-        )
+        self.multiply_label = wx.StaticBox(self, -1, "Multiply 2D Data by " + "n" + ":")
         self.multiply_sizer = wx.StaticBoxSizer(self.multiply_label, wx.VERTICAL)
         self.multiply_inner_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.multiply_ranges = [
@@ -4673,7 +4671,7 @@ class TwoDViewer(wx.Panel):
                 self.move_y_slider.SetValue(0)
                 self.move_x_value_label.SetLabel("0.00")
                 self.move_y_value_label.SetLabel("0.00")
-                self.multiply_slider.SetValue(0)
+                self.multiply_slider.SetValue(1)
                 self.multiply_value_label.SetLabel("0")
                 self.line_width_slider.SetValue(1)
                 # if(self.transposed2D==True):
