@@ -59,6 +59,7 @@ from matplotlib.backends.backend_wxagg import (
 )
 import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
+import matplotlib.patches as patches
 import nmrglue as ng
 import subprocess
 import os
@@ -4049,6 +4050,9 @@ class TwoDViewer(wx.Panel):
         self.toggle_button = wx.Button(self, label="Hide Options", size=(width, height))
         self.toggle_button.Bind(wx.EVT_BUTTON, self.OnHideButton)
 
+        self.peaklist_button = wx.Button(self, label="Read Peaks", size=(width, height))
+        self.peaklist_button.Bind(wx.EVT_BUTTON, self.OnReadPeaks)
+
         # Add the buttons to a sizer
         self.general_options_sizer = wx.BoxSizer(wx.HORIZONTAL)
         if self.threeDprojection == False:
@@ -4077,6 +4081,8 @@ class TwoDViewer(wx.Panel):
             self.hide_sizer.Add(self.CEST_button)
             self.hide_sizer.AddSpacer(5)
             self.hide_sizer.Add(self.uSTA_button)
+            self.hide_sizer.AddSpacer(5)
+            self.hide_sizer.Add(self.peaklist_button)
 
         else:
             self.general_options_sizer.Add(
@@ -4978,6 +4984,19 @@ class TwoDViewer(wx.Panel):
 
             uSTA_input = uSTA_Dialog(title="Input uSTA parameters", parent=self)
 
+    def OnReadPeaks(self, event):
+        """
+        Have a popout window where a user can choose a peaklist (in Sparky format)
+        This can also suggest if it is advisable to transpose the peaklist to match
+        the data.
+
+        Supported file formats are:
+        (test).ft2.list files (Sparky format)
+        CCPN peak table output - to be added
+        """
+
+        self.peaklist_frame = PeakListWindow2D(title="Peak Lists", parent=self)
+
     def draw_figure_2D(self):
         self.ax = self.fig.add_subplot(111)
         self.axes1D = self.ax.twinx()
@@ -5336,6 +5355,24 @@ class TwoDViewer(wx.Panel):
             self.OnReferenceComboY(wx.EVT_SCROLL)
             self.move_y_slider.SetValue(move_x_value)
 
+            for window in wx.GetTopLevelWindows():
+                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+                    # Need to swap the order of the peaklist dimensions
+                    for (
+                        peaklist_name,
+                        dictionary,
+                    ) in self.peaklist_frame.peak_list_dictionary.items():
+                        shift1 = dictionary["shift1"]
+                        shift2 = dictionary["shift2"]
+                        self.peaklist_frame.peak_list_dictionary[peaklist_name][
+                            "shift1"
+                        ] = shift2
+                        self.peaklist_frame.peak_list_dictionary[peaklist_name][
+                            "shift2"
+                        ] = shift1
+                else:
+                    pass
+
             self.OnMinContour2D(wx.EVT_SCROLL)
             self.toolbar.update()
 
@@ -5692,6 +5729,7 @@ class TwoDViewer(wx.Panel):
                 self.cl,
                 colors=self.cmap,
                 linewidths=self.linewidth,
+                zorder=1,
             )
             self.contour1_neg = self.ax.contour(
                 self.Y,
@@ -5700,6 +5738,7 @@ class TwoDViewer(wx.Panel):
                 self.cl_neg,
                 colors=self.cmap_neg,
                 linewidths=self.linewidth,
+                zorder=1,
             )
 
             if self.line1.get_visible() == True:
@@ -5733,6 +5772,7 @@ class TwoDViewer(wx.Panel):
                     self.cl,
                     colors=self.twoD_colours[i],
                     linewidths=self.values_dictionary[i]["contour linewidth"],
+                    zorder=1,
                 )
                 self.ax.legend(self.files.custom_lines, self.files.custom_labels)
 
@@ -5760,10 +5800,122 @@ class TwoDViewer(wx.Panel):
         self.contour_value_label.SetLabel(
             str(int(10 ** float(self.contour_slider.GetValue())))
         )
+
+        for window in wx.GetTopLevelWindows():
+            self.peaklist_colours = [
+                "black",
+                "gray",
+                "saddlebrown",
+                "purple",
+                "purple",
+                "blue",
+                "red",
+                "orange",
+            ]
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+                # Plot Peaklists
+                count = 0
+                self.points = []
+                self.annotations = []
+                for (
+                    peaklist_name,
+                    dictionary,
+                ) in self.peaklist_frame.peak_list_dictionary.items():
+
+                    if (
+                        self.peaklist_frame.select_peak_button.GetValue() == True
+                        or self.peaklist_frame.select_peaks_button.GetValue() == True
+                    ):
+                        if peaklist_name == self.peaklist_frame.selected_peaklist:
+                            if "N/A" in self.peaklist_frame.selected_peak_indexes:
+                                cs = self.peaklist_colours[count]
+                            else:
+                                cs = []
+                                for i, peak in enumerate(dictionary["peak_name"]):
+                                    if i in self.peaklist_frame.selected_peak_indexes:
+                                        cs.append("darkviolet")
+                                    else:
+                                        cs.append(self.peaklist_colours[count])
+                        else:
+                            cs = self.peaklist_colours[count]
+                    else:
+                        cs = self.peaklist_colours[count]
+
+                    shift1 = dictionary["shift1"]
+                    shift2 = dictionary["shift2"]
+                    self.points.append(
+                        self.ax.scatter(
+                            shift1,
+                            shift2,
+                            s=5,
+                            marker="o",
+                            c=cs,
+                            picker=5,
+                            zorder=2,
+                        )
+                    )
+                    count += 1
+
+                    # Annotation for hover
+                    self.annotations.append(
+                        self.ax.annotate(
+                            "",
+                            xy=(0, 0),
+                            xytext=(15, 15),
+                            textcoords="offset points",
+                            bbox=dict(boxstyle="round", fc="w"),
+                            arrowprops=dict(arrowstyle="->"),
+                        )
+                    )
+                    self.annotations[-1].set_visible(False)
+                    # adjust_text(self.annotations, ax=self.ax)
+
+                    # Connect event
+                    self.hover_connect = self.canvas.mpl_connect(
+                        "motion_notify_event", self.on_hover
+                    )
+
+            else:
+                pass
+
         self.OnSliderScroll2D(wx.EVT_SCROLL)
         self.OnIntensityScroll2D(wx.EVT_SCROLL)
 
         self.UpdateFrame()
+
+    def on_hover(self, event):
+
+        if event.inaxes != None:
+            # Calculate distance from mouse to each point
+
+            for i, points in enumerate(self.points):
+                cont, ind = points.contains(event)
+
+                if cont:
+                    # Show annotation
+                    index = ind["ind"][0]  # first index found
+                    peaklist_name = self.peaklist_frame.peak_list_choices[i]
+                    dictionary = self.peaklist_frame.peak_list_dictionary[peaklist_name]
+
+                    peakname = (
+                        dictionary["peak_name"][index] + " (" + peaklist_name + ")"
+                    )
+                    x = dictionary["shift1"][index]
+                    y = dictionary["shift2"][index]
+                    self.annotations[i].xy = (x, y)
+
+                    text = peakname
+                    self.annotations[i].set_text(text)
+                    self.annotations[i].set_color(self.peaklist_colours[i])
+                    self.annotations[i].set_position((36, i * 36))
+                    self.annotations[i].set_visible(True)
+                    self.canvas.draw_idle()
+                else:
+                    if self.annotations[i].get_visible():
+                        self.annotations[i].set_visible(False)
+
+            # adjust_text(self.annotations, ax=self.ax, time_lim=5)
+            self.canvas.draw_idle()
 
     def OnContourLevels(self, event):
         # update number of contour levels
@@ -17340,6 +17492,1214 @@ class ReadSession:
         self.main_frame.viewer.plot_combobox.SetSelection(0)
 
         self.main_frame.viewer.UpdateFrame()
+
+
+class PeakListWindow2D(wx.Frame):
+    def __init__(self, title, parent):
+        """
+        This class contains all the information relating to loading in
+        peaklists. For now the peak lists loaded will not be saved in a
+        session but hopefully that can be added in the future
+        """
+        self.main_frame = parent
+        self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
+        width = 800
+        height = 400
+        wx.Frame.__init__(self, parent=parent, title=title, size=(width, height))
+        self.panel_peaklist = wx.Panel(self, -1)
+        self.main_peaklist_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.main_peaklist_sizer)
+
+        self.set_initial_values()
+        self.make_peaklist_window()
+        self.Show()
+
+    def set_initial_values(self):
+        """
+        Setting initial values such as the peak list colour choices
+        """
+        self.peak_list_choices = [""]
+        self.initial_peak_list_colours = ["black", "gray", "saddlebrown"]
+        self.selected_colour = "darkviolet"
+        self.peak_list_dictionary = {}
+        self.selected_peakname = ""
+        self.selected_peaklist = ""
+        self.selected_peak_indexes = ""
+
+        # Flags showing whether a given button is active or not
+        self.active_add = False
+        self.active_select_peak = False
+        self.active_select_peaks = False
+        self.active_remove = False
+        self.active_move = False
+        self.active_find = False
+
+        self.rect = None
+        self.start_point = None
+        self.start_point_move = None
+
+        self.old_key = None
+        self.old_num = None
+
+    def make_peaklist_window(self):
+        """
+        This window will have the following:
+        - a button to add peaklists
+        - a combobox to change the current peaklist selection
+        - a combobox to change the peak cross colour
+        - a combobox to change the peak cross size/thickness
+        - buttons to toggle add peak(s), select peak, select region, remove peak(s), move peak(s), find peak
+        """
+
+        self.add_peaklist_button = wx.Button(self, label="Add peaklist")
+        self.add_peaklist_button.Bind(wx.EVT_BUTTON, self.OnAddPeakList)
+
+        self.peaklist_selection_text = wx.StaticText(self, -1, "Selected Peaklist:")
+
+        self.current_peaklist_box = wx.ComboBox(
+            self, choices=self.peak_list_choices, size=(250, 20)
+        )
+        self.current_peaklist_box.Bind(wx.EVT_COMBOBOX, self.OnPeakListSelection)
+
+        self.add_peaks_button = wx.ToggleButton(self, label="Add Peaks (a)")
+        self.add_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddPeaks)
+        ID_BUTTON_a = wx.NewIdRef()
+
+        self.select_peak_button = wx.ToggleButton(self, label="Select Peak (s)")
+        self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
+        ID_BUTTON_s = wx.NewIdRef()
+
+        self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
+        self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
+        ID_BUTTON_g = wx.NewIdRef()
+
+        self.remove_peaks_button = wx.Button(self, label="Remove Peaks (r)")
+        self.remove_peaks_button.Bind(wx.EVT_BUTTON, self.OnRemovePeaks)
+        ID_BUTTON_r = wx.NewIdRef()
+
+        self.find_peak_button = wx.Button(self, label="Find Peak (f)")
+        self.find_peak_button.Bind(wx.EVT_BUTTON, self.OnFindPeaks)
+        ID_BUTTON_f = wx.NewIdRef()
+
+        self.move_peaks_button = wx.ToggleButton(self, label="Move Peaks (m)")
+        self.move_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnMovePeaks)
+        ID_BUTTON_m = wx.NewIdRef()
+
+        # Creating an accelerator table for keyboard shortcuts for the buttons
+        accelerator_table = wx.AcceleratorTable(
+            [
+                (wx.ACCEL_CTRL, ord("a"), ID_BUTTON_a),
+                (wx.ACCEL_CTRL, ord("s"), ID_BUTTON_s),
+                (wx.ACCEL_CTRL, ord("g"), ID_BUTTON_g),
+                (wx.ACCEL_CTRL, ord("r"), ID_BUTTON_r),
+                (wx.ACCEL_CTRL, ord("f"), ID_BUTTON_f),
+                (wx.ACCEL_CTRL, ord("m"), ID_BUTTON_m),
+            ]
+        )
+
+        self.SetAcceleratorTable(accelerator_table)
+        self.main_frame.SetAcceleratorTable(accelerator_table)
+        self.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
+        self.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
+        self.Bind(wx.EVT_MENU, self.OnSelectPeaks, id=ID_BUTTON_g)
+        self.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
+        self.Bind(wx.EVT_MENU, self.OnMovePeaks, id=ID_BUTTON_m)
+        self.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
+
+        self.main_frame.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeaks, id=ID_BUTTON_g)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeaks, id=ID_BUTTON_m)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
+
+        self.save_peaks_button = wx.Button(self, label="Save")
+        self.save_peaks_button.Bind(wx.EVT_BUTTON, self.OnSave)
+
+        self.row1_label = wx.StaticBox(self, -1, "Loading Peaklists:")
+        self.row1 = wx.StaticBoxSizer(self.row1_label, wx.HORIZONTAL)
+
+        self.row2_label = wx.StaticBox(
+            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key)"
+        )
+        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
+
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.add_peaklist_button)
+        self.row1.AddSpacer(10)
+        self.row1.Add(self.peaklist_selection_text)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.current_peaklist_box)
+
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.add_peaks_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.select_peak_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.select_peaks_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.move_peaks_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.remove_peaks_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.find_peak_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.save_peaks_button)
+
+        self.main_peaklist_sizer.AddSpacer(10)
+        self.main_peaklist_sizer.Add(
+            self.row1, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
+        )
+        self.main_peaklist_sizer.AddSpacer(10)
+        self.main_peaklist_sizer.Add(
+            self.row2, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
+        )
+
+        # Then have a table of the currently loaded peaklist (originally blank)
+        import wx.grid as gridlib
+
+        self.grid = gridlib.Grid(self)
+        self.grid.CreateGrid(5, 3)
+
+        self.grid.SetColLabelValue(0, "Peak name")
+        self.grid.SetColLabelValue(1, "Shift 1 (ppm)")
+        self.grid.SetColLabelValue(2, "Shift 2 (ppm)")
+
+        # Bind event when cell value changes
+        self.grid.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.on_begin_edit)
+        self.grid.Bind(gridlib.EVT_GRID_CELL_CHANGED, self.on_cell_changed)
+
+        self.row3_label = wx.StaticBox(self, -1, "Peaklist Table:")
+        self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
+        self.row3.Add(self.grid, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
+        self.main_peaklist_sizer.AddSpacer(10)
+        self.main_peaklist_sizer.Add(self.row3, 1, wx.EXPAND | wx.ALL, 5)
+
+        self.Layout()
+        self.Refresh()
+        total_width = int(self.grid.GetClientSize().width * 0.8)
+        col_count = self.grid.GetNumberCols()
+        if col_count > 0:
+            col_width = int(total_width // col_count)
+            for c in range(col_count):
+                self.grid.SetColSize(c, col_width)
+
+    def OnAddPeakList(self, event):
+        """
+        1 - Open a file explorer window (opening at the current directory)
+        2 - Try to read the peaklist file (might be necessary to transpose)
+        3 - Plot the peaklist file (and when open mincontour 2D need to also
+            plot the peaklists too)
+        """
+        # Opening up a file window asking the user to select the 1D peak list - must be in the format of 1st column = peak_name, 2nd column = peak_position
+        dlg = wx.FileDialog(self, "Select the peak list", wildcard="", style=wx.FD_OPEN)
+        dlg.SetDirectory(os.getcwd())
+        if dlg.ShowModal() == wx.ID_OK:
+            peaklist_file = dlg.GetPath()
+        else:
+            dlg.Destroy()
+            return
+
+        self.AddPeaklist(peaklist_file)
+
+    def AddPeaklist(self, peaklist_file, new_peaklist=False):
+        p = pathlib.Path(peaklist_file)
+        dirs = p.parts[-3:]
+        last_directories_path = str(pathlib.Path(*dirs))
+        peaklist = self.ReadPeakList(peaklist_file, new_peaklist)
+        if type(peaklist) != dict:
+            return
+        self.peak_list_dictionary[last_directories_path] = peaklist
+        if self.peak_list_choices == [""]:
+            self.peak_list_choices = [last_directories_path]
+        else:
+            self.peak_list_choices.append(last_directories_path)
+
+        self.current_peaklist_box.SetItems(self.peak_list_choices)
+        self.current_peaklist_box.SetSelection(len(self.peak_list_choices) - 1)
+
+        self.turn_off_togglebuttons()
+
+        self.AddToTable()
+
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+    def AddToTable(self):
+        """
+        Adding the peaklist just entered into the peaklist table
+        """
+        row_count = self.grid.GetNumberRows()
+        if row_count > 0:
+            self.grid.DeleteRows(0, row_count)
+        peaklist = self.current_peaklist_box.GetValue()
+        data = []
+
+        import re
+
+        def extract_number(s):
+            match = re.match(r"(\d+)", s)
+            return int(match.group(1)) if match else float("inf")
+
+        # Pair each item with its original index
+        indexed_arr = list(enumerate(self.peak_list_dictionary[peaklist]["peak_name"]))
+
+        # Sort by number while keeping track of original indices
+        sorted_indexed = sorted(indexed_arr, key=lambda x: extract_number(x[1]))
+
+        # Extract sorted values and index mapping
+        sorted_values = [val for _, val in sorted_indexed]
+        index_mapping = {
+            new_idx: old_idx for new_idx, (old_idx, _) in enumerate(sorted_indexed)
+        }
+
+        for i, peak_name in enumerate(self.peak_list_dictionary[peaklist]["peak_name"]):
+            index = index_mapping[i]
+            peak = self.peak_list_dictionary[peaklist]["peak_name"][index]
+            shift1 = self.peak_list_dictionary[peaklist]["shift1"][index]
+            shift2 = self.peak_list_dictionary[peaklist]["shift2"][index]
+            data.append([peak, shift1, shift2])
+
+        num_rows = self.grid.GetNumberRows()
+        self.grid.AppendRows(len(data) - num_rows)
+        for row, rowData in enumerate(data):
+            for col, value in enumerate(rowData):
+                self.grid.SetCellValue(row, col, str(value))
+
+    def on_begin_edit(self, event):
+        """
+        If the user is editing the peak_name column, store the original value
+        """
+        row = event.GetRow()
+        col = event.GetCol()
+        if col == 0:
+            self.old_key = self.grid.GetCellValue(row, col)
+        else:
+            self.old_num = self.grid.GetCellValue(row, col)
+        event.Skip()
+
+    def on_cell_changed(self, event):
+        """
+        When a cell is changed, see if the types are correct
+        e.g. the shifts are numbers.
+        Can then update the dictionary and re-perform OnMinContour2D.
+        """
+        row = event.GetRow()
+        col = event.GetCol()
+        if self.old_key != None:
+            peak_name = self.grid.GetCellValue(row, col)
+            if (
+                peak_name
+                in self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                    "peak_name"
+                ]
+            ):
+                # Give an error saying that this peak name is already taken, changing back to the original value
+                self.grid.SetCellValue(row, col, self.old_key)
+                dlg = wx.MessageDialog(
+                    self,
+                    "The peak name entered (row:{}, coloum:{})is already taken, this value has been reset to its previous value".format(
+                        str(row), str(col)
+                    ),
+                    "Warning",
+                    wx.OK,
+                )
+                dlg.ShowModal()
+                dlg.Destroy()
+            else:
+                index = self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                    "peak_name"
+                ].index(self.old_key)
+                self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                    "peak_name"
+                ][index] = peak_name
+
+        else:
+            peak_name = self.grid.GetCellValue(row, 0)
+            index = self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                "peak_name"
+            ].index(peak_name)
+            try:
+                new_value = float(self.grid.GetCellValue(row, col))
+                if col == 1:
+                    self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                        "shift1"
+                    ][index] = new_value
+                if col == 2:
+                    self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                        "shift2"
+                    ][index] = new_value
+            except:
+                dlg = wx.MessageDialog(
+                    self,
+                    "The value entered (row:{}, coloum:{})is not a number, this value has been reset to its previous value".format(
+                        str(row), str(col)
+                    ),
+                    "Warning",
+                    wx.OK,
+                )
+                dlg.ShowModal()
+                dlg.Destroy()
+
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+        self.old_key = None
+        self.old_num = None
+
+        self.AddToTable()
+
+    def ReadPeakList(self, peaklist_file, new_peaklist):
+        """
+        Read the selected peaklist to obtain the chemical shifts in each dimension
+        Add a list of peak names, chemical shifts (dim1) and chemical shifts (dim2)
+        to the dictionary
+        """
+        dictionary = {}
+        dictionary["peak_name"] = []
+        dictionary["shift1"] = []
+        dictionary["shift2"] = []
+        # Try to read the peaklist, otherwise give an error saying it could not be read correctly
+        try:
+            with open(peaklist_file) as file:
+                lines = file.readlines()
+                if(len(lines)!=0):
+                    for line in lines:
+                        line = line.split("\n")[0].split()
+                        if len(line) == 3:
+                            try:
+                                dictionary["peak_name"].append(line[0])
+                                dictionary["shift1"].append(float(line[1]))
+                                dictionary["shift2"].append(float(line[2]))
+                            except:
+                                pass
+
+        except:
+            self.peaklist_error_message()
+            return None
+
+        if len(dictionary["peak_name"]) == 0 and new_peaklist == False:
+            self.peaklist_error_message()
+            return None
+
+        # Try to see if the chemical shifts of the peaks are within the 2D spectral range
+        dictionary = self.check_peaklist(dictionary)
+
+        return dictionary
+
+    def check_peaklist(self, dictionary: dict):
+        """
+        Try to see if the chemical shifts of the peaks are within the 2D spectral range
+        """
+        ppms_0 = dictionary["shift1"]
+        ppms_1 = dictionary["shift2"]
+
+        match_0 = []
+        for ppm in ppms_0:
+            if ppm > np.min(self.main_frame.ppms_0) and ppm < np.max(
+                self.main_frame.ppms_0
+            ):
+                match_0.append(1)
+            else:
+                match_0.append(0)
+
+        mean0 = np.mean(np.array(match_0))
+
+        match_1 = []
+        for ppm in ppms_1:
+            if ppm > np.min(self.main_frame.ppms_1) and ppm < np.max(
+                self.main_frame.ppms_1
+            ):
+                match_1.append(1)
+            else:
+                match_1.append(0)
+
+        mean1 = np.mean(np.array(match_1))
+
+        if mean0 == 0 and mean1 == 0:
+            # No peaks are within the spectrum, trying transposing
+            match_0 = []
+            for ppm in ppms_0:
+                if ppm > np.min(self.main_frame.ppms_1) and ppm < np.max(
+                    self.main_frame.ppms_1
+                ):
+                    match_0.append(1)
+                else:
+                    match_0.append(0)
+
+            mean0 = np.mean(np.array(match_0))
+
+            match_1 = []
+            for ppm in ppms_1:
+                if ppm > np.min(self.main_frame.ppms_0) and ppm < np.max(
+                    self.main_frame.ppms_0
+                ):
+                    match_1.append(1)
+                else:
+                    match_1.append(0)
+
+            mean1 = np.mean(np.array(match_1))
+
+            if mean0 > 0.5 and mean1 > 0.5:
+                # More than 50 percent of the peaks are within the spectrum
+                dictionary["shift1"] = ppms_1
+                dictionary["shift2"] = ppms_0
+                if self.main_frame.transposed2D == True:
+                    dictionary["shift1"] = ppms_0
+                    dictionary["shift2"] = ppms_1
+                return dictionary
+
+            else:
+                return None
+
+        else:
+            if self.main_frame.transposed2D == True:
+                dictionary["shift1"] = ppms_1
+                dictionary["shift2"] = ppms_0
+            return dictionary
+
+    def peaklist_error_message(self):
+        """
+        Gives the user an error when the peaklist was not read correctly
+        """
+
+        dlg = wx.MessageDialog(
+            self,
+            "The selected peaklist was not read correctly. Please select another peak list.",
+            "Error",
+        )
+        dlg.ShowModal()
+
+    def OnPeakListSelection(self, event):
+        if self.selected_peaklist != "":
+            self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        self.turn_off_togglebuttons()
+
+        self.AddToTable()
+
+    def turn_off_togglebuttons(self):
+        # If any toggle buttons are on, turn them off
+        if self.active_add == True:
+            self.active_add = False
+            self.add_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
+        if self.active_move:
+            if self.active_select_peak:
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_connect)
+            if self.active_select_peaks:
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_press)
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_motion)
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_release)
+        if self.active_select_peak == True:
+            self.select_peak_button.SetValue(False)
+            self.active_select_peak = False
+            self.selected_peakname = ""
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+        if self.active_select_peaks:
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.select_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+    def OnAddPeaks(self, event):
+        """
+        This will allow a user to add a peak to the currently selected peaklist
+        A popout will come up saying that the user needs to use the cursor to
+        add a peak. De-select the add button once complete.
+
+        The code will also disable all the other buttons which have been
+        selected
+        """
+
+        if self.active_add == True:
+            self.active_add = False
+            self.add_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
+            return
+
+        if self.active_select_peaks:
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.select_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+        if self.active_select_peak:
+            self.select_peak_button.SetValue(False)
+            self.active_select_peak = False
+            self.selected_peakname = ""
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+        if self.peak_list_choices == [""]:
+            dlg = wx.MessageDialog(
+                None,
+                "No peaklists are loaded, would you like to create a new peaklist?",
+                "Adding peaks",
+                wx.YES_NO,
+            )
+            result = dlg.ShowModal()
+            if result == wx.ID_NO:
+                dlg.Destroy()
+                return
+
+            dlg.Destroy()
+            # Making a new peaklist, ask the user to create and save a new file in a file dialog
+            dlg = wx.FileDialog(
+                None, "Creating new peaklist", wildcard="*.list|*.txt", style=wx.FD_SAVE
+            )
+            dlg.SetDirectory(os.getcwd())
+            if dlg.ShowModal() == wx.ID_OK:
+                peaklist_file = dlg.GetPath()
+                with open(peaklist_file, "w") as file:
+                    pass
+
+                self.AddPeaklist(peaklist_file, new_peaklist=True)
+
+            else:
+                dlg.Destroy()
+                return
+
+        # Updating the current active values
+        self.active_add = True
+        self.add_peaks_button.SetValue(True)
+        self.add_peaks_button.SetForegroundColour(wx.Colour(60, 60, 60))
+
+        # Connect the canvas click event to an add peak function
+        self.add_peak_connect = self.main_frame.fig.canvas.mpl_connect(
+            "button_press_event", self.on_click_addpeak
+        )
+
+        self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        dlg = wx.MessageDialog(
+            None,
+            "Peaks can now be added to the peaklist {} by clicking the cursor. Please de-select the add button when complete.".format(
+                self.current_peaklist_box.GetValue()
+            ),
+            "Adding Peaks",
+            wx.OK,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def on_click_addpeak(self, event):
+
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+
+        if x != None and y != None:
+
+            # Current peaklist
+            current_peaklist = self.current_peaklist_box.GetValue()
+
+            part = ""
+            number = 1
+            order = [0, 1]
+
+            if len(self.peak_list_dictionary[current_peaklist]["peak_name"]) > 0:
+                import re
+
+                peakname = self.peak_list_dictionary[current_peaklist]["peak_name"][-1]
+                parts = re.findall(r"[A-Za-z_-]+|\d+", peakname)
+                for i, v in enumerate(parts):
+                    try:
+                        v = int(v)
+                        number = v + 1
+                    except:
+                        part = v
+                        if i == 0:
+                            order = [1, 0]
+                if order == [0, 1]:
+                    peakname = str(number) + part
+                else:
+                    peakname = part + str(number)
+
+                if peakname in self.peak_list_dictionary[current_peaklist]["peak_name"]:
+                    peakname = peakname + "_1"
+
+            else:
+                peakname = str(number) + part
+
+            self.peak_list_dictionary[current_peaklist]["peak_name"].append(peakname)
+            self.peak_list_dictionary[current_peaklist]["shift1"].append(x)
+            self.peak_list_dictionary[current_peaklist]["shift2"].append(y)
+
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+            self.AddToTable()
+
+    def OnSelectPeak(self, event):
+        """
+        This will select a peak so that it can be moved etc
+        """
+        if self.active_move:
+            if self.active_select_peak:
+                self.select_peak_button.SetValue(True)
+            return
+        self.selected_peaklist = self.current_peaklist_box.GetValue()
+        if self.selected_peaklist == "":
+            dlg = wx.MessageDialog(
+                None,
+                "No peaklists are loaded, please load a peaklist and try again.",
+                "Warning",
+                wx.OK,
+            )
+            result = dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if self.active_select_peak == True:
+            self.active_select_peak = False
+            self.selected_peakname = ""
+            self.select_peak_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+            return
+
+        # First need to disable other toggle buttons that are selected
+        if self.active_add == True:
+            self.active_add = False
+            self.add_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
+        if self.active_select_peaks == True:
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.select_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+        self.active_select_peak = True
+        self.select_peak_button.SetValue(True)
+
+        self.select_peak_connect = self.main_frame.fig.canvas.mpl_connect(
+            "button_press_event", self.on_click_selectpeak
+        )
+
+    def on_click_selectpeak(self, event):
+        """
+        If the peak is within a tolerence select the peak
+        If multiple peaks are within the tolerence, select the closest
+        in terms of pixels on the screen.
+        """
+
+        # Find the index of the currently selected peaklist
+        peaklist_index = self.current_peaklist_box.GetSelection()
+        points = self.main_frame.points[peaklist_index]
+
+        cont, ind = points.contains(event)
+        if cont:
+            mouse_coordinates = [event.x, event.y]  # in pixels
+            distances = []
+            for index in ind["ind"]:
+                x = self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                    "shift1"
+                ][index]
+                y = self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                    "shift2"
+                ][index]
+                x, y = self.main_frame.ax.transData.transform((x, y))
+                distance = np.sqrt(
+                    (mouse_coordinates[0] - x) ** 2 + (mouse_coordinates[1] - y) ** 2
+                )
+                distances.append(distance)
+
+            min_index = ind["ind"][np.argmin(np.array(distances))]
+
+            self.selected_peak_indexes = [min_index]
+            self.selected_peakname = self.peak_list_dictionary[
+                self.current_peaklist_box.GetValue()
+            ]["peak_name"][min_index]
+            self.remove_peak = True
+
+        else:
+            self.selected_peak_indexes = ["N/A"]
+
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+    def OnSelectPeaks(self, event):
+        """
+        Giving a popout telling the user to drag a box over
+        a region of the plot to select peaks in a given area
+        """
+
+        if self.active_move:
+            if self.active_select_peaks:
+                self.select_peaks_button.SetValue(True)
+            return
+
+        self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        if self.selected_peaklist == "":
+            dlg = wx.MessageDialog(
+                None,
+                "No peaklists are loaded, please load a peaklist and try again.",
+                "Warning",
+                wx.OK,
+            )
+            result = dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if self.active_select_peaks == True:
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.select_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+            return
+
+        # First de-select all activated toggles
+        if self.active_add == True:
+            self.active_add = False
+            self.add_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
+        if self.active_select_peak == True:
+            self.active_select_peak = False
+            self.select_peak_button.SetValue(False)
+            self.selected_peakname = ""
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+            return
+
+        self.active_select_peaks = True
+        self.select_peaks_button.SetValue(True)
+
+        # self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        dlg = wx.MessageDialog(
+            None,
+            "Drag over multiple peaks to select a group. Multiple groups can be selected sequentially by repeating and holding down the shift key.",
+            "Select Peaks",
+            wx.OK,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
+
+        # If drag, finds new peaks
+        self.select_press = self.main_frame.fig.canvas.mpl_connect(
+            "button_press_event", self.on_press_select
+        )
+        self.select_release = self.main_frame.fig.canvas.mpl_connect(
+            "button_release_event", self.on_release_select
+        )
+        self.select_motion = self.main_frame.fig.canvas.mpl_connect(
+            "motion_notify_event", self.on_motion_select
+        )
+
+    def on_press_select(self, event):
+        """
+        This is activated when the mouse is clicked when select peaks
+        is toggled
+        """
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+
+        if x != None and y != None:
+            self.start_point = (x, y)
+
+            # Create the rectangle
+            self.rect = patches.Rectangle(
+                self.start_point, 0, 0, linewidth=1, edgecolor="red", facecolor="none"
+            )
+            self.main_frame.ax.add_patch(self.rect)
+            self.main_frame.fig.canvas.draw()
+            self.main_frame.UpdateFrame()
+
+    def on_motion_select(self, event):
+        """
+        This is activated when the mouse is moved when select peaks
+        is toggled after it has been clicked
+        """
+        if not self.start_point:
+            return
+
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+
+        if x != None and y != None:
+
+            # Update rectangle size
+            x0, y0 = self.start_point
+            x1, y1 = x, y
+            width = x1 - x0
+            height = y1 - y0
+
+            self.rect.set_width(width)
+            self.rect.set_height(height)
+            self.rect.set_xy((x0, y0))
+            self.main_frame.canvas.draw_idle()
+            self.main_frame.UpdateFrame()
+
+    def on_release_select(self, event):
+        """
+        This is activated when the mouse is released when select peaks
+        is toggled after it has been clicked
+        """
+        if not self.start_point:
+            return
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+
+        if x != None and y != None:
+            x0, y0 = self.start_point
+            x1, y1 = x, y
+            xmin, xmax = sorted([x0, x1])
+            ymin, ymax = sorted([y0, y1])
+            self.find_selected_peaks([xmin, xmax], [ymin, ymax], event)
+
+        # Cleanup
+        self.start_point = None
+        self.rect.set_visible(False)
+        self.rect = None
+        self.main_frame.canvas.draw()
+        self.main_frame.UpdateFrame()
+
+    def find_selected_peaks(self, xcoords: list, ycoords: list, event):
+        """
+        Find any peaks in the current selected peaklist that are within
+        the area just selected by the user.
+        """
+
+        if event.key and "shift" in event.key.lower():
+            pass
+        else:
+            self.selected_peak_indexes = []
+
+        for i, peak_name in enumerate(
+            self.peak_list_dictionary[self.current_peaklist_box.GetValue()]["peak_name"]
+        ):
+            x = self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                "shift1"
+            ][i]
+            y = self.peak_list_dictionary[self.current_peaklist_box.GetValue()][
+                "shift2"
+            ][i]
+            if x > xcoords[0] and x < xcoords[1]:
+                if y > ycoords[0] and y < ycoords[1]:
+                    self.selected_peak_indexes.append(i)
+
+        if len(self.selected_peak_indexes) == 0:
+            self.selected_peak_indexes = ["N/A"]
+        else:
+            # If have multiple peaks, add the ability to remove peaks
+            self.remove_peak = True
+
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+    def OnRemovePeaks(self, event):
+        """
+        If there is a current peak or peaks selected, then remove these peaks
+        from the dictionary.
+
+        If a peak or peaks are selected in the table of the Peak List window ask
+        if the user if they want to remove these peaks.
+        """
+
+        if self.active_select_peak == True or self.active_select_peaks == True:
+            if "N/A" not in self.selected_peak_indexes:
+                if self.remove_peak == True:
+                    count = 0
+                    for peak_index in self.selected_peak_indexes:
+                        del self.peak_list_dictionary[
+                            self.current_peaklist_box.GetValue()
+                        ]["peak_name"][peak_index - count]
+                        del self.peak_list_dictionary[
+                            self.current_peaklist_box.GetValue()
+                        ]["shift1"][peak_index - count]
+                        del self.peak_list_dictionary[
+                            self.current_peaklist_box.GetValue()
+                        ]["shift2"][peak_index - count]
+
+                        count += 1
+
+                    self.remove_peak = False
+                    self.selected_peak_indexes = ["N/A"]
+                    self.selected_peakname = ""
+
+                    self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+                    self.AddToTable()
+
+    def OnMovePeaks(self, event):
+        """
+        This function is activated when the user clicks on the move peaks button.
+        The function first deactivates the select peak matplotlib connect functions.
+        The code then checks to see if there are peaks selected.
+        If peaks are selected then the user is able to click a new peak position (if
+        one peak is selected) or drag the selected peaks to new positions (if multiple
+        peaks are selected).
+        """
+
+        if self.active_move == True:
+            self.active_move = False
+            self.move_peaks_button.SetValue(False)
+
+            if self.active_select_peaks == True:
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_press)
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_motion)
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_release)
+                self.select_press = self.main_frame.fig.canvas.mpl_connect(
+                    "button_press_event", self.on_press_select
+                )
+                self.select_release = self.main_frame.fig.canvas.mpl_connect(
+                    "button_release_event", self.on_release_select
+                )
+                self.select_motion = self.main_frame.fig.canvas.mpl_connect(
+                    "motion_notify_event", self.on_motion_select
+                )
+            if self.active_select_peak == True:
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_connect)
+                self.select_peak_connect = self.main_frame.fig.canvas.mpl_connect(
+                    "button_press_event", self.on_click_selectpeak
+                )
+
+            return
+
+        # Temporarily deactivate the ability to select peak or select group
+        if len(self.selected_peak_indexes) == 0 or "N/A" in self.selected_peak_indexes:
+            # return as there are no selected peaks
+            self.active_move = False
+            self.move_peaks_button.SetValue(False)
+            dlg = wx.MessageDialog(
+                self,
+                "There are no peaks selected. Please select a peak or a group of peaks and try again.",
+                "Warning",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if self.active_select_peaks == True:
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
+            dlg = wx.MessageDialog(
+                self,
+                "Please drag to move the selected peaks to a new location. This can be repeated. Un-toggle the move peaks button when completed. (Note: ensure that zoom/pan in the matplotlib toolbar is not selected. Zoom/pan before entering move peaks mode)",
+                "Move Peaks",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+        if self.active_select_peak == True:
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
+            dlg = wx.MessageDialog(
+                self,
+                "Please click a new location to move the selected peak. This can be repeated. Un-toggle the move peaks button when completed. (Note: ensure zoom/pan in the matplotlib toolbar is not selected. Zoom/pan before entering move peaks mode)",
+                "Move Peaks",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+
+        self.active_move = True
+        self.move_peaks_button.SetValue(True)
+
+        # If select peak, and there is a peak selected give a popout telling
+        # the user to click where they want the peak to go
+        if self.active_select_peak == True:
+            self.move_peak_connect = self.main_frame.fig.canvas.mpl_connect(
+                "button_press_event", self.on_click_movepeak
+            )
+
+        if self.active_select_peaks == True:
+            self.move_peak_press = self.main_frame.fig.canvas.mpl_connect(
+                "button_press_event", self.on_press_movepeak
+            )
+            self.move_peak_motion = self.main_frame.fig.canvas.mpl_connect(
+                "motion_notify_event", self.on_motion_movepeak
+            )
+            self.move_peak_release = self.main_frame.fig.canvas.mpl_connect(
+                "button_release_event", self.on_release_movepeak
+            )
+
+        # when dragging, update the x/y coordinates of self.main_frame.points and then
+        # redraw the canvas.
+
+    def on_click_movepeak(self, event):
+        """
+        This function will update the peak position of the selected peak
+        depending on where the user clicked.
+        """
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+
+        if x != None and y != None:
+            self.peak_list_dictionary[self.selected_peaklist]["shift1"][
+                self.selected_peak_indexes[0]
+            ] = x
+            self.peak_list_dictionary[self.selected_peaklist]["shift2"][
+                self.selected_peak_indexes[0]
+            ] = y
+
+            index = 0
+            for i, [peaklist, dictionary] in enumerate(
+                self.peak_list_dictionary.items()
+            ):
+                if peaklist == self.selected_peaklist:
+                    index = i
+
+            self.main_frame.points[index].set_offsets(
+                np.c_[
+                    self.peak_list_dictionary[self.selected_peaklist]["shift1"],
+                    self.peak_list_dictionary[self.selected_peaklist]["shift2"],
+                ]
+            )
+            # self.main_frame.points[index].set_ydata(self.peak_list_dictionary[self.selected_peaklist]['shift2'])
+            self.main_frame.UpdateFrame()
+            self.AddToTable()
+
+    def on_press_movepeak(self, event):
+        import copy
+
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+        if x != None and y != None:
+            self.start_point_move = (x, y)
+            self.x_init = copy.deepcopy(
+                self.peak_list_dictionary[self.selected_peaklist]["shift1"]
+            )
+            self.y_init = copy.deepcopy(
+                self.peak_list_dictionary[self.selected_peaklist]["shift2"]
+            )
+
+    def on_motion_movepeak(self, event):
+        if self.start_point_move == None:
+            return
+
+        x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
+
+        if x != None and y != None:
+
+            # Update rectangle size
+            x0, y0 = self.start_point_move
+            x1, y1 = x, y
+            x_change = x1 - x0
+            y_change = y1 - y0
+
+            for index in self.selected_peak_indexes:
+
+                self.peak_list_dictionary[self.selected_peaklist]["shift1"][index] = (
+                    self.x_init[index] + x_change
+                )
+                self.peak_list_dictionary[self.selected_peaklist]["shift2"][index] = (
+                    self.y_init[index] + y_change
+                )
+
+            ind = 0
+            for i, [peaklist, dictionary] in enumerate(
+                self.peak_list_dictionary.items()
+            ):
+                if peaklist == self.selected_peaklist:
+                    ind = i
+
+            self.main_frame.points[ind].set_offsets(
+                np.c_[
+                    self.peak_list_dictionary[self.selected_peaklist]["shift1"],
+                    self.peak_list_dictionary[self.selected_peaklist]["shift2"],
+                ]
+            )
+            # self.main_frame.points[index].set_ydata(self.peak_list_dictionary[self.selected_peaklist]['shift2'])
+            self.main_frame.UpdateFrame()
+
+    def on_release_movepeak(self, event):
+        # self.on_motion_movepeak(event)
+        self.AddToTable()
+        self.start_point_move = None
+
+    def OnFindPeaks(self, event):
+        """
+        If one peak is currently selected in the table, then zoom in to this
+        peak and select it.
+        Before doing this, the code will turn off all active toggled buttons from
+        the Peak List frame.
+        """
+        if self.active_move == True:
+            self.active_move = False
+            self.move_peaks_button.SetValue(False)
+
+            if self.active_select_peaks == True:
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_press)
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_motion)
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_release)
+            if self.active_select_peak == True:
+                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_connect)
+        elif self.active_add == True:
+            self.active_add = False
+            self.add_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
+            return
+
+        elif self.active_select_peaks:
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.select_peaks_button.SetValue(False)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+        elif self.active_select_peak:
+            self.select_peak_button.SetValue(False)
+            self.active_select_peak = False
+            self.selected_peakname = ""
+            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
+            self.main_frame.OnMinContour2D(wx.EVT_BUTTON)
+
+        row = self.grid.GetGridCursorRow()
+        peak_name = self.grid.GetCellValue(row, 0)
+        shift1 = self.grid.GetCellValue(row, 1)
+        shift2 = self.grid.GetCellValue(row, 2)
+
+        # Zoom in on grid selected peak and then select it in the plot.
+        width = 0.05  # ppm
+        height = 0.05  # ppm
+
+        xmin = float(shift1) - width
+        xmax = float(shift1) + width
+
+        ymin = float(shift2) - height
+        ymax = float(shift2) + height
+
+        self.main_frame.toolbar.push_current()
+
+        self.main_frame.ax.set_xlim([xmin, xmax])
+        self.main_frame.ax.set_ylim([ymin, ymax])
+        self.main_frame.UpdateFrame()
+
+        self.main_frame.toolbar.push_current()
+
+    def OnSave(self, event):
+        """
+        Provide a FileDialog where the user can chose the name for
+        the peaklist.
+        The peaklist will then be saved.
+        """
+
+        dlg = wx.FileDialog(self, "Select the peak list", wildcard="", style=wx.FD_SAVE)
+        dlg.SetDirectory(os.getcwd())
+        if dlg.ShowModal() == wx.ID_OK:
+            peaklist_file = dlg.GetPath()
+        else:
+            dlg.Destroy()
+            return
+        
+        with open(peaklist_file, 'w') as file:
+            # Save all elements in the grid
+            num_rows = self.grid.GetNumberRows()
+            for i in range(num_rows):
+                peak = self.grid.GetCellValue(i,0)
+                shift1 = self.grid.GetCellValue(i,1)
+                shift2 = self.grid.GetCellValue(i,2)
+                file.write('{} \t {} \t {}\n'.format(peak, shift1, shift2))
 
 
 def main():
