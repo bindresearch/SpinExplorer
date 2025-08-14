@@ -143,13 +143,13 @@ class Convert_pipe:
         was successful
         """
         dlg = wx.MessageDialog(
-            self.notebook,
+            self.app,
             "Conversion was completed",
             "Completion",
             wx.OK,
         )
-        self.notebook.Raise()
-        self.notebook.SetFocus()
+        self.app.Raise()
+        self.app.SetFocus()
         result = dlg.ShowModal()
 
 
