@@ -60,9 +60,14 @@ from matplotlib.backends.backend_wxagg import (
 import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 import matplotlib.patches as patches
+from matplotlib.backend_bases import MouseEvent as MPLMouseEvent
 import nmrglue as ng
 import subprocess
 import os
+import copy
+import wx.grid as gridlib
+import pandas as pd
+import re
 from scipy.interpolate import make_interp_spline
 
 matplotlib.rcParams["font.sans-serif"] = "Arial"
@@ -10717,6 +10722,8 @@ class SpinBore(wx.Frame):
             1, 3, gridspec_kw={"width_ratios": [3, 1, 1]}
         )
 
+        self.ax_bore_2.sharey(self.ax_bore_3)
+
         self.click_press_connect = self.fig_bore.canvas.mpl_connect(
             "button_press_event", self.on_click_bore
         )
@@ -10864,6 +10871,10 @@ class SpinBore(wx.Frame):
 
         self.ax_bore_3.set_title("Strip Plot")
 
+        self.original_limits = [
+            (ax.get_xlim(), ax.get_ylim()) for ax in [self.ax_bore_2, self.ax_bore_3]
+        ]
+
         self.UpdateBoreFrame()
 
     def OnIntensitySlider(self, event):
@@ -10989,7 +11000,7 @@ class SpinBore(wx.Frame):
                 #             marker="o",
                 #             picker=5,
                 #             zorder=2)
-                
+
                 #     # Annotation for hover
                 #             self.annotations_strip = self.ax_bore_3.annotate(
                 #                 "",
@@ -10999,13 +11010,11 @@ class SpinBore(wx.Frame):
                 #                 bbox=dict(boxstyle="round", fc="w"),
                 #                 arrowprops=dict(arrowstyle="->"))
                 #             self.annotations[-1].set_visible(False)
-        
 
                 #             # Connect event
                 #             self.hover_connect_strip = self.canvas_bore.mpl_connect(
                 #                 "motion_notify_event", self.on_hover_strip
                 #             )
-
 
             else:
                 self.bore_initial = event.xdata, event.ydata
@@ -11090,6 +11099,9 @@ class SpinBore(wx.Frame):
                 self.ax_bore_3.set_ylim(ylim3)
 
             self.OverlayBore()
+            self.ax_bore_2.set_ylim(self.original_limits[0][1])
+            self.ax_bore_3.set_xlim(self.original_limits[1][0])
+            self.ax_bore_3.set_ylim(self.original_limits[1][1])
             # self.overlay_peaklist()
             # self.canvas_bore.draw_idle()
             self.UpdateBoreFrame()
@@ -11106,38 +11118,53 @@ class SpinBore(wx.Frame):
                 and window.GetTitle().split()[0] == "3D"
                 and window.GetTitle().split()[1] == "Peak"
             ):
-                if(len(self.selected_bore_peaks) > 0):
+                if len(self.selected_bore_peaks) > 0:
                     # Plot these bore peaks
                     xvals = []
                     yvals = []
                     names = []
                     for index in self.selected_bore_peaks:
-                        names.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['peak_name'][index])
-                        if(self.transposed2D == False):
-                            xvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift1'][index])
+                        names.append(
+                            self.peak_lists3D.peak_list_dictionary[
+                                self.peak_lists3D.peak_list_choices[0]
+                            ]["peak_name"][index]
+                        )
+                        if self.transposed2D == False:
+                            xvals.append(
+                                self.peak_lists3D.peak_list_dictionary[
+                                    self.peak_lists3D.peak_list_choices[0]
+                                ]["shift1"][index]
+                            )
                         else:
-                            xvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift2'][index])
-                        yvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift3'][index])
-                    self.scatter_strip = self.ax_bore_3.scatter(xvals, yvals, s=5,
-                    marker="o",
-                    picker=5,
-                    zorder=2, color='k')
-        
-            # Annotation for hover
+                            xvals.append(
+                                self.peak_lists3D.peak_list_dictionary[
+                                    self.peak_lists3D.peak_list_choices[0]
+                                ]["shift2"][index]
+                            )
+                        yvals.append(
+                            self.peak_lists3D.peak_list_dictionary[
+                                self.peak_lists3D.peak_list_choices[0]
+                            ]["shift3"][index]
+                        )
+                    self.scatter_strip = self.ax_bore_3.scatter(
+                        xvals, yvals, s=5, marker="o", picker=5, zorder=2, color="k"
+                    )
+
+                    # Annotation for hover
                     self.annotations_strip = self.ax_bore_3.annotate(
                         "",
                         xy=(0, 0),
                         xytext=(15, 15),
                         textcoords="offset points",
                         bbox=dict(boxstyle="round", fc="w"),
-                        arrowprops=dict(arrowstyle="->"))
+                        arrowprops=dict(arrowstyle="->"),
+                    )
                     self.annotations[-1].set_visible(False)
 
                     # Connect event
                     self.hover_connect_strip = self.canvas_bore.mpl_connect(
                         "motion_notify_event", self.on_hover_strip
                     )
-
 
     def OverlayBore(self):
         if self.include_overlay == True:
@@ -11196,12 +11223,11 @@ class SpinBore(wx.Frame):
             * self.contour_factor_strip ** np.flip(np.arange(self.contour_num_strip))
         )
 
-
         try:
             xvalue = self.line3.get_ydata()
         except:
-            xvalue = '1'
-        
+            xvalue = "1"
+
         xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
         xlabel = self.ax_bore_3.get_xlabel()
         title = self.ax_bore_3.get_title()
@@ -11230,19 +11256,16 @@ class SpinBore(wx.Frame):
         self.ax_bore_3.set_xlabel(xlabel)
         self.ax_bore_3.set_title(title)
 
-        if(xvalue!='1'):
-            if(self.transposed2D==False):
+        if xvalue != "1":
+            if self.transposed2D == False:
                 xvalue = self.bore_initial[0]
             else:
                 xvalue = self.bore_initial[1]
-            
-            self.line3 = self.ax_bore_3.axvline(
-                    x=xvalue, color="black", linewidth=0.5
-                )
-        
+
+            self.line3 = self.ax_bore_3.axvline(x=xvalue, color="black", linewidth=0.5)
+
         self.overlay_peaklist()
-            
-        
+
         self.UpdateBoreFrame()
 
     def OnBoreSlider(self, event):
@@ -11340,21 +11363,7 @@ class SpinBore(wx.Frame):
                     dictionary,
                 ) in self.peak_lists3D.peak_list_dictionary.items():
 
-                    if (
-                        self.peak_lists3D.select_peak_button.GetValue() == True
-                        and self.peak_lists3D.select_peaks_button.GetValue() == True
-                    ):
-                        if "N/A" in self.peak_lists3D.selected_peak_indexes:
-                            cs = self.peaklist_colours[count]
-                        else:
-                            cs = []
-                            for i, peak in enumerate(dictionary["peak_name"]):
-                                if i in self.peak_lists3D.selected_peak_indexes:
-                                    cs.append("darkviolet")
-                                else:
-                                    cs.append("k")
-                    else:
-                        cs = self.peaklist_colours[count]
+                    cs = self.peaklist_colours[count]
 
                     shift1 = dictionary["shift1"]
                     shift2 = dictionary["shift2"]
@@ -11398,7 +11407,6 @@ class SpinBore(wx.Frame):
 
             self.UpdateBoreFrame()
 
-
     def on_hover(self, event):
 
         if event.inaxes is self.ax_bore:
@@ -11410,9 +11418,7 @@ class SpinBore(wx.Frame):
                 index = ind["ind"][0]  # first index found
                 peaklist_name = self.peak_lists3D.peak_list_choices[0]
                 dictionary = self.peak_lists3D.peak_list_dictionary[peaklist_name]
-                peakname = (
-                    dictionary["peak_name"][index] + " (" + peaklist_name + ")"
-                )
+                peakname = dictionary["peak_name"][index] + " (" + peaklist_name + ")"
                 x = dictionary["shift1"][index]
                 y = dictionary["shift2"][index]
                 self.annotations[0].xy = (x, y)
@@ -11428,11 +11434,9 @@ class SpinBore(wx.Frame):
 
             # adjust_text(self.annotations, ax=self.ax, time_lim=5)
             self.canvas_bore.draw_idle()
-            
-
 
     def on_pick(self, event):
-        if(event.inaxes is self.ax_bore):
+        if event.inaxes is self.ax_bore:
             contains, details = self.points[0].contains(event)
             try:
                 self.scatter_strip.clear()
@@ -11446,8 +11450,6 @@ class SpinBore(wx.Frame):
                 self.canvas_bore.draw_idle()
             else:
                 self.selected_bore_peaks = []
-                
-            
 
     def on_hover_strip(self, event):
 
@@ -11461,9 +11463,12 @@ class SpinBore(wx.Frame):
                 peaklist_name = self.peak_lists3D.peak_list_choices[0]
                 dictionary = self.peak_lists3D.peak_list_dictionary[peaklist_name]
                 peakname = (
-                    dictionary["peak_name"][self.selected_bore_peaks[index]] + " (" + peaklist_name + ")"
+                    dictionary["peak_name"][self.selected_bore_peaks[index]]
+                    + " ("
+                    + peaklist_name
+                    + ")"
                 )
-                if(self.transposed2D==False):
+                if self.transposed2D == False:
                     x = dictionary["shift1"][self.selected_bore_peaks[index]]
                 else:
                     x = dictionary["shift2"][self.selected_bore_peaks[index]]
@@ -11481,7 +11486,6 @@ class SpinBore(wx.Frame):
 
             # adjust_text(self.annotations, ax=self.ax, time_lim=5)
             self.canvas_bore.draw_idle()
-
 
     def OnTransposeButtonBore(self, event):
         if self.transposed2D == False:
@@ -18196,7 +18200,6 @@ class PeakListWindow2D(wx.Frame):
         )
 
         # Then have a table of the currently loaded peaklist (originally blank)
-        import wx.grid as gridlib
 
         self.grid = gridlib.Grid(self)
         self.grid.CreateGrid(5, 3)
@@ -18277,8 +18280,6 @@ class PeakListWindow2D(wx.Frame):
             self.grid.DeleteRows(0, row_count)
         peaklist = self.current_peaklist_box.GetValue()
         data = []
-
-        import re
 
         def extract_number(s):
             match = re.match(r"(\d+)", s)
@@ -18433,7 +18434,6 @@ class PeakListWindow2D(wx.Frame):
         """
         Read peaklist that has been exported from a CCPN peaklist table.
         """
-        import pandas as pd
 
         df = pd.read_excel(peaklist_file, dtype=str)
 
@@ -18678,7 +18678,6 @@ class PeakListWindow2D(wx.Frame):
             order = [0, 1]
 
             if len(self.peak_list_dictionary[current_peaklist]["peak_name"]) > 0:
-                import re
 
                 peakname = self.peak_list_dictionary[current_peaklist]["peak_name"][-1]
                 parts = re.findall(r"[A-Za-z_-]+|\d+", peakname)
@@ -19150,7 +19149,6 @@ class PeakListWindow2D(wx.Frame):
             )
 
     def on_press_movepeak(self, event):
-        import copy
 
         x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
         if x != None and y != None:
@@ -19487,13 +19485,13 @@ class PeakListWindow3D(wx.Frame):
         self.add_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddPeaks)
         ID_BUTTON_a = wx.NewIdRef()
 
-        self.select_peak_button = wx.ToggleButton(self, label="Select Peak (s)")
-        self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
-        ID_BUTTON_s = wx.NewIdRef()
+        # self.select_peak_button = wx.ToggleButton(self, label="Select Peak (s)")
+        # self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
+        # ID_BUTTON_s = wx.NewIdRef()
 
-        self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
-        self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
-        ID_BUTTON_g = wx.NewIdRef()
+        # self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
+        # self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
+        # ID_BUTTON_g = wx.NewIdRef()
 
         self.remove_peaks_button = wx.Button(self, label="Remove Peaks (r)")
         self.remove_peaks_button.Bind(wx.EVT_BUTTON, self.OnRemovePeaks)
@@ -19511,8 +19509,6 @@ class PeakListWindow3D(wx.Frame):
         accelerator_table = wx.AcceleratorTable(
             [
                 (wx.ACCEL_CTRL, ord("a"), ID_BUTTON_a),
-                (wx.ACCEL_CTRL, ord("s"), ID_BUTTON_s),
-                (wx.ACCEL_CTRL, ord("g"), ID_BUTTON_g),
                 (wx.ACCEL_CTRL, ord("r"), ID_BUTTON_r),
                 (wx.ACCEL_CTRL, ord("f"), ID_BUTTON_f),
                 (wx.ACCEL_CTRL, ord("m"), ID_BUTTON_m),
@@ -19522,15 +19518,11 @@ class PeakListWindow3D(wx.Frame):
         self.SetAcceleratorTable(accelerator_table)
         self.main_frame.SetAcceleratorTable(accelerator_table)
         self.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
-        self.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
-        self.Bind(wx.EVT_MENU, self.OnSelectPeaks, id=ID_BUTTON_g)
         self.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
         self.Bind(wx.EVT_MENU, self.OnMovePeaks, id=ID_BUTTON_m)
         self.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
 
         self.main_frame.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
-        self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
-        self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeaks, id=ID_BUTTON_g)
         self.main_frame.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeaks, id=ID_BUTTON_m)
         self.main_frame.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
@@ -19548,10 +19540,6 @@ class PeakListWindow3D(wx.Frame):
         self.row2.AddSpacer(5)
         self.row2.Add(self.add_peaks_button)
         self.row2.AddSpacer(5)
-        self.row2.Add(self.select_peak_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.select_peaks_button)
-        self.row2.AddSpacer(5)
         self.row2.Add(self.move_peaks_button)
         self.row2.AddSpacer(5)
         self.row2.Add(self.remove_peaks_button)
@@ -19566,7 +19554,6 @@ class PeakListWindow3D(wx.Frame):
         )
 
         # Then have a table of the currently loaded peaklist (originally blank)
-        import wx.grid as gridlib
 
         self.grid = gridlib.Grid(self)
         self.grid.CreateGrid(5, 4)
@@ -19646,8 +19633,6 @@ class PeakListWindow3D(wx.Frame):
             self.grid.DeleteRows(0, row_count)
         peaklist = self.peak_list
         data = []
-
-        import re
 
         def extract_number(s):
             match = re.match(r"(\d+)", s)
@@ -19805,34 +19790,37 @@ class PeakListWindow3D(wx.Frame):
         """
         Read peaklist that has been exported from a CCPN peaklist table.
         """
-        import pandas as pd
 
         df = pd.read_excel(peaklist_file, dtype=str)
 
-        peak_names = df.iloc[:, 0].tolist()
-        shift1 = df.iloc[:, 7].to_numpy()
-        shift2 = df.iloc[:, 8].to_numpy()
-        shift3 = df.iloc[:, 9].to_numpy()
+        try:
+            peak_names = df.iloc[:, 0].tolist()
+            shift1 = df.iloc[:, 8].to_numpy()
+            shift2 = df.iloc[:, 9].to_numpy()
+            shift3 = df.iloc[:, 10].to_numpy()
 
-        shift1_1 = []
-        shift2_1 = []
-        shift3_1 = []
+            shift1_1 = []
+            shift2_1 = []
+            shift3_1 = []
 
-        for i in range(len(shift1)):
-            shift1_1.append(float(shift1[i]))
-            shift2_1.append(float(shift2[i]))
-            shift3_1.append(float(shift3[i]))
+            for i in range(len(shift1)):
+                shift1_1.append(float(shift1[i]))
+                shift2_1.append(float(shift2[i]))
+                shift3_1.append(float(shift3[i]))
 
-        dictionary = {}
-        dictionary["peak_name"] = peak_names
-        dictionary["shift1"] = shift1_1
-        dictionary["shift2"] = shift2_1
-        dictionary["shift3"] = shift3_1
+            dictionary = {}
+            dictionary["peak_name"] = peak_names
+            dictionary["shift1"] = shift1_1
+            dictionary["shift2"] = shift2_1
+            dictionary["shift3"] = shift3_1
 
-        # Try to see if the chemical shifts of the peaks are within the 2D spectral range
-        dictionary = self.check_peaklist(dictionary)
+            # Try to see if the chemical shifts of the peaks are within the 2D spectral range
+            dictionary = self.check_peaklist(dictionary)
 
-        return dictionary
+            return dictionary
+        except:
+            self.peaklist_error_message()
+            return None
 
     def check_peaklist(self, dictionary: dict):
         """
@@ -20008,6 +19996,11 @@ class PeakListWindow3D(wx.Frame):
         The code will also disable all the other buttons which have been
         selected
         """
+        self.add_peaks_button.SetValue(False)
+        dlg = wx.MessageDialog(self, 'Add peaks is not currently implemented on 3D data. This functionality will be added soon', "Information", wx.OK)
+        dlg.ShowModal()
+        dlg.Destroy()
+        return
 
         if self.active_add == True:
             self.active_add = False
@@ -20098,7 +20091,6 @@ class PeakListWindow3D(wx.Frame):
             order = [0, 1]
 
             if len(self.peak_list_dictionary[current_peaklist]["peak_name"]) > 0:
-                import re
 
                 peakname = self.peak_list_dictionary[current_peaklist]["peak_name"][-1]
                 parts = re.findall(r"[A-Za-z_-]+|\d+", peakname)
@@ -20397,6 +20389,11 @@ class PeakListWindow3D(wx.Frame):
         If a peak or peaks are selected in the table of the Peak List window ask
         if the user if they want to remove these peaks.
         """
+        
+        dlg = wx.MessageDialog(self, 'Remove peaks is not currently implemented on 3D data. This functionality will be added soon', "Information", wx.OK)
+        dlg.ShowModal()
+        dlg.Destroy()
+        return
 
         if self.active_select_peak == True or self.active_select_peaks == True:
             if "N/A" not in self.selected_peak_indexes:
@@ -20431,6 +20428,12 @@ class PeakListWindow3D(wx.Frame):
         one peak is selected) or drag the selected peaks to new positions (if multiple
         peaks are selected).
         """
+
+        self.move_peaks_button.SetValue(False)
+        dlg = wx.MessageDialog(self, 'Move peaks is not currently implemented on 3D data. This functionality will be added soon', "Information", wx.OK)
+        dlg.ShowModal()
+        dlg.Destroy()
+        return
 
         if self.active_move == True:
             self.active_move = False
@@ -20552,7 +20555,6 @@ class PeakListWindow3D(wx.Frame):
             self.AddToTable()
 
     def on_press_movepeak(self, event):
-        import copy
 
         x, y = self.main_frame.ax.transData.inverted().transform((event.x, event.y))
         if x != None and y != None:
@@ -20615,38 +20617,12 @@ class PeakListWindow3D(wx.Frame):
         Before doing this, the code will turn off all active toggled buttons from
         the Peak List frame.
         """
-        if self.active_move == True:
-            self.active_move = False
-            self.move_peaks_button.SetValue(False)
 
-            if self.active_select_peaks == True:
-                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_press)
-                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_motion)
-                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_release)
-            if self.active_select_peak == True:
-                self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_connect)
-        elif self.active_add == True:
+        if self.active_add == True:
             self.active_add = False
             self.add_peaks_button.SetValue(False)
             self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
             return
-
-        elif self.active_select_peaks:
-            self.active_select_peaks = False
-            self.rect = None
-            self.start_point = None
-            self.select_peaks_button.SetValue(False)
-            self.main_frame.fig.canvas.mpl_disconnect(self.select_press)
-            self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
-            self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
-            self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
-
-        elif self.active_select_peak:
-            self.select_peak_button.SetValue(False)
-            self.active_select_peak = False
-            self.selected_peakname = ""
-            self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
-            self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
 
         row = self.grid.GetGridCursorRow()
         peak_name = self.grid.GetCellValue(row, 0)
@@ -20663,13 +20639,40 @@ class PeakListWindow3D(wx.Frame):
         ymin = float(shift2) - height
         ymax = float(shift2) + height
 
-        self.main_frame.toolbar.push_current()
+        self.main_frame.toolbar_bore.push_current()
 
-        self.main_frame.ax.set_xlim([xmin, xmax])
-        self.main_frame.ax.set_ylim([ymin, ymax])
-        self.main_frame.UpdateFrame()
+        self.main_frame.ax_bore.set_xlim([xmin, xmax])
+        self.main_frame.ax_bore.set_ylim([ymin, ymax])
 
-        self.main_frame.toolbar.push_current()
+        self.simulate_peak_selection_click(float(shift1), float(shift2))
+
+        self.main_frame.UpdateBoreFrame()
+
+        self.main_frame.toolbar_bore.push_current()
+
+    def simulate_peak_selection_click(self, shift1, shift2):
+        # evt_down = wx.MouseEvent(wx.wxEVT_LEFT_DOWN)
+        # evt_down.SetX(shift1)
+        # evt_down.SetY(shift2)
+        # evt_down.SetEventObject(self.main_frame.canvas_bore)
+        # self.main_frame.on_click_bore(evt_down)
+        disp_x, disp_y = self.main_frame.ax_bore.transData.transform((shift1, shift2))
+        event = MPLMouseEvent(
+            name="button_press_event",
+            canvas=self.main_frame.canvas_bore,
+            x=disp_x,
+            y=disp_y,
+            button=1,
+            key=None,
+            step=0,
+            dblclick=False,
+            guiEvent=None,
+        )
+        event.inaxes = self.main_frame.ax_bore
+        event.xdata = shift1
+        event.ydata = shift2
+        self.main_frame.on_pick(event)
+        self.main_frame.on_click_bore(event)
 
     def OnSave(self, event):
         """
@@ -20693,7 +20696,8 @@ class PeakListWindow3D(wx.Frame):
                 peak = self.grid.GetCellValue(i, 0)
                 shift1 = self.grid.GetCellValue(i, 1)
                 shift2 = self.grid.GetCellValue(i, 2)
-                file.write("{} \t {} \t {}\n".format(peak, shift1, shift2))
+                shift3 = self.grid.GetCellValue(i, 3)
+                file.write("{} \t {} \t {} \t {}\n".format(peak, shift1, shift2, shift3))
 
 
 def main():
