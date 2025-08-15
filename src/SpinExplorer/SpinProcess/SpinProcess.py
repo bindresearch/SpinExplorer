@@ -59,6 +59,7 @@ from matplotlib.backends.backend_wxagg import (
 import nmrglue as ng
 import subprocess
 import os
+import pathlib
 
 matplotlib.rcParams["font.sans-serif"] = "Arial"
 matplotlib.rcParams["font.family"] = "sans-serif"
@@ -109,9 +110,12 @@ class SpinProcess(wx.Frame):
         self.path = path
         self.cwd = cwd
 
+        # Get the title for the panels
+        self.title = self.GetTitle()
+
         # Create the main window
         self.main_window = wx.Frame.__init__(
-            self, None, title="SpinProcess", size=(self.width, self.height)
+            self, None, title=self.title, size=(self.width, self.height)
         )
 
         # Read the NMR data in the current directory
@@ -138,6 +142,35 @@ class SpinProcess(wx.Frame):
 
         # Centre the window on the screen
         self.Centre()
+    
+    def GetTitle(self):
+        """
+        Finding an appropriate title for the panel. 
+        The title for the panel is:
+        SpinProcess + the current working directory (last 3 elements)
+        + the title + pulseprogram (for Bruker data)
+        """
+        title = 'SpinProcess: '
+        p = pathlib.Path.cwd()
+        dirs = p.parts[-3:]
+        last_directories_path = pathlib.Path(*dirs)
+        title = title + "/" + str(last_directories_path)
+        
+        # If pdata/1/title exists, add this title too
+        try:
+            with open('pdata/1/title') as file:
+                lines = file.readlines()
+                title = title + ' ('
+                for line in lines:
+                    line = line.split('\n')[0]
+                    line = line + ' '
+                    title+= line 
+                
+                title +=')'
+        except:
+            pass
+
+        return title
 
 
 def main():

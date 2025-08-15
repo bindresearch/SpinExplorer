@@ -48,6 +48,7 @@ import subprocess
 import os
 import darkdetect
 import warnings
+import pathlib
 
 # Importing internal classes
 from SpinExplorer.SpinConverter.FindingParameters.parameters import FindingParameters
@@ -106,6 +107,9 @@ class MyApp(wx.Frame):
         for changing the parameters.
         """
 
+        # Get the title for the panels
+        self.title = self.GetTitle()
+
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 0.6 * self.monitorWidth
@@ -114,7 +118,7 @@ class MyApp(wx.Frame):
             self,
             None,
             wx.ID_ANY,
-            "SpinConverter",
+            self.title,
             wx.DefaultPosition,
             size=(int(self.width), int(self.height)),
         )
@@ -134,6 +138,36 @@ class MyApp(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Show()
         self.Centre()
+
+    def GetTitle(self):
+        """
+        Finding an appropriate title for the panel. 
+        The title for the panel is:
+        SpinConverter + the current working directory (last 3 elements)
+        + the title + pulseprogram (for Bruker data)
+        """
+        title = 'SpinConverter: '
+        p = pathlib.Path.cwd()
+        dirs = p.parts[-3:]
+        last_directories_path = pathlib.Path(*dirs)
+        title = title + "/" + str(last_directories_path)
+        
+        # If pdata/1/title exists, add this title too
+        try:
+            with open('pdata/1/title') as file:
+                lines = file.readlines()
+                title = title + ' ('
+                for line in lines:
+                    line = line.split('\n')[0]
+                    line = line + ' '
+                    title+= line 
+                
+                title +=')'
+        except:
+            pass
+
+        return title
+
 
     def OnClose(self, event):
         """
@@ -206,7 +240,7 @@ class MyApp(wx.Frame):
             else:
                 self.shared_format.include_NUS = False
         elif self.nmrdata.spectrometer == "Varian":
-            self.format = FormatParametersVarian(self)
+            self.format = FormatParametersVarian(self, self.nmrdata.params, self.nmrdata)
             self.shared_format = SharedFormatting(
                 self, self.nmrdata.params, self.nmrdata
             )
@@ -216,12 +250,12 @@ class MyApp(wx.Frame):
             self.format.get_nuclei_frequency_varian()
             self.format.get_nuclei_labels_varian()
             self.format.get_carrier_frequencies_varian()
-            if len(self.shared_format.N_complex_boxes) > 1:
+            if len(self.format.N_complex_boxes) > 1:
                 self.shared_format.acquisition_2D_mode_combo_box()
             self.shared_format.create_temperature_box()
             self.shared_format.create_conversion_box()
             self.shared_format.create_intensity_scaling_box()
-            if self.nmrdata.phase != False or self.nmrdata.phase2 != False:
+            if self.nmrdata.params.phase != False or self.nmrdata.params.phase2 != False:
                 self.shared_format.find_nus_file()
                 self.shared_format.input_NUS_list_box()
             else:

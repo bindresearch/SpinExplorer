@@ -139,6 +139,23 @@ class ProcessNMRPipe:
         p.wait()
 
         self.final_changes(nmrfile)
+        self.completion_notification(nmrfile)
+
+    def completion_notification(self, nmrfile: str):
+        """
+        This function provides the user with a message saying
+        that the NMR processing completed successfully and
+        has the name nmrfile.
+        """
+        dlg = wx.MessageDialog(
+            self.notebook,
+            "NMR processing is complete, data was saved as {}".format(nmrfile),
+            "Completion",
+            wx.OK,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        result = dlg.ShowModal()
 
     def checking_processed_data(self, nmrfile: str) -> bool:
         """
@@ -146,7 +163,7 @@ class ProcessNMRPipe:
         in the current directory and asking if the user wants
         to overwrite this.
         """
-        # Check to see if test.ft file already exists, if it does ask the user if they want to overwrite it
+        # Check to see if nmrfile file already exists, if it does ask the user if they want to overwrite it
         if os.path.exists(nmrfile):
             dlg = wx.MessageDialog(
                 self.notebook,

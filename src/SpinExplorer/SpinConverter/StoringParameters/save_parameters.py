@@ -170,10 +170,10 @@ class Populate_dictionary_global:
                 parameter_dictionary["conversion"]
             )
 
-            # If there is more than one dimension, save the non-uniform sampling (NUS) information
-            parameter_dictionary["conversion"] = self.add_nus_information(
-                parameter_dictionary["conversion"]
-            )
+        # If there is more than one dimension, save the non-uniform sampling (NUS) information
+        parameter_dictionary["conversion"] = self.add_nus_information(
+            parameter_dictionary["conversion"]
+        )
 
         self.parameter_dictionary = parameter_dictionary
 
@@ -353,9 +353,10 @@ class Populate_dictionary_global:
         dictionary["intensity scaling"][
             "Scale by number of scans (NS)"
         ] = scale_by_ns_flag
-        dictionary["intensity scaling"][
-            "Scale by Bruker normalisation constant (NC)"
-        ] = scale_by_nc_flag
+        if(dictionary["general"]["spectrometer"] == "Bruker"):
+            dictionary["intensity scaling"][
+                "Scale by Bruker normalisation constant (NC)"
+            ] = scale_by_nc_flag
         dictionary["intensity scaling"]["Scale by 1000"] = scale_by_1000_flag
         dictionary["intensity scaling"]["Scaling number"] = str(scaling_number)
 
