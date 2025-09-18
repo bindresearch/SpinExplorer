@@ -5045,7 +5045,7 @@ class TwoDViewer(wx.Panel):
         y_ppms = self.ppms_1
 
         # Create a window to allow the user to see the current labels and ppm values and change the labels accordingly
-        self.dlg = wx.Dialog(self, title="Change Labels")
+        self.dlg = wx.Dialog(None, title="Change Labels")
         self.dlg.SetSize(500, 200)
 
         # Create a sizer to hold the labels and ppm values
@@ -5100,7 +5100,7 @@ class TwoDViewer(wx.Panel):
         self.dlg.SetSizer(sizer)
 
         # Show the dialog
-        self.dlg.ShowModal()
+        self.dlg.Show()
 
     def OnSaveLabels(self, event):
         # Get the new labels for the x and y axes
@@ -5127,9 +5127,9 @@ class TwoDViewer(wx.Panel):
         if self.parent.cwd != "":
             os.chdir(self.parent.cwd)
 
-        self.dlg.Destroy()
 
         self.UpdateFrame()
+        self.dlg.Destroy()
 
     def OnuSTAButton(self, event):
         # Producing an output to the user telling them this will produce a .data file required for uSTA analysis. Full uSTA implementation is in development.
@@ -10472,6 +10472,8 @@ class SpinBore(wx.Frame):
         self.titlecolor = "black"
 
         self.selected_bore_peaks = []
+        self.free_protein = 'Free'
+        self.nucleus = 'H'
 
         self.make_bore_sizer()
         self.plot_bore_data()
@@ -10584,7 +10586,7 @@ class SpinBore(wx.Frame):
 
         # Have a combo box with 1H, 13C, 15N
         self.bore_combo_box = wx.ComboBox(
-            self, -1, choices=["1H", "13C"], style=wx.CB_READONLY
+            self, -1, choices=["1H", "13C", "15N"], style=wx.CB_READONLY
         )
         self.bore_combo_box.Bind(wx.EVT_COMBOBOX, self.OnNucleusSelection)
         self.bore_overlay_sizer.Add(
@@ -11102,9 +11104,12 @@ class SpinBore(wx.Frame):
             self.ax_bore_2.set_ylim(self.original_limits[0][1])
             self.ax_bore_3.set_xlim(self.original_limits[1][0])
             self.ax_bore_3.set_ylim(self.original_limits[1][1])
-            # self.overlay_peaklist()
-            # self.canvas_bore.draw_idle()
-            self.UpdateBoreFrame()
+        # try:
+        #     self.overlay_peaklist()
+        # except:
+        #     pass
+        # self.canvas_bore.draw_idle()
+        self.UpdateBoreFrame()
 
     def overlay_peaklist(self):
         """
@@ -11170,8 +11175,12 @@ class SpinBore(wx.Frame):
         if self.include_overlay == True:
             intensity_percent = 10 ** float(self.bore_intensity_slider.GetValue())
             # Plot current amino acid selection
-            data = self.bmrb_free[self.amino_acid][self.nucleus][0]
-            labels = self.bmrb_free[self.amino_acid][self.nucleus][1]
+            if self.bore_free_protein_combo_box.GetValue() == "Free":
+                data = self.bmrb_free[self.amino_acid][self.nucleus][0]
+                labels = self.bmrb_free[self.amino_acid][self.nucleus][1]
+            else:
+                data = self.bmrb_protein[self.amino_acid][self.nucleus][0]
+                labels = self.bmrb_protein[self.amino_acid][self.nucleus][1]
 
             xdata = self.bore_data
             ydata = self.main_frame.ppms_2
@@ -11447,7 +11456,7 @@ class SpinBore(wx.Frame):
                 indices = details["ind"]
                 self.selected_bore_peaks = indices
                 self.overlay_peaklist()
-                self.canvas_bore.draw_idle()
+                self.UpdateBoreFrame()
             else:
                 self.selected_bore_peaks = []
 
@@ -11590,26 +11599,38 @@ class SpinBore(wx.Frame):
         self.OnNucleusSelection(event)
 
     def OnNucleusSelection(self, event):
+        self.OnFreeProteinSelection(event, silent=True)
         if self.bore_combo_box.GetSelection() == 0:
             self.nucleus = "H"
-        else:
+        elif self.bore_combo_box.GetSelection() == 1:
             self.nucleus = "C"
-        self.OnFreeProteinSelection(event)
+        else:
+            if(self.free_protein == 'Protein'):
+                self.nucleus = "N"
+            else:
+                # Nitrogen shifts are not available for the free amino acids
+                message = 'Nitrogen shifts are not available for the free amino acids'
+                dlg = wx.MessageBox(message, "Nucleus selection", wx.OK)
+                
+                self.bore_combo_box.SetSelection(1)
+                self.nucleus = "C"
+        
+        self.OnFreeProteinSelection(event, silent=False)
+        
 
-    def OnFreeProteinSelection(self, event):
-        if self.bore_free_protein_combo_box.GetSelection == 0:
+    def OnFreeProteinSelection(self, event, silent=False):
+        if self.bore_free_protein_combo_box.GetSelection() == 0:
             self.free_protein = "Free"
         else:
             self.free_protein = "Protein"
 
-        self.OverlayBore()
+        if(silent==False):
+            self.OverlayBore()
 
     def read_bmrb(self):
-        directory = __file__.split("SpinView.py")[0]
-        file1 = directory + "bmrb_free.txt"  # Free amino acid chemical shift data
-        file2 = directory + "bmrb.txt"  # Protein amino acid chemical shift data
 
         self.read_free()
+        self.read_protein()
         # else:
         #     # Give a warning saying that the 'bmrb_free.txt' file is missing
         #     message = "The file 'bmrb_free.txt' is missing from the SpinView directory. Unable to show free amino acid overlays."
@@ -11618,6 +11639,327 @@ class SpinBore(wx.Frame):
         #     dlg.Destroy()
         #     self.include_overlay = False
         #     return
+
+    def read_protein(self):
+        self.bmrb_protein = {}
+        data = """
+ALA,H,8.194
+ALA,HA,4.237
+ALA,HB,1.357
+ALA,CO,177.815
+ALA,CA,53.138
+ALA,CB,18.956
+ALA,N,123.380
+ARG,H,8.235
+ARG,HA,4.285
+ARG,HB2,1.795
+ARG,HB3,1.765
+ARG,HD2,3.118
+ARG,HD3,3.103
+ARG,HE,7.355
+ARG,HG2,1.567
+ARG,HG3,1.547
+ARG,HH11,6.895
+ARG,HH12,6.845
+ARG,HH21,6.807
+ARG,HH22,6.796
+ARG,CO,176.491
+ARG,CA,56.765
+ARG,CB,30.623
+ARG,CD,43.163
+ARG,CG,27.216
+ARG,CZ,159.864
+ARG,N,120.904
+ARG,NE,84.593
+ARG,NH1,74.089
+ARG,NH2,72.837
+ASN,H,8.322
+ASN,HA,4.658
+ASN,HB2,2.803
+ASN,HB3,2.749
+ASN,HD21,7.328
+ASN,HD22,7.148
+ASN,CO,175.290
+ASN,CA,53.517
+ASN,CB,38.681
+ASN,CG,176.714
+ASN,N,118.974
+ASN,ND2,112.749
+ASP,H,8.295
+ASP,HA,4.581
+ASP,HB2,2.711
+ASP,HB3,2.661
+ASP,HD2,6.567
+ASP,CO,176.427
+ASP,CA,54.664
+ASP,CB,40.863
+ASP,CG,179.232
+ASP,N,120.744
+CYS,H,8.380
+CYS,HA,4.655
+CYS,HB2,2.956
+CYS,HB3,2.893
+CYS,HG,2.086
+CYS,CO,174.820
+CYS,CA,58.035
+CYS,CB,33.441
+CYS,N,120.092
+GLN,H,8.219
+GLN,HA,4.256
+GLN,HB2,2.045
+GLN,HB3,2.016
+GLN,HE21,7.229
+GLN,HE22,7.036
+GLN,HG2,2.316
+GLN,HG3,2.296
+GLN,CO,176.345
+GLN,CA,56.532
+GLN,CB,29.144
+GLN,CD,179.705
+GLN,CG,33.785
+GLN,N,120.091
+GLN,NE2,111.870
+GLU,H,8.330
+GLU,HA,4.238
+GLU,HB2,2.021
+GLU,HB3,1.998
+GLU,HE2,4.132
+GLU,HG2,2.268
+GLU,HG3,2.250
+GLU,CO,176.930
+GLU,CA,57.299
+GLU,CB,29.946
+GLU,CD,182.205
+GLU,CG,36.110
+GLU,N,120.802
+GLY,H,8.328
+GLY,H1,8.525
+GLY,HA2,3.958
+GLY,HA3,3.894
+GLY,CO,173.899
+GLY,CA,45.347
+GLY,N,109.547
+HIS,H,8.244
+HIS,HA,4.599
+HIS,HB2,3.104
+HIS,HB3,3.048
+HIS,HD1,8.907
+HIS,HD2,7.001
+HIS,HE1,7.951
+HIS,HE2,9.628
+HIS,CO,175.249
+HIS,CA,56.469
+HIS,CB,30.251
+HIS,CD2,120.290
+HIS,CE1,137.590
+HIS,CG,132.265
+HIS,N,119.731
+HIS,ND1,193.190
+HIS,NE2,183.264
+ILE,H,8.256
+ILE,HA,4.152
+ILE,HB,1.788
+ILE,HG12,1.275
+ILE,HG13,1.204
+ILE,HD,0.683
+ILE,HG,0.778
+ILE,CO,175.971
+ILE,CA,61.676
+ILE,CB,38.527
+ILE,CD1,13.390
+ILE,CG1,27.757
+ILE,CG2,17.519
+ILE,N,121.416
+LEU,H,8.214
+LEU,H1,7.340
+LEU,HA,4.293
+LEU,HB2,1.611
+LEU,HB3,1.529
+LEU,HG,1.512
+LEU,HD1,0.755
+LEU,HD2,0.736
+LEU,CO,177.106
+LEU,CA,55.674
+LEU,CB,42.205
+LEU,CD1,24.621
+LEU,CD2,24.098
+LEU,CG,26.782
+LEU,N,121.845
+LYS,H,8.177
+LYS,HA,4.253
+LYS,HB2,1.779
+LYS,HB3,1.753
+LYS,HD2,1.607
+LYS,HD3,1.600
+LYS,HE2,2.914
+LYS,HE3,2.908
+LYS,HG2,1.369
+LYS,HG3,1.354
+LYS,CO,176.725
+LYS,CA,56.949
+LYS,CB,32.737
+LYS,CD,28.967
+LYS,CE,41.896
+LYS,CG,24.896
+LYS,N,121.123
+LYS,NZ,33.117
+LYS,QZ,7.413
+MET,H,8.251
+MET,HA,4.388
+MET,HB2,2.030
+MET,HB3,1.995
+MET,HG2,2.421
+MET,HG3,2.396
+MET,HE,1.891
+MET,CO,176.256
+MET,CA,56.129
+MET,CB,32.904
+MET,CE,17.121
+MET,CG,32.029
+MET,N,120.146
+PHE,H,8.328
+PHE,HA,4.604
+PHE,HB2,3.002
+PHE,HB3,2.942
+PHE,HD1,7.058
+PHE,HD2,7.062
+PHE,HE1,7.088
+PHE,HE2,7.085
+PHE,HZ,6.998
+PHE,CO,175.486
+PHE,CA,58.118
+PHE,CB,39.870
+PHE,CD1,131.583
+PHE,CD2,131.574
+PHE,CE1,130.726
+PHE,CE2,130.760
+PHE,CG,138.248
+PHE,CZ,129.252
+PHE,N,120.363
+PRO,H,8.519
+PRO,HA,4.386
+PRO,HB2,2.078
+PRO,HB3,2.004
+PRO,HD2,3.651
+PRO,HD3,3.620
+PRO,HG2,1.928
+PRO,HG3,1.906
+PRO,CO,176.770
+PRO,CA,63.334
+PRO,CB,31.834
+PRO,CD,50.342
+PRO,CG,27.200
+PRO,N,135.632
+SER,H,8.275
+SER,HA,4.466
+SER,HB2,3.870
+SER,HB3,3.847
+SER,HG,5.336
+SER,CO,174.631
+SER,CA,58.679
+SER,CB,63.791
+SER,N,116.317
+THR,H,8.224
+THR,HA,4.446
+THR,HB,4.166
+THR,HG1,5.061
+THR,HG,1.138
+THR,CO,174.554
+THR,CA,62.203
+THR,CB,69.694
+THR,CG2,21.550
+THR,N,115.329
+TRP,H,8.260
+TRP,HA,4.651
+TRP,HB2,3.187
+TRP,HB3,3.124
+TRP,HD1,7.138
+TRP,HE1,10.088
+TRP,HE3,7.321
+TRP,HH2,6.985
+TRP,HZ2,7.289
+TRP,HZ3,6.881
+TRP,CO,176.244
+TRP,CA,57.748
+TRP,CB,29.885
+TRP,CD1,126.575
+TRP,CD2,127.266
+TRP,CE2,137.632
+TRP,CE3,120.500
+TRP,CG,110.962
+TRP,CH2,123.805
+TRP,CZ2,114.261
+TRP,CZ3,121.366
+TRP,N,121.554
+TRP,NE1,129.262
+TYR,H,8.279
+TYR,HA,4.599
+TYR,HB2,2.909
+TYR,HB3,2.846
+TYR,HD1,6.941
+TYR,HD2,6.937
+TYR,HE1,6.702
+TYR,HE2,6.704
+TYR,HH,9.079
+TYR,CO,175.541
+TYR,CA,58.161
+TYR,CB,39.227
+TYR,CD1,132.730
+TYR,CD2,132.720
+TYR,CE1,117.947
+TYR,CE2,117.922
+TYR,CG,129.665
+TYR,CZ,156.898
+TYR,N,120.446
+VAL,H,8.265
+VAL,HA,4.157
+VAL,HB,1.986
+VAL,HG1,0.823
+VAL,HG2,0.806
+VAL,CO,175.717
+VAL,CA,62.529
+VAL,CB,32.668
+VAL,CG1,21.490
+VAL,CG2,21.303
+VAL,N,121.079
+"""
+        for line in data.splitlines():
+            line = line.split("\n")[0].split(",")
+            if len(line) != 3:
+                continue
+            if line[0] not in self.bmrb_protein.keys():
+                self.bmrb_protein[line[0]] = {}
+            if "H" not in self.bmrb_protein[line[0]].keys():
+                self.bmrb_protein[line[0]]["H"] = []
+            if "C" not in self.bmrb_protein[line[0]].keys():
+                self.bmrb_protein[line[0]]["C"] = []
+            if "N" not in self.bmrb_protein[line[0]].keys():
+                self.bmrb_protein[line[0]]["N"] = []
+            if line[1][0] == "H":
+                self.bmrb_protein[line[0]]["H"].append([line[1], float(line[2])])
+            elif line[1][0] == "C":
+                self.bmrb_protein[line[0]]["C"].append([line[1], float(line[2])])
+            elif line[1][0] == "N":
+                self.bmrb_protein[line[0]]["N"].append([line[1], float(line[2])])
+        for key in self.bmrb_protein.keys():
+            H_values = []
+            H_labels = []
+            N_values = []
+            N_labels = []
+            C_values = []
+            C_labels = []
+            for i in range(len(self.bmrb_protein[key]["H"])):
+                H_values.append(self.bmrb_protein[key]["H"][i][1])
+                H_labels.append(self.bmrb_protein[key]["H"][i][0])
+            for i in range(len(self.bmrb_protein[key]["N"])):
+                N_values.append(self.bmrb_protein[key]["N"][i][1])
+                N_labels.append(self.bmrb_protein[key]["N"][i][0])
+            for i in range(len(self.bmrb_protein[key]["C"])):
+                C_values.append(self.bmrb_protein[key]["C"][i][1])
+                C_labels.append(self.bmrb_protein[key]["C"][i][0])
+            self.bmrb_protein[key]["H"] = [H_values, H_labels]
+            self.bmrb_protein[key]["C"] = [C_values, C_labels]
+            self.bmrb_protein[key]["N"] = [N_values, N_labels]
 
     def read_free(self):
         self.bmrb_free = {}
@@ -18043,7 +18385,7 @@ class PeakListWindow2D(wx.Frame):
         self.main_frame = parent
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         width = 800
-        height = 400
+        height = 600
         wx.Frame.__init__(self, parent=parent, title=title, size=(width, height))
         self.panel_peaklist = wx.Panel(self, -1)
         self.main_peaklist_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -18163,6 +18505,38 @@ class PeakListWindow2D(wx.Frame):
         self.row1_label = wx.StaticBox(self, -1, "Loading Peaklists:")
         self.row1 = wx.StaticBoxSizer(self.row1_label, wx.HORIZONTAL)
 
+        self.row_pickpeaks_label = wx.StaticBox(self, -1, "Peak Picking (nmrglue):")
+        self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.HORIZONTAL)
+
+        self.peak_picking_threshold_text = wx.StaticText(self,-1,"Threshold (% of maximum):")
+        self.peak_picking_threshold_box = wx.TextCtrl(self,value='1.0',
+                size=(50, 20))
+        
+        self.peak_picking_algorithm_text = wx.StaticText(self,-1,"Algorithm:")
+        algorithms = ['thres', 'thres-fast', 'downward', 'connected']
+        self.peak_picking_algorithm_box = wx.ComboBox(self, choices=algorithms, style=wx.CB_READONLY)
+
+        self.peaklist_name_text = wx.StaticText(self,-1,"Peaklist name:")
+        self.peaklist_name_box = wx.TextCtrl(self,value='peaks_nmrglue.list',
+                size=(50, 20))
+
+        self.peak_pick_button = wx.Button(self, label='Peak Pick')
+        self.peak_pick_button.Bind(wx.EVT_BUTTON, self.OnPickPeaks)
+        
+        self.row_pickpeaks.Add(self.peak_picking_threshold_text)
+        self.row_pickpeaks.AddSpacer(5)
+        self.row_pickpeaks.Add(self.peak_picking_threshold_box)
+        self.row_pickpeaks.AddSpacer(10)
+        self.row_pickpeaks.Add(self.peak_picking_algorithm_text)
+        self.row_pickpeaks.AddSpacer(5)
+        self.row_pickpeaks.Add(self.peak_picking_algorithm_box)
+        self.row_pickpeaks.AddSpacer(10)
+        self.row_pickpeaks.Add(self.peaklist_name_text)
+        self.row_pickpeaks.AddSpacer(10)
+        self.row_pickpeaks.Add(self.peaklist_name_box)
+        self.row_pickpeaks.AddSpacer(5)
+        self.row_pickpeaks.Add(self.peak_pick_button)
+
         self.row2_label = wx.StaticBox(
             self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key)"
         )
@@ -18193,6 +18567,10 @@ class PeakListWindow2D(wx.Frame):
         self.main_peaklist_sizer.AddSpacer(10)
         self.main_peaklist_sizer.Add(
             self.row1, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
+        )
+        self.main_peaklist_sizer.AddSpacer(10)
+        self.main_peaklist_sizer.Add(
+            self.row_pickpeaks, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
         )
         self.main_peaklist_sizer.AddSpacer(10)
         self.main_peaklist_sizer.Add(
@@ -19291,79 +19669,94 @@ class PeakListWindow2D(wx.Frame):
                 shift2 = self.grid.GetCellValue(i, 2)
                 file.write("{} \t {} \t {}\n".format(peak, shift1, shift2))
 
-    # def OnFindLocalMaximum(self, event):
-    #     """
-    #     Moves a point to its nearest local maximum using local interpolation.
+    def OnPickPeaks(self, event):
+        """
+        Pick peaks using nmrglue peak picking routines and then load this peaklist.
+        """
+        if(self.main_frame.multiplot_mode==True):
+            message = 'Peak picking is not currently supported in multiplot mode.'
+            dlg = wx.MessageBox(message, "Pick Peaks", wx.OK)
+            return
 
-    #     Parameters
-    #     ----------
-    #     data : 2D numpy array
-    #         The data grid.
-    #     start : tuple (y, x)
-    #         Starting point in floating coordinates (row, col).
-    #     step_size : float
-    #         Step size for gradient ascent.
-    #     tol : float
-    #         Gradient norm tolerance to stop.
-    #     max_iter : int
-    #         Maximum number of iterations.
+        
+        # See if the peaklist name is already in the current directory, and ask the user
+        # if they wish to overwrite this.
+        peaklist_name = self.peaklist_name_box.GetValue()
+        if(peaklist_name in os.listdir()):
+            message = 'The peaklist ({}) is already in the current directory. Would you like to overwrite this?'.format(peaklist_name)
+            dlg = wx.MessageDialog(None, message, "Pick Peaks", wx.YES_NO)
+            result=dlg.ShowModal()
+            if(result == wx.ID_NO):
+                dlg.Destroy()
+                return
+            dlg.Destroy()
+        
+        # Check to see the validity of the value in the threshold box.
+        threshold_box_value = self.peak_picking_threshold_box.GetValue()
+        try:
+            threshold = float(threshold_box_value)
+            if(threshold < 0 or threshold > 100):
+                message = 'The value in the threshold box ({}) is not a number between 0 and 100, please correct this and try again.'.format(threshold_box_value)
+                dlg = wx.MessageBox(message, "Pick Peaks", wx.OK)
+                return
 
-    #     Returns
-    #     -------
-    #     (y, x) : tuple
-    #         Coordinates of the local maximum (floating point).
-    #     """
+        except:
+            message = 'The value in the threshold box ({}) is not a number, please correct this and try again.'.format(threshold_box_value)
+            dlg = wx.MessageBox(message, "Pick Peaks", wx.OK)
+            return
+        
+        data = self.main_frame.nmrdata.data
+        x = self.main_frame.ppms_0
+        y = self.main_frame.ppms_1
 
-    #     # Find out if a single point is selected or not
-    #     if(self.active_select_peak):
-    #         if(self.selected_peak_indexes != ['N/A'] and len(self.selected_peak_indexes)==1):
-    #             pass
-    #         else:
-    #             return
-    #     else:
-    #         return
+        threshold = float(threshold_box_value)/100 *np.max(data)
 
-    #     x = self.peak_list_dictionary[self.selected_peaklist]['shift1'][self.selected_peak_indexes[0]]
-    #     y = self.peak_list_dictionary[self.selected_peaklist]['shift2'][self.selected_peak_indexes[0]]
-    #     step_size=0.1
-    #     tol=1e-5
-    #     max_iter=500
-    #     data = self.main_frame.nmrdata.data
-    #     ny, nx = data.shape
-    #     y_coords = np.arange(ny)
-    #     x_coords = np.arange(nx)
+        algorithm_selection =self.peak_picking_algorithm_box.GetValue()
+        if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
+            peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1])
+        else:
+            peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
+        
 
-    #     print(x,y)
+        x = self.main_frame.uc0.ppm(peaks["Y_AXIS"])
+        y = self.main_frame.uc1.ppm(peaks["X_AXIS"])
 
-    #     # Create spline interpolator
-    #     from scipy.interpolate import RectBivariateSpline # type: ignore
-    #     spline = RectBivariateSpline(y_coords, x_coords, data)
+        picked_peak_array = []
+        for i, xval in enumerate(x):
+            picked_peak_array.append([xval, y[i]])
 
-    #     for _ in range(max_iter):
-    #         # Compute gradient (dy, dx)
-    #         grad_y = spline.ev(y, x, dx=0, dy=1)
-    #         grad_x = spline.ev(y, x, dx=1, dy=0)
-    #         grad = np.array([grad_y, grad_x])
+        dictionary = {}
+        dictionary["peak_name"] = []
+        dictionary["shift1"] = []
+        dictionary["shift2"] = []
+        for i, peak in enumerate(picked_peak_array):
+            dictionary["peak_name"].append(str(i+1))
+            dictionary["shift1"].append(peak[0])
+            dictionary["shift2"].append(peak[1])
+        
+        with open(peaklist_name, 'w') as file:
+            file.write('')
+        
+        p = pathlib.Path(peaklist_name)
+        dirs = p.parts[-3:]
+        file_name = p.parts[-1]
+        last_directories_path = str(pathlib.Path(*dirs))
+        peaklist = dictionary
+        self.peak_list_dictionary[last_directories_path] = peaklist
+        if self.peak_list_choices == [""]:
+            self.peak_list_choices = [last_directories_path]
+        else:
+            self.peak_list_choices.append(last_directories_path)
 
-    #         # Stop if gradient is tiny
-    #         if np.linalg.norm(grad) < tol:
-    #             break
+        self.current_peaklist_box.SetItems(self.peak_list_choices)
+        self.current_peaklist_box.SetSelection(len(self.peak_list_choices) - 1)
 
-    #         # Step uphill
-    #         y += step_size * grad[0]
-    #         x += step_size * grad[1]
+        self.turn_off_togglebuttons()
 
-    #         # Clamp to grid bounds
-    #         y = np.clip(y, 0, ny - 1)
-    #         x = np.clip(x, 0, nx - 1)
+        self.AddToTable()
 
-    #     print(x,y)
-
-    #     self.peak_list_dictionary[self.selected_peaklist]['shift1'][self.selected_peak_indexes[0]] = x
-    #     self.peak_list_dictionary[self.selected_peaklist]['shift2'][self.selected_peak_indexes[0]] = y
-
-    #     self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
-    #     return
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
+        
 
     def OnFindLocalMaximum(self, event):
         """
@@ -19826,9 +20219,10 @@ class PeakListWindow3D(wx.Frame):
         """
         Try to see if the chemical shifts of the peaks are within the 2D spectral range
         """
-        ppms_0 = dictionary["shift1"]
-        ppms_1 = dictionary["shift2"]
-        ppms_2 = dictionary["shift3"]
+        ppms_0 = copy.deepcopy(dictionary["shift1"])
+        ppms_1 = copy.deepcopy(dictionary["shift2"])
+        ppms_2 = copy.deepcopy(dictionary["shift3"])
+
 
         shifts = [ppms_0, ppms_1, ppms_2]
 
@@ -19857,6 +20251,7 @@ class PeakListWindow3D(wx.Frame):
                 wx.OK,
             )
             return None
+        
 
         ppms_projection = []
         for i in range(3):
@@ -19869,6 +20264,7 @@ class PeakListWindow3D(wx.Frame):
 
         ppms_0 = ppms_projection[0]
         ppms_1 = ppms_projection[1]
+
 
         mean_0 = np.mean(ppms_0)
         mean_1 = np.mean(ppms_1)
@@ -19997,7 +20393,12 @@ class PeakListWindow3D(wx.Frame):
         selected
         """
         self.add_peaks_button.SetValue(False)
-        dlg = wx.MessageDialog(self, 'Add peaks is not currently implemented on 3D data. This functionality will be added soon', "Information", wx.OK)
+        dlg = wx.MessageDialog(
+            self,
+            "Add peaks is not currently implemented on 3D data. This functionality will be added soon",
+            "Information",
+            wx.OK,
+        )
         dlg.ShowModal()
         dlg.Destroy()
         return
@@ -20389,8 +20790,13 @@ class PeakListWindow3D(wx.Frame):
         If a peak or peaks are selected in the table of the Peak List window ask
         if the user if they want to remove these peaks.
         """
-        
-        dlg = wx.MessageDialog(self, 'Remove peaks is not currently implemented on 3D data. This functionality will be added soon', "Information", wx.OK)
+
+        dlg = wx.MessageDialog(
+            self,
+            "Remove peaks is not currently implemented on 3D data. This functionality will be added soon",
+            "Information",
+            wx.OK,
+        )
         dlg.ShowModal()
         dlg.Destroy()
         return
@@ -20430,7 +20836,12 @@ class PeakListWindow3D(wx.Frame):
         """
 
         self.move_peaks_button.SetValue(False)
-        dlg = wx.MessageDialog(self, 'Move peaks is not currently implemented on 3D data. This functionality will be added soon', "Information", wx.OK)
+        dlg = wx.MessageDialog(
+            self,
+            "Move peaks is not currently implemented on 3D data. This functionality will be added soon",
+            "Information",
+            wx.OK,
+        )
         dlg.ShowModal()
         dlg.Destroy()
         return
@@ -20697,7 +21108,9 @@ class PeakListWindow3D(wx.Frame):
                 shift1 = self.grid.GetCellValue(i, 1)
                 shift2 = self.grid.GetCellValue(i, 2)
                 shift3 = self.grid.GetCellValue(i, 3)
-                file.write("{} \t {} \t {} \t {}\n".format(peak, shift1, shift2, shift3))
+                file.write(
+                    "{} \t {} \t {} \t {}\n".format(peak, shift1, shift2, shift3)
+                )
 
 
 def main():

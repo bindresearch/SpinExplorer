@@ -587,7 +587,7 @@ class ProcessNMRGlue:
             digital_filter_removal = self.check_digital_filter_removal()
             if digital_filter_removal == True:
                 dic_bruker, dat_bruker = ng.bruker.read("./")
-                data = self.remove_digital_filter(dic_bruker, data)
+                data = self.remove_digital_filter(dic_bruker, data, truncate=False)
 
         return dic, data
 
