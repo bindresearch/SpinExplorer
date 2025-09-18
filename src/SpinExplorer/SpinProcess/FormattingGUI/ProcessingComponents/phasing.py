@@ -209,21 +209,43 @@ class PhasingDirect:
             return False
 
         dic, data = ng.pipe.read("test.fid")
-        # Perform at fourier transform in the direct dimension
-        dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-        dic_bruker, dat_bruker = ng.bruker.read("./")
         proc_glue = ProcessNMRGlue(
             self.parent.parent,
             self.parent.parent.tabs,
-            self.nmr_data,
+            data,
             interactive_phasing=True,
         )
-        data = proc_glue.remove_digital_filter(dic_bruker, data)
+
+        # Perform at fourier transform in the direct dimension
+        dic, data = ng.pipe_proc.em(
+                    dic,
+                    data,
+                    lb=1.0,
+                    c=0.5,
+                )
+        dic, data = ng.pipe_proc.zf(
+                    dic,
+                    data,
+                    zf=2,
+                    auto=True,
+                )
+        
+        dic, data = ng.pipe_proc.ft(dic, data)
+        dic_bruker, dat_bruker = ng.bruker.read("./")
+        data = proc_glue.remove_digital_filter(dic_bruker, data, truncate=False)
+        dic, data = ng.pipe_proc.ps(
+                dic,
+                data,
+                p0=0,
+                p1=0,
+            )
+        dic, data = ng.pipe_proc.di(dic, data)
 
         if len(self.parent.parent.tabs) == 2:
             dic, data = ng.pipe_proc.tp(dic, data)
             dic, data = ng.pipe_proc.ft(dic, data, auto=True)
             dic, data = ng.pipe_proc.tp(dic, data)
+
 
         self.nmr_d, self.nmr_spectrum = dic, data
 
