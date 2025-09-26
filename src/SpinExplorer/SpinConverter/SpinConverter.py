@@ -42,13 +42,11 @@ print("")
 # Import relevant external modules
 import sys
 import wx
-import numpy as np
-import nmrglue as ng
 import subprocess
-import os
 import darkdetect
 import warnings
 import pathlib
+import wx.adv
 
 # Importing internal classes
 from SpinExplorer.SpinConverter.FindingParameters.parameters import FindingParameters
@@ -65,6 +63,8 @@ from SpinExplorer.SpinConverter.StoringParameters.save_parameters import Save_js
 from SpinExplorer.SpinConverter.StoringParameters.read_parameters import Read_json
 from SpinExplorer.SpinConverter.Conversion.convert_pipe import Convert_pipe
 from SpinExplorer.SpinConverter.Conversion.convert_nmrglue import Convert_nmrglue
+
+from SpinExplorer.SpinExpLogo import SpinExpLogo
 
 
 warnings.simplefilter("ignore", UserWarning)
@@ -95,9 +95,48 @@ if platform == "mac" or platform == "linux":
 
 
 # James Eaton, 10/06/2025, University of Oxford
+# James Eaton, 25/09/2025, Bind Research
 # This program is designed to allow the user to convert NMR data from Bruker/Varian into NMRPipe format so it can be viewed using
 # SpinView.py. It is designed to be used with the SpinProcess.py program used to process the converted nmrPipe FID to produce
 # an NMR spectrum. These spectra can then be viewed using SpinView.py, a GUI for viewing NMR data.
+
+
+# task bar dock icon adapted from https://wiki.wxpython.org/Custom%20Mac%20OsX%20Dock%20Bar%20Icon
+class TaskBarIcon(wx.adv.TaskBarIcon):
+    TBMENU_CLOSE   = wx.NewId()
+    TBMENU_CHANGE  = wx.NewId()
+    TBMENU_REMOVE  = wx.NewId()
+   
+    def __init__(self, frame):
+        wx.adv.TaskBarIcon.__init__(self, iconType=wx.adv.TBI_DOCK)
+        self.frame = frame
+
+        # Set the image
+        icon = self.MakeIcon(SpinExpLogo.GetImage())
+        self.SetIcon(icon, "SpinConverter")
+        self.imgidx = 1      
+        # bind some events
+        self.Bind(wx.EVT_MENU, self.OnTaskBarClose, id=self.TBMENU_CLOSE)
+
+    def CreatePopupMenu(self):
+        """
+        This method is called by the base class when it needs to popup
+        the menu for the default EVT_RIGHT_DOWN event.
+        """
+        menu = wx.Menu()
+        menu.Append(self.TBMENU_CLOSE,   "Close SpinConverter")
+        return menu
+
+    def MakeIcon(self, img):
+        icon = wx.Icon()
+        icon.CopyFromBitmap(img.ConvertToBitmap())
+        return icon
+
+    def OnTaskBarClose(self, evt):
+        self.frame.Destroy()
+        sys.exit()
+
+
 
 
 class MyApp(wx.Frame):
@@ -109,6 +148,9 @@ class MyApp(wx.Frame):
 
         # Get the title for the panels
         self.title = self.GetTitle()
+        
+        # Setup the dock/task bar with the logo
+        self.tbicon = TaskBarIcon(self)
 
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
@@ -136,6 +178,9 @@ class MyApp(wx.Frame):
         read = Read_json(self.nmrdata.params, self.nmrdata, self)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+        
+        self.SetIcon(SpinExpLogo.GetIcon())
         self.Show()
         self.Centre()
 
