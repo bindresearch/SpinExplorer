@@ -43,22 +43,14 @@ print("")
 import sys
 
 import wx
-import wx.lib.agw.hyperlink as hl
+import wx.adv
 
 # Import relevant modules
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
 
 matplotlib.use("WXAgg")
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
-from matplotlib.backends.backend_wxagg import (
-    NavigationToolbar2WxAgg as NavigationToolbar,
-)
-import nmrglue as ng
-import subprocess
-import os
+
 import pathlib
 
 matplotlib.rcParams["font.sans-serif"] = "Arial"
@@ -74,6 +66,7 @@ warnings.simplefilter("ignore", np.exceptions.ComplexWarning)  # For new numpy v
 # Importing SpinProcess modules
 from SpinExplorer.SpinProcess.ReadingData.read_fid import ReadFID
 from SpinExplorer.SpinProcess.FormattingGUI.notebook import NotebookProcess
+from SpinExplorer.SpinExpLogo import SpinExpLogo
 
 # Find out the version of operating system being used (Mac, Linux, Windows)
 if sys.platform == "linux":
@@ -88,10 +81,44 @@ else:
 
 
 # James Eaton, 10/06/2025, University of Oxford
+# James Eaton, 25/09/2025, Bind Research
 # This program is designed to allow the user to process NMR FID data that has been converted to nmrPipe format.
 
 
-# Read the FID data from the nmrPipe file
+# task bar dock icon adapted from https://wiki.wxpython.org/Custom%20Mac%20OsX%20Dock%20Bar%20Icon
+class TaskBarIcon(wx.adv.TaskBarIcon):
+    TBMENU_CLOSE   = wx.NewId()
+    TBMENU_CHANGE  = wx.NewId()
+    TBMENU_REMOVE  = wx.NewId()
+   
+    def __init__(self, frame):
+        wx.adv.TaskBarIcon.__init__(self, iconType=wx.adv.TBI_DOCK)
+        self.frame = frame
+
+        # Set the image
+        icon = self.MakeIcon(SpinExpLogo.GetImage())
+        self.SetIcon(icon, "SpinProcess")
+        self.imgidx = 1      
+        # bind some events
+        self.Bind(wx.EVT_MENU, self.OnTaskBarClose, id=self.TBMENU_CLOSE)
+
+    def CreatePopupMenu(self):
+        """
+        This method is called by the base class when it needs to popup
+        the menu for the default EVT_RIGHT_DOWN event.
+        """
+        menu = wx.Menu()
+        menu.Append(self.TBMENU_CLOSE,   "Close SpinProcess")
+        return menu
+
+    def MakeIcon(self, img):
+        icon = wx.Icon()
+        icon.CopyFromBitmap(img.ConvertToBitmap())
+        return icon
+
+    def OnTaskBarClose(self, evt):
+        self.frame.Destroy()
+        sys.exit()
 
 
 class SpinProcess(wx.Frame):
@@ -112,6 +139,9 @@ class SpinProcess(wx.Frame):
 
         # Get the title for the panels
         self.title = self.GetTitle()
+
+        # Setup the dock/task bar with the logo
+        self.tbicon = TaskBarIcon(self)
 
         # Create the main window
         self.main_window = wx.Frame.__init__(

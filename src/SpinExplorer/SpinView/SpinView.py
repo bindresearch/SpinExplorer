@@ -44,6 +44,7 @@ print("")
 
 import sys
 import wx
+import wx.adv
 
 # Import relevant modules
 import numpy as np
@@ -62,13 +63,13 @@ from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 from matplotlib.backend_bases import MouseEvent as MPLMouseEvent
 import nmrglue as ng
-import subprocess
 import os
 import copy
 import wx.grid as gridlib
 import pandas as pd
 import re
 from scipy.interpolate import make_interp_spline
+from SpinExplorer.SpinExpLogo import SpinExpLogo
 
 matplotlib.rcParams["font.sans-serif"] = "Arial"
 matplotlib.rcParams["font.family"] = "sans-serif"
@@ -88,6 +89,7 @@ else:
 platform = "windows"
 
 # James Eaton, 10/06/2025, University of Oxford
+# James Eaton, 25/09/2025, Bind Research
 # This code will read in 1D, 2D and 3D NMRPipe (as well as topspin processed) data files and plot them
 # It will also allow spectra to be phased, moved, multiplied, overlaid, etc.
 # In addition, it allows the analysis of pseudo2D diffusion and relaxation (R1,R2) data
@@ -249,63 +251,6 @@ class GetData:
                 self.axislabels = line
         file.close()
 
-    # def read_spectrum_header(self):
-    #     self.axislabels = []
-
-    #     if(self.dim == 1):
-    #         # If 1D take FDF1LABEL
-    #         self.axislabels.append(self.dic["FDF1LABEL"])
-    #     elif(self.dim == 2):
-    #         # If 2D take FDF2LABEL as direct and FDF1LABEL as indirect
-    #         self.axislabels.append(self.dic['FDF1LABEL'])
-    #         self.axislabels.append(self.dic['FDF2LABEL'])
-    #     else:
-    #         # If 3D take FDF3LABEL as direct, FDF2LABEL as indirect1 and FDF3LABEL as indirect3
-    #         self.axislabels.append(self.dic['FDF1LABEL'])
-    #         self.axislabels.append(self.dic['FDF2LABEL'])
-    #         self.axislabels.append(self.dic['FDF3LABEL'])
-
-    #     # # Try the command showhdr to get the axis labels
-    #     # command = "showhdr " + self.file
-    #     # # output = subprocess.check_output(command)
-    #     # p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-    #     # (output, err) = p.communicate()
-    #     # ## Wait for command to terminate. Get return returncode ##
-    #     # p_status = p.wait()
-    #     # output = output.decode()
-    #     # output = output.split("\n")
-    #     # if output != [""]:
-    #     #     for line in output:
-    #     #         if "NAME" in line:
-    #     #             line = line.split()[1:]
-    #     #             self.axislabels = line
-    #     #             if self.dim == 3:
-    #     #                 self.axislabels.reverse()
-
-    # def read_fid_com_file(self):
-    #     # Open fid.com file and get the axis labels
-    #     file = open("fid.com", "r")
-    #     fid_com = file.readlines()
-    #     file.close()
-    #     for line in fid_com:
-    #         if "LAB" in line:
-    #             line = line.split("\n")[0].split()
-    #             # deleting the first element of the list which is the word 'LAB'
-    #             del line[0]
-    #             # deleting the last element of the list which is the '\' character
-    #             del line[-1]
-    #             if self.dim == 1:
-    #                 self.labels.append(line[0])
-    #             elif self.dim == 2:
-    #                 self.labels.append(line[0])
-    #                 self.labels.append(line[2])
-    #             elif self.dim == 3:
-    #                 self.labels.append(line[0])
-    #                 self.labels.append(line[2])
-    #                 self.labels.append(line[4])
-    #     self.axislabels = self.labels
-    #     if self.dim == 3:
-    #         self.axislabels.reverse()
 
     def get_axislabels_nmrglue(self):
         """
@@ -348,58 +293,6 @@ class GetData:
         if self.dim == 3:
             self.labels = ["dim1", "dim2", "dim3"]
         self.axislabels = self.labels
-
-    # def get_axislabels(self):
-    #     self.labels = []
-    #     # Try to find the labels in fid.com file, then try to match the dimension size of the label in the fid.com file to the dimension size of the data
-    #     # This is to ensure that the correct labels are used for the correct dimension
-    #     if platform == "linux" or platform == "mac":
-    #         try:
-    #             # If the user has already opened and customised the labels they will be in the labels.txt file
-    #             self.read_labels_file()
-    #         except:
-    #             self.read_spectrum_header()
-    #         else:
-    #             try:
-    #                 # Open fid.com file and get the axis labels
-    #                 self.read_fid_com_file()
-    #             except:
-    #                 self.axislabels = []
-
-    #         if self.axislabels == [] or len(self.axislabels) != self.dim:
-    #             # Uable to find axis labels automatically so set as dim1 and dim2 etc
-    #             if self.dim == 1:
-    #                 self.labels = ["dim1"]
-    #             if self.dim == 2:
-    #                 self.labels = ["dim1", "dim2"]
-    #             if self.dim == 3:
-    #                 self.labels = ["dim1", "dim2", "dim3"]
-    #             self.axislabels = self.labels
-
-    #     else:
-    #         try:
-    #             self.read_labels_file()
-    #         except:
-    #             try:
-    #                 self.read_fid_com_file()
-    #                 if len(self.axislabels) != self.dim:
-    #                     if self.dim == 1:
-    #                         self.labels = ["dim1"]
-    #                     if self.dim == 2:
-    #                         self.labels = ["dim1", "dim2"]
-    #                     if self.dim == 3:
-    #                         self.labels = ["dim1", "dim2", "dim3"]
-
-    #             except:
-    #                 # Uable to find axis labels automatically so set as dim1 and dim2 etc
-    #                 if self.dim == 1:
-    #                     self.labels = ["dim1"]
-    #                 if self.dim == 2:
-    #                     self.labels = ["dim1", "dim2"]
-    #                 if self.dim == 3:
-    #                     self.labels = ["dim1", "dim2", "dim3"]
-
-    #                 self.axislabels = self.labels
 
 
 class ChooseFile(wx.Dialog):
@@ -531,20 +424,61 @@ class FloatSlider(wx.Slider):
         self._max = maxval
 
 
+
+# task bar dock icon adapted from https://wiki.wxpython.org/Custom%20Mac%20OsX%20Dock%20Bar%20Icon
+class TaskBarIcon(wx.adv.TaskBarIcon):
+    TBMENU_CLOSE   = wx.NewId()
+    TBMENU_CHANGE  = wx.NewId()
+    TBMENU_REMOVE  = wx.NewId()
+   
+    def __init__(self, frame):
+        wx.adv.TaskBarIcon.__init__(self, iconType=wx.adv.TBI_DOCK)
+        self.frame = frame
+
+        # Set the image
+        icon = self.MakeIcon(SpinExpLogo.GetImage())
+        self.SetIcon(icon, "SpinView")
+        self.imgidx = 1      
+        # bind some events
+        self.Bind(wx.EVT_MENU, self.OnTaskBarClose, id=self.TBMENU_CLOSE)
+
+    def CreatePopupMenu(self):
+        """
+        This method is called by the base class when it needs to popup
+        the menu for the default EVT_RIGHT_DOWN event.
+        """
+        menu = wx.Menu()
+        menu.Append(self.TBMENU_CLOSE,   "Close SpinView")
+        return menu
+
+    def MakeIcon(self, img):
+        icon = wx.Icon()
+        icon.CopyFromBitmap(img.ConvertToBitmap())
+        return icon
+
+    def OnTaskBarClose(self, evt):
+        self.frame.Destroy()
+        sys.exit()
+
+
+
+
 # This class creates the GUI main frame
-
-
 class MyApp(wx.Frame):
     def __init__(self):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
+
         self.width = int(1.0 * sizes[0][0])
         self.height = int(0.875 * sizes[0][1])
         self.reprocess = False
 
         # Get the title for the panels
         self.title = self.GetTitle()
+
+        # Setup the dock/task bar with the logo
+        self.tbicon = TaskBarIcon(self)
 
         self.app_frame = wx.Frame.__init__(
             self,
@@ -963,7 +897,7 @@ class OneDViewer(wx.Panel):
     def add_to_main_sizer1D(self):
         # Creating the main sizer
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.main_sizer.Add(self.canvas, 10, wx.EXPAND)
+        self.main_sizer.Add(self.canvas, 1, wx.EXPAND)
         self.main_sizer.Add(self.toolbar, 0, wx.EXPAND)
         # Adding all sizers to the main sizer
         self.main_sizer.Add(self.bottom_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
@@ -9821,6 +9755,7 @@ class ProjectionFrame(wx.Frame):
         self.main_sizer.AddSpacer(10)
         self.main_sizer.Add(self.notebook, 1, wx.EXPAND)
 
+
         self.SetSizerAndFit(self.main_sizer)
         self.Show()
         self.Centre()
@@ -10000,6 +9935,7 @@ class WaterfallFrame(wx.Frame):
 
         self.titlecolor = "black"
 
+
         self.plot_waterfall()
         self.Show()
 
@@ -10138,6 +10074,7 @@ class Plot3DFrame(wx.Frame):
         self.create_3D_plot_sizer()
 
         self.titlecolor = "black"
+
 
         self.plot3d()
         self.Show()
@@ -10353,6 +10290,7 @@ class Stack2D(wx.Frame):
         self.main_stack_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_stack_sizer)
 
+
         try:
             dic, dat = ng.pipe.read(nmr_data_0.file)
         except:
@@ -10456,6 +10394,7 @@ class SpinBore(wx.Frame):
         self.panel_bore = wx.Panel(self, -1)
         self.main_bore_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_bore_sizer)
+
 
         self.fig_bore = Figure()
         self.fig_bore.tight_layout()
@@ -12329,6 +12268,7 @@ class CESTFrame(wx.Frame):
         self.toolbar_CEST = NavigationToolbar(self.canvas_CEST)
         self.main_CEST_sizer.Add(self.toolbar_CEST, 0, wx.EXPAND)
 
+
         self.make_CEST_sizer()
 
         self.titlecolor = "black"
@@ -12699,6 +12639,7 @@ class DiffusionFit(wx.Frame):
         self.main_diffusion_sizer.Add(self.canvas_diffusion, 10, flag=wx.GROW)
         self.toolbar_diffusion = NavigationToolbar(self.canvas_diffusion)
         self.main_diffusion_sizer.Add(self.toolbar_diffusion, 0, wx.EXPAND)
+
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -14916,6 +14857,7 @@ class GradientsManualTextInput(wx.Frame):
         self.main_gradients_text_input = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_gradients_text_input)
 
+
         self.make_manual_gradients_text_input_sizer()
         self.Show()
 
@@ -15119,6 +15061,7 @@ class DiffusionGradientManualInput(wx.Frame):
         height = int(0.35 * self.monitorHeight)
         wx.Frame.__init__(self, parent=parent, title=title, size=(width, height))
         self.panel_gradient_input = wx.Panel(self, -1)
+
 
         # Define initial default values
         self.number_of_gradients = 5
@@ -15707,6 +15650,7 @@ class RelaxFit(wx.Frame):
         self.panel_relax = wx.Panel(self, -1)
         self.main_relax_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_relax_sizer)
+
 
         self.fig_relax = Figure()
         self.fig_relax.tight_layout()
@@ -17431,6 +17375,7 @@ class DeleteSliceDialog(wx.Frame):
         self.main_delete_slice = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_delete_slice)
 
+
         self.make_delete_slice_sizer()
         self.Show()
 
@@ -17479,6 +17424,7 @@ class DelaysManualInput(wx.Frame):
         self.panel_delays_input = wx.Panel(self, -1)
         self.main_delays_input = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_delays_input)
+
 
         self.make_manual_delays_input_sizer()
         self.Show()
@@ -18390,6 +18336,7 @@ class PeakListWindow2D(wx.Frame):
         self.panel_peaklist = wx.Panel(self, -1)
         self.main_peaklist_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_peaklist_sizer)
+
 
         self.set_initial_values()
         self.make_peaklist_window()

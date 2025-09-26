@@ -597,11 +597,15 @@ class ParameterExtractorBruker:
         self.acqusition_mode_direct = 3  # setting the default value
         self.acqusition_modes_indirect = []
         self.pseudo_flag = 0
+        fn_mode = 0
 
         for line in self.acqus_file_lines:
             if "##$AQ_mod=" in line:
                 line = line.split()[1]
                 self.acqusition_mode_direct = int(line)
+            if "##$FnMode=" in line:
+                line = line.split()[1]
+                fn_mode = int(line)
 
         if self.nmrdata.data_dimensions > 1 or self.size_indirect != []:
             self.pseudo_flag = 0
@@ -613,9 +617,15 @@ class ParameterExtractorBruker:
                 for line in file_lines:
                     if "##$FnMODE=" in line:
                         line = line.split()[1]
-                        self.acqusition_modes_indirect.append(int(line))
-                        if int(line) == 0 or int(line) == 1:
+                        if(int(line) < 7):
+                            val = line
+                        else:
+                            val = fn_mode
+                        
+                        self.acqusition_modes_indirect.append(int(val))
+                        if int(val) == 0 or int(val) == 1:
                             self.pseudo_flag += 1
+                        break
 
             if len(self.size_indirect) > 1:
                 with open("acqu3s", "r") as file:
@@ -623,9 +633,14 @@ class ParameterExtractorBruker:
                     for line in file_lines:
                         if "##$FnMODE=" in line:
                             line = line.split()[1]
-                            self.acqusition_modes_indirect.append(int(line))
-                            if int(line) == 0 or int(line) == 1:
+                            if(int(line) < 7):
+                                val = line
+                            else:
+                                val = fn_mode
+                            self.acqusition_modes_indirect.append(int(val))
+                            if int(val) == 0 or int(val) == 1:
                                 self.pseudo_flag += 1
+                            break
 
             # try:
             #     self.pulseprogram_file = open("pulseprogram.precomp", "r")
