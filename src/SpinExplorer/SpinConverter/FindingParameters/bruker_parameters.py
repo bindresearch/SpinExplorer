@@ -91,6 +91,8 @@ class ParameterExtractorBruker:
                     self.size_2 = self.size_2 / self.size_indirect_non_reduced[i]
                 if self.size_direct_complex < int(self.size_2 * 2):
                     self.size_direct_complex = int(self.size_2 * 2)
+                if(self.size_direct_complex > 1.5*self.size_direct):
+                    self.size_direct_complex = self.size_direct
             else:
                 # Sometimes have the issue where stored complex data size is larger than TD, this ensures that the direct dimension
                 # size is altered to the larger size to correctly be read
