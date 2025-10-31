@@ -141,7 +141,10 @@ class SpinProcess(wx.Frame):
         self.title = self.GetTitle()
 
         # Setup the dock/task bar with the logo
-        self.tbicon = TaskBarIcon(self)
+        try:
+            self.tbicon = TaskBarIcon(self)
+        except:
+            pass
 
         # Create the main window
         self.main_window = wx.Frame.__init__(
