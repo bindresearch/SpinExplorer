@@ -26,6 +26,7 @@ SOFTWARE."""
 import wx
 import os
 import subprocess
+import nmrglue as ng
 
 # Import relevant SpinExplorer modules
 from SpinExplorer.SpinProcess.Processing.PipeProcessing.write_nmrpipe_processing import (
@@ -72,6 +73,7 @@ class ProcessNMRPipe:
 
         # Checking whether processing is required for second/third dimensions
         include_dim2, include_dim3 = self.checking_dimensions()
+
 
         # Create the nmrproc.com file
         nmrproc_com = open("nmrproc.com", "w")
@@ -137,6 +139,14 @@ class ProcessNMRPipe:
         # Check to see if the output file is not empty
         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         p.wait()
+
+        # Set the comment to pipe so that the fact nmrpipe processing was used is noted in the processed spectrum header
+        if self.nmr_data.pseudo_axis == True:
+            # Read the processed data and update the FDCOMMENT
+            dic, data = ng.pipe.read(nmrfile)
+            # Adding the fact that there is a pseudo axis to the FDCOMMENT
+            dic['FDCOMMENT'] += 'pseudo'
+            ng.pipe.write(nmrfile, dic, data, overwrite=True)
 
         self.final_changes(nmrfile)
         self.completion_notification(nmrfile)

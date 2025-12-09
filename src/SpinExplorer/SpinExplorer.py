@@ -25,14 +25,12 @@ SOFTWARE."""
 
 
 print("-------------------------------------------------------------")
-print("                         SpinProcess                         ")
+print("                        SpinExplorer                         ")
 print("-------------------------------------------------------------")
 print("                (version 2.0) 29th July 2025                 ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                     2025, Bind Research                     ")
 print("                        MIT License                          ")
-print("-------------------------------------------------------------")
-print("                     Processing NMR Data                     ")
 print("-------------------------------------------------------------")
 print(" Documentation at:")
 print(" https://github.com/james-eaton-1/SpinExplorer")
@@ -64,8 +62,9 @@ warnings.simplefilter("ignore", np.exceptions.ComplexWarning)  # For new numpy v
 
 
 # Importing SpinProcess modules
-from SpinExplorer.SpinProcess.ReadingData.read_fid import ReadFID
-from SpinExplorer.SpinProcess.FormattingGUI.notebook import NotebookProcess
+from SpinExplorer.SpinProcess.SpinProcess import SpinProcess
+from SpinExplorer.SpinConverter.SpinConverter import SpinConverter
+from SpinExplorer.SpinView.SpinView import SpinView
 from SpinExplorer.SpinExpLogo import SpinExpLogo
 
 # Find out the version of operating system being used (Mac, Linux, Windows)
@@ -82,7 +81,6 @@ else:
 
 # James Eaton, 10/06/2025, University of Oxford
 # James Eaton, 25/09/2025, Bind Research
-# This program is designed to allow the user to process NMR FID data that has been converted to nmrPipe format.
 
 
 # task bar dock icon adapted from https://wiki.wxpython.org/Custom%20Mac%20OsX%20Dock%20Bar%20Icon
@@ -121,24 +119,15 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         sys.exit()
 
 
-class SpinProcess(wx.Frame):
+class SpinExplorer(wx.Frame):
     def __init__(
-        self, original_frame=None, file_parser=False, path="", cwd="", reprocess=False
+        self
     ):
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 0.8 * self.monitorWidth
         self.height = 0.75 * self.monitorHeight
 
-        # Initially set the reprocessing flag to False
-        self.reprocess = reprocess
-        self.original_frame = original_frame
-        self.file_parser = file_parser
-        self.path = path
-        self.cwd = cwd
-
-        # Get the title for the panels
-        self.title = self.GetTitle()
 
         # Setup the dock/task bar with the logo
         try:
@@ -148,17 +137,12 @@ class SpinProcess(wx.Frame):
 
         # Create the main window
         self.main_window = wx.Frame.__init__(
-            self, None, title=self.title, size=(self.width, self.height)
+            self, None, title='SpinExplorer', size=(self.width, self.height)
         )
 
-        # Read the NMR data in the current directory
-        self.nmr_data = ReadFID(self)
-
-        self.notebook = NotebookProcess(self, self.nmr_data)
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.main_sizer.AddSpacer(10)
         self.main_sizer.Add(self.notebook, 1, wx.EXPAND)
-        self.notebook.create_buttons(parent=self)
 
         self.SetSizerAndFit(self.main_sizer)
         self.Show()

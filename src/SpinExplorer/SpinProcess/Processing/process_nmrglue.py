@@ -87,6 +87,12 @@ class ProcessNMRGlue:
         # Checking whether processing is required for second/third dimensions
         include_dim2, include_dim3 = self.checking_dimensions()
 
+        # Set the comment to nmrglue so that the fact nmrglue processing was used is noted in the processed spectrum header
+        dic['FDCOMMENT'] = 'nmrglue'
+        if self.nmr_data.pseudo_axis == True:
+            # Adding the fact that there is a pseudo axis to the FDCOMMENT
+            dic['FDCOMMENT'] += '_pseudo'
+
         # For the direct dimension, apply the processing functions
         dic, data = self.apply_dimension_processing(
             dic, data, 0, self.dimension_tabs[0]
@@ -111,7 +117,6 @@ class ProcessNMRGlue:
 
                         dic, data = self.zero_transpose_3d(dic, data)
                 else:
-                    # If the pseudo axis is the central axis then need to move the third axis
                     dic, data = self.transpose_3d(dic, data, auto=True)
 
             dic, data = self.apply_dimension_processing(
@@ -1109,6 +1114,13 @@ class ProcessNMRGlue:
         new_dic["FDDIMORDER3"] = order1
         new_dic["FDDIMORDER"][0] = order3
         new_dic["FDDIMORDER"][2] = order1
+
+        new_dic["FDDIMORDER"] = [
+            new_dic["FDDIMORDER1"],
+            new_dic["FDDIMORDER2"],
+            new_dic["FDDIMORDER3"],
+            new_dic["FDDIMORDER4"],
+        ]
 
         new_dic["FDSLICECOUNT"] = new_data.shape[-2]
         new_dic["FDSPECNUM"] = new_dic["FDSLICECOUNT"]

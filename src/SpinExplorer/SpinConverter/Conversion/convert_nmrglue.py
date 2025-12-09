@@ -139,6 +139,8 @@ class Convert_nmrglue:
             pdic["FDF1ORIG"] = 1.0
             pdic["FD2DPHASE"] = 0
 
+        pdic['FDCOMMENT'] = 'nmrglue'
+
         ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
 
     def create_conversion_dictionary(self) -> Dict:
