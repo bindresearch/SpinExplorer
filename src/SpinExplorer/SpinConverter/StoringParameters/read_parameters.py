@@ -58,7 +58,12 @@ class Read_json:
         directory
         """
         if pathlib.Path("parameters.json").exists() == True:
-            return self.ask_user()
+            parameter_dictionary = self.read(warning=False)
+            
+            if parameter_dictionary == False or parameter_dictionary==None:
+                return None
+            else:
+                return self.ask_user()
         else:
             return None
 
@@ -82,7 +87,7 @@ class Read_json:
             dlg.Destroy()
             return True
 
-    def read(self):
+    def read(self, warning=True):
         """
         Reading the parameters.json file and giving an error to the user if this
         could not be read correctly.
@@ -94,10 +99,11 @@ class Read_json:
         except:
             # Unable to read the converter.json file effectively
             # Giving a warning to the user and returning
-            message = "Unable to read the saved conversion parameters in parameters.json. Continuing using default parameters."
-            dlg = wx.MessageDialog(self.app, message, "Warning", wx.OK | wx.ICON_ERROR)
-            dlg.ShowModal()
-            dlg.Destroy()
+            if(warning==True):
+                message = "Unable to read the saved conversion parameters in parameters.json. Continuing using default parameters."
+                dlg = wx.MessageDialog(self.app, message, "Warning", wx.OK | wx.ICON_ERROR)
+                dlg.ShowModal()
+                dlg.Destroy()
 
             return False
 

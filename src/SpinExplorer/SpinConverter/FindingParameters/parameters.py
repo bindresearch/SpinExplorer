@@ -41,7 +41,7 @@ warnings.simplefilter("ignore", UserWarning)
 
 class FindingParameters:
 
-    def __init__(self) -> None:
+    def __init__(self, app) -> None:
         """
         Initialising the converter class. The class reads the spectrometer
         parameter files to obtain relevant spectra for nmrpipe conversion
@@ -51,6 +51,8 @@ class FindingParameters:
         # Creating a hidden frame to be used as a parent for popout messages
         self.tempframe = wx.Frame(None, title="Temporary Parent", size=(1, 1))
         self.tempframe.Hide()  # Hide the frame since we don't need it to be visible
+
+        self.app=app
 
         # Get the NMR data and parameters
         self.find_nmr_files()
@@ -87,7 +89,7 @@ class FindingParameters:
                     dlg.Destroy()
                 else:
                     dlg.Destroy()
-                    exit()
+                    self.app.Destroy()
             else:
                 # Give a popout error message saying that there are no bruker NMR files in the current directory, but found an acqus file
                 dlg = wx.MessageDialog(
@@ -100,12 +102,16 @@ class FindingParameters:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-                exit()
+                self.app.Destroy()
         if self.spectrometer == "Bruker":
             self.files = []
             for file in os.listdir("."):
-                if file.endswith("ser") or file == "fid":
+                if file.endswith("ser"):
                     self.files.append(file)
+                if(file == "fid"):
+                    if os.path.isdir(file) == False:
+                        self.files.append(file)
+
             if len(self.files) == 0:
                 # Give a popout error message saying that there are no bruker NMR files in the current directory, but found an acqus file
                 dlg = wx.MessageDialog(
@@ -119,7 +125,7 @@ class FindingParameters:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-                exit()
+                self.app.Destroy()
 
             elif len(self.files) == 2:
                 # Give a popout error message saying that there are two NMR files in the current directory
@@ -135,7 +141,7 @@ class FindingParameters:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-                exit()
+                self.app.Destroy()
         elif self.spectrometer == "Varian":
             self.files = []
             for file in os.listdir("."):
@@ -163,10 +169,10 @@ class FindingParameters:
                         self.files = [dlg.GetPath()]
                     else:
                         dlg.Destroy()
-                        exit()
+                        self.app.Destroy()
                 else:
                     dlg.Destroy()
-                    exit()
+                    self.app.Destroy()
 
     def read_nmr_data(self) -> None:
         """
@@ -192,7 +198,7 @@ class FindingParameters:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-                exit()
+                self.app.Destroy()
         if self.spectrometer == "Varian":
             try:
                 self.nmr_dic, self.nmr_data = ng.varian.read(
@@ -209,7 +215,7 @@ class FindingParameters:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-                exit()
+                self.app.Destroy()
 
         self.data_dimensions = len(self.nmr_data.shape)
 

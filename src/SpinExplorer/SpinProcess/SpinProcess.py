@@ -47,14 +47,8 @@ import wx.adv
 
 # Import relevant modules
 import numpy as np
-import matplotlib
-
-matplotlib.use("WXAgg")
 
 import pathlib
-
-matplotlib.rcParams["font.sans-serif"] = "Arial"
-matplotlib.rcParams["font.family"] = "sans-serif"
 
 # Suppress complex warning from numpy
 import warnings
@@ -123,7 +117,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 class SpinProcess(wx.Frame):
     def __init__(
-        self, original_frame=None, file_parser=False, path="", cwd="", reprocess=False
+        self, original_frame=None, file_parser=False, path="", cwd="", reprocess=False, explorer=False
     ):
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
@@ -142,7 +136,8 @@ class SpinProcess(wx.Frame):
 
         # Setup the dock/task bar with the logo
         try:
-            self.tbicon = TaskBarIcon(self)
+            if(explorer == False):
+                self.tbicon = TaskBarIcon(self)
         except:
             pass
 
@@ -168,7 +163,8 @@ class SpinProcess(wx.Frame):
 
     def OnClose(self, event):
         self.Destroy()
-        sys.exit()
+        # if(self.reprocess == False):
+        #     sys.exit()
 
     def change_frame_size(self, width, height):
         self.SetSize(width, height)
@@ -192,14 +188,13 @@ class SpinProcess(wx.Frame):
         # If pdata/1/title exists, add this title too
         try:
             with open('pdata/1/title') as file:
-                lines = file.readlines()
-                title = title + ' ('
-                for line in lines:
-                    line = line.split('\n')[0]
-                    line = line + ' '
-                    title+= line 
+                line = file.readlines()[0]
+                title_extra = ''
+                line = line.split('\n')[0]
+                title_extra+= line 
+
                 
-                title +=')'
+                title = title + '(' + title_extra + ')'
         except:
             pass
 

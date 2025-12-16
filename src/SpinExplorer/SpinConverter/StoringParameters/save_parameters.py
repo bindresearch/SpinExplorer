@@ -415,29 +415,34 @@ class Populate_dictionary_global:
         """
         Adding the current NUS information to the dictionary
         """
-        if len(dictionary["spectral parameters"]["sizes"]["complex"]) > 1:
-            if self.app.shared_format.NUS_tickbox.GetValue() == True:
-                NUS_checkbox = True
-                dictionary["NUS information"] = {}
-                nuslist = self.app.shared_format.nusfile_input.GetValue()
-                nus_sample_count = (
-                    self.app.shared_format.NUS_sample_count_box.GetValue()
-                )
-                nus_offset = self.app.shared_format.nus_offset_box.GetValue()
-                reverse_nus_schedule = (
-                    self.app.shared_format.reverse_NUS_tickbox.GetValue()
-                )
-                dictionary["NUS information"]["Checkbox"] = NUS_checkbox
-                dictionary["NUS information"]["NUS sample count"] = str(
-                    nus_sample_count
-                )
-                dictionary["NUS information"]["NUS offset"] = str(nus_offset)
-                dictionary["NUS information"]["NUS file"] = str(nuslist)
-                dictionary["NUS information"][
-                    "Reverse NUS schedule"
-                ] = reverse_nus_schedule
+        try:
+            if len(dictionary["spectral parameters"]["sizes"]["complex"]) > 1:
+                if self.app.shared_format.NUS_tickbox.GetValue() == True:
+                    NUS_checkbox = True
+                    dictionary["NUS information"] = {}
+                    nuslist = self.app.shared_format.nusfile_input.GetValue()
+                    nus_sample_count = (
+                        self.app.shared_format.NUS_sample_count_box.GetValue()
+                    )
+                    nus_offset = self.app.shared_format.nus_offset_box.GetValue()
+                    reverse_nus_schedule = (
+                        self.app.shared_format.reverse_NUS_tickbox.GetValue()
+                    )
+                    dictionary["NUS information"]["Checkbox"] = NUS_checkbox
+                    dictionary["NUS information"]["NUS sample count"] = str(
+                        nus_sample_count
+                    )
+                    dictionary["NUS information"]["NUS offset"] = str(nus_offset)
+                    dictionary["NUS information"]["NUS file"] = str(nuslist)
+                    dictionary["NUS information"][
+                        "Reverse NUS schedule"
+                    ] = reverse_nus_schedule
 
-                return dictionary
+                    return dictionary
 
-        dictionary["NUS information"] = "N/A"
+            dictionary["NUS information"] = "N/A"
+        
+        except:
+            dictionary["NUS information"] = "N/A"
+
         return dictionary

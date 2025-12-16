@@ -52,9 +52,15 @@ class ProcessNMRGlue:
             # Just initialising the class for bruker digital filter removal
             return
 
-        self.on_run_processing_nmrglue()
+        try:
+            self.on_run_processing_nmrglue()
+            self.success_output_message()
 
-        self.success_output_message()
+        except:
+            self.fail_output_message()
+
+        if self.notebook.parent.original_frame != None:
+            self.Destroy()
 
     def success_output_message(self):
         """
@@ -65,6 +71,24 @@ class ProcessNMRGlue:
             self.notebook,
             "Data processing using nmrglue is complete.",
             "Complete",
+            wx.OK,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
+
+
+    def fail_output_message(self):
+        """
+        Provides an output message to the user to say that the
+        conversion did not work correctly
+        """
+        dlg = wx.MessageDialog(
+            self.notebook,
+            "Data processing using nmrglue did not complete correctly.",
+            "Error",
             wx.OK,
         )
         self.notebook.Raise()
@@ -86,6 +110,12 @@ class ProcessNMRGlue:
 
         # Checking whether processing is required for second/third dimensions
         include_dim2, include_dim3 = self.checking_dimensions()
+
+        # Set the comment to nmrglue so that the fact nmrglue processing was used is noted in the processed spectrum header
+        dic['FDCOMMENT'] = 'nmrglue'
+        if self.nmr_data.pseudo_axis == True:
+            # Adding the fact that there is a pseudo axis to the FDCOMMENT
+            dic['FDCOMMENT'] += '_pseudo'
 
         # For the direct dimension, apply the processing functions
         dic, data = self.apply_dimension_processing(
@@ -111,7 +141,6 @@ class ProcessNMRGlue:
 
                         dic, data = self.zero_transpose_3d(dic, data)
                 else:
-                    # If the pseudo axis is the central axis then need to move the third axis
                     dic, data = self.transpose_3d(dic, data, auto=True)
 
             dic, data = self.apply_dimension_processing(
@@ -288,15 +317,16 @@ class ProcessNMRGlue:
         path = self.notebook.parent.original_frame.parent.path
         cwd = self.notebook.parent.original_frame.parent.cwd
         self.notebook.parent.original_frame.parent.reprocess = True
-        self.notebook.parent.original_frame.parent.Close()
+        self.notebook.parent.original_frame.parent.Destroy()
         if self.notebook.parent.original_frame.parent.path != "":
             os.chdir(self.notebook.parent.original_frame.parent.path)
-        from SpinExplorer.SpinView.SpinView import MyApp
+        from SpinExplorer.SpinView.SpinView import SpinView
 
-        app = MyApp()
+        app = SpinView()
         if self.notebook.parent.original_frame.parent.cwd != "":
             app.path = path
             app.cwd = cwd
+        
 
     def create_3D_projections(self, dic, data):
         """
@@ -1109,6 +1139,13 @@ class ProcessNMRGlue:
         new_dic["FDDIMORDER3"] = order1
         new_dic["FDDIMORDER"][0] = order3
         new_dic["FDDIMORDER"][2] = order1
+
+        new_dic["FDDIMORDER"] = [
+            new_dic["FDDIMORDER1"],
+            new_dic["FDDIMORDER2"],
+            new_dic["FDDIMORDER3"],
+            new_dic["FDDIMORDER4"],
+        ]
 
         new_dic["FDSLICECOUNT"] = new_data.shape[-2]
         new_dic["FDSPECNUM"] = new_dic["FDSLICECOUNT"]

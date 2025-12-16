@@ -25,19 +25,84 @@ SOFTWARE."""
 
 import wx
 import os
-
+import nmrglue as ng
 
 class CheckingParameters:
     def __init__(self, notebook, dimension_tabs):
         """
         This class will check the SpinProcess TextControl input
-        values to make sure that they are valid
+        values to make sure that they are valid.
+        
+        It will also check to make
+        sure that if the fid file was made using nmrglue conversion but the
+        user has pressed nmrpipe processing it will give a warning.
         """
         self.notebook = notebook
         self.dimension_tabs = dimension_tabs
 
         self.check = True  # Start off having passed the check
         self.check_parameter_validity()
+
+
+    def check_nmrglue_fid(self, nmr_data):
+        """
+        This function will check to make sure that if the fid file was made
+        using nmrglue conversion. If the user has pressed nmrglue processing 
+        with an nmrpipe converted fid it will give a warning.
+        """
+
+        # Read the fid
+        if(nmr_data.dic['FDCOMMENT'] == 'nmrglue'):
+            return True
+        else:
+            # Inform the user that an fid made using nmrglue conversion is not detected and the user is trying to use nmrglue processing
+            dlg = wx.MessageDialog(
+                    None,
+                    "The .fid file was detected to have not been converted using nmrglue. It is advisable to re-convert the data using nmrglue (SpinConverter) and try again. Would you like to continue processing?",
+                    "Continue processing",
+                    wx.YES_NO | wx.ICON_INFORMATION,
+                )
+            self.notebook.Raise()
+            self.notebook.SetFocus()
+            result = dlg.ShowModal()
+            if result == wx.ID_YES:
+                dlg.Destroy()
+                return True
+            else:
+                dlg.Destroy()
+                return False
+            
+
+    def check_nmrpipe_fid(self, nmr_data):
+        """
+        This function will check to make sure that if the fid file was made
+        using nmrpipe conversion, if the user has pressed nmrpipe processing 
+        with an nmrglue converted fid it will give a warning.
+        """
+
+        # Read the fid
+        if(nmr_data.dic['FDCOMMENT'] != 'nmrglue'):
+            return True
+        else:
+            # Inform the user that an fid made using nmrglue conversion is not detected and the user is trying to use nmrglue processing
+            dlg = wx.MessageDialog(
+                    None,
+                    "The .fid file was detected to have not been converted using nmrpipe. It is advisable to re-convert the data using nmrpipe (SpinConverter) and try again. Would you like to continue processing?",
+                    "Continue processing",
+                    wx.YES_NO | wx.ICON_INFORMATION,
+                )
+            self.notebook.Raise()
+            self.notebook.SetFocus()
+            result = dlg.ShowModal()
+            if result == wx.ID_YES:
+                dlg.Destroy()
+                return True
+            else:
+                dlg.Destroy()
+                return False
+
+
+
 
     def check_parameter_validity(self):
         """

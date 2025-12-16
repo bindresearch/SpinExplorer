@@ -458,7 +458,7 @@ class FormatParametersVarian:
                     )
                 )
                 self.acqusition_combo_boxes[0].Bind(
-                    wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                    wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                 )
             elif self.params.phase == True and self.params.phase2 == False:
                 for i in range(2):
@@ -498,7 +498,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 1:
                         self.acqusition_combo_boxes.append(
@@ -510,7 +510,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 2:
                         self.acqusition_combo_boxes.append(
@@ -522,7 +522,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
         else:
             if self.params.phase == False and self.params.phase2 == False:
@@ -537,7 +537,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 1:
                         self.acqusition_combo_boxes.append(
@@ -549,7 +549,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
             elif self.params.phase == True and self.params.phase2 == False:
                 for i in range(3):
@@ -563,7 +563,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 1:
                         self.acqusition_combo_boxes.append(
@@ -575,7 +575,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 2:
                         self.acqusition_combo_boxes.append(
@@ -587,7 +587,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
             elif self.params.phase == True and self.params.phase2 == True:
                 for i in range(4):
@@ -601,7 +601,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 1:
                         self.acqusition_combo_boxes.append(
@@ -625,7 +625,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 3:
                         self.acqusition_combo_boxes.append(
@@ -637,7 +637,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
             elif self.params.phase == False and self.params.phase2 == True:
                 for i in range(3):
@@ -651,7 +651,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 1:
                         self.acqusition_combo_boxes.append(
@@ -663,7 +663,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
                     if i == 2:
                         self.acqusition_combo_boxes.append(
@@ -675,7 +675,7 @@ class FormatParametersVarian:
                             )
                         )
                         self.acqusition_combo_boxes[i].Bind(
-                            wx.EVT_COMBOBOX, self.on_acquisition_mode_change
+                            wx.EVT_COMBOBOX, self.app.shared_format.on_acquisition_mode_change
                         )
 
         self.acquisition_mode_sizer.AddSpacer(20)
