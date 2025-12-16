@@ -2,41 +2,24 @@ A python-based graphical interface package to perform NMR data processing and an
 
 Processing can be performed using nmrglue or nmrPipe. All processing except SMILE NUS reconstruction can be performed using nmrglue.
 
-Full documentation provided at "https://github.com/james-eaton-1/SpinExplorer" in Documentation.pdf
+Video tutorials can be accessed at "https://www.youtube.com/@BindResearch"
 
-Once installed, the commands SpinConverter, SpinProcess and SpinView can be ran from a terminal in a directory containing raw NMR data to perform NMR data conversion, processing, and viewing/analysis, respectively.
+Releases
+--------
+Each release will have application bundles for the app to make the installation as simple as possible. In the current pre-release, only MacOS (apple silicon and x86_64) architectures are supported. Windows on x86_64 architectures is also supported. For Linux users, follow the installation for GitHub instructions below (Linux users may also need to compile wxPython from source).
 
-Installation from GitHub:
+
+Installation from GitHub
+------------------------
+If users prefer to view/edit the source code directly or add extra functionality, cloning the repository from GitHub is possible.
+
 - Clone the GitHub repository
-- Create a virtual environment containing python3>=3.11 (see PyPi installation instructions)
+- Create a virtual environment containing python3>=3.11
 - Activate the virtual environment
-- From the main package directory (containing README.md) run the command "pip install -e ."
+- From the main package directory (containing README.md) run the command "pip install ."
 
+Once installed from GitHub, the command SpinExplorer can be run in a terminal to open the application in the same manner as the releases. In addition, the commands SpinConverter, SpinProcess and SpinView can be ran from a terminal in a directory containing raw NMR data to perform NMR data conversion, processing, and viewing/analysis, respectively. This is useful if a user prefers to use the command line for NMR processing/analysis.
 
-Installation from PyPi (macOS/Linux):
-- Ensure python3 version is greater than 3.10 (package not tested on python<3.10)
-- It is recommended to create a python3 virtual environment in the terminal using the command:  
-"python3 -m venv ~/SpinEnv"    
-More details at https://docs.python.org/3/tutorial/venv.html
-- Alternatively conda environments can be used if preferred
-- Activate the virtual environment using the command:  
-"source ~/SpinEnv/bin/activate"  
-This will need to be ran every time a new terminal is created, or the following line can be
-added to the ~/.zshrc or ~/.bashrc file: "source ~/SpinEnv/bin/activate"
-- Install the SpinExplorer package and all dependencies using:
-"python3 -m pip install SpinExplorer"
-
-Note: the wxPython dependency might not install correctly on Linux systems.  
-More details and fixes at https://wxpython.org/pages/downloads/  
-Currently, wxPython needs to be build from source for Linux systems without x86_64 architecture.  
-More details at https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html
-
-Installation from PyPi (Windows):
-- Using py (py-launcher) is recommended for windows systems  
-If py is not present, download latest python from https://www.python.org, and ensure install py-launcher is ticked
-- If desired, a virtual environment for the package can be created according to https://docs.python.org/3/tutorial/venv.html
-- Install the SpinExplorer package and all dependencies using the following command in command prompt/power shell:  
-"py -m pip install SpinExplorer"
 
 
 

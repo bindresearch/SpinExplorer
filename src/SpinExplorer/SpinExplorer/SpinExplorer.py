@@ -27,13 +27,13 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinExplorer                         ")
 print("-------------------------------------------------------------")
-print("                (version 2.0) 29th July 2025                 ")
+print("               (version 0.1) 16th December 2025              ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                     2025, Bind Research                     ")
 print("                        MIT License                          ")
 print("-------------------------------------------------------------")
-print(" Documentation at:")
-print(" https://github.com/james-eaton-1/SpinExplorer")
+print(" Video tutorials at:")
+print(" https://www.youtube.com/@BindResearch")
 print("-------------------------------------------------------------")
 print("")
 
@@ -251,9 +251,20 @@ class SpinExplorer(wx.Frame):
 
         self.extra_info = wx.StaticText(self, label="This package was developed by Bind Research and the Baldwin Group at the University of Oxford.")
 
-        self.extra_info1 = wx.StaticText(self, label="Documentation is provided at XXX, and video tutorials can be accessed at XXX.")
-        self.extra_info2 = wx.StaticText(self, label="The python source code for the project can be accessed at XXX.")
-        
+        self.video_link = hl.HyperLinkCtrl(
+            self,
+            -1,
+            "Video Tutorials",
+            URL="https://www.youtube.com/@BindResearch",
+        )
+
+        self.source_code_link = hl.HyperLinkCtrl(
+            self,
+            -1,
+            "Source code",
+            URL="https://github.com/bindresearch/SpinExplorer",
+        )
+
         
         self.citation_info = wx.StaticText(self, label="If you use SpinExplorer, please cite the following:")
 
@@ -289,9 +300,14 @@ class SpinExplorer(wx.Frame):
         self.citation_box.AddSpacer(10)
         self.citation_box.Add(self.citation3)
 
+        self.link_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.link_box.Add(self.video_link)
+        self.link_box.AddSpacer(10)
+        self.link_box.Add(self.source_code_link)
+
+
         self.bottom_box.Add(self.extra_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.extra_info1, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.extra_info2, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.link_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.citation_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.citation_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.copyright_statement, 1, wx.ALIGN_CENTER_HORIZONTAL)
