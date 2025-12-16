@@ -43,12 +43,24 @@ print("")
 
 
 import sys
+import os
 import wx
 import wx.adv
 
 # Import relevant modules
 import numpy as np
+from appdirs import user_data_dir
+
+appname = 'SpinExplorer'
+appauthor = "James Eaton"
+data_dir = user_data_dir(appname, appauthor)
+os.makedirs(data_dir, exist_ok=True)
+
 import matplotlib
+
+mpl_cache = os.path.join(data_dir, "mpl-cache")
+os.makedirs(mpl_cache, exist_ok=True)
+matplotlib.get_cachedir = lambda: mpl_cache
 from scipy.optimize import leastsq
 import pathlib
 
@@ -63,10 +75,11 @@ from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 from matplotlib.backend_bases import MouseEvent as MPLMouseEvent
 import nmrglue as ng
-import os
 import copy
 import wx.grid as gridlib
 import pandas as pd
+import struct
+import sys
 import re
 from scipy.interpolate import make_interp_spline
 from SpinExplorer.SpinExpLogo import SpinExpLogo
@@ -274,8 +287,6 @@ class GetData:
             self.axislabels = []
 
 
-            # Labels from nmrglue and nmrpipe are stored in different orders.
-
             if self.dim == 1:
                 # If 1D take FDF1LABEL
                 self.axislabels.append(self.dic["FDF1LABEL"])
@@ -289,14 +300,14 @@ class GetData:
                     self.axislabels.append(self.dic["FDF1LABEL"])
             else:
                 # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
-                if(self.nmrglue_flag == False):
+                if(self.pseudo_flag == False):
                     self.axislabels.append(self.dic["FDF1LABEL"])
                     self.axislabels.append(self.dic["FDF2LABEL"])
                     self.axislabels.append(self.dic["FDF3LABEL"])
                 else:
+                    self.axislabels.append(self.dic["FDF3LABEL"])
                     self.axislabels.append(self.dic["FDF2LABEL"])
                     self.axislabels.append(self.dic["FDF1LABEL"])
-                    self.axislabels.append(self.dic["FDF3LABEL"])
 
     def generic_labels_bruker(self):
         """
@@ -313,6 +324,7 @@ class GetData:
         if self.dim == 3:
             self.labels = ["dim1", "dim2", "dim3"]
         self.axislabels = self.labels
+
 
 
 class ChooseFile(wx.Dialog):
@@ -485,7 +497,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 # This class creates the GUI main frame
 class SpinView(wx.Frame):
-    def __init__(self):
+    def __init__(self, explorer=False):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -498,7 +510,8 @@ class SpinView(wx.Frame):
         self.title = self.GetTitle()
 
         # Setup the dock/task bar with the logo
-        self.tbicon = TaskBarIcon(self)
+        if(explorer==False):
+            self.tbicon = TaskBarIcon(self)
 
         self.app_frame = wx.Frame.__init__(
             self,
@@ -564,15 +577,14 @@ class SpinView(wx.Frame):
 
         # If pdata/1/title exists, add this title too
         try:
-            with open("pdata/1/title") as file:
-                lines = file.readlines()
-                title = title + " ("
-                for line in lines:
-                    line = line.split("\n")[0]
-                    line = line + " "
-                    title += line
+            with open('pdata/1/title') as file:
+                line = file.readlines()[0]
+                title_extra = ''
+                line = line.split('\n')[0]
+                title_extra+= line 
 
-                title += ")"
+                
+                title = title + '(' + title_extra + ')'
         except:
             pass
 
@@ -615,10 +627,10 @@ class SpinView(wx.Frame):
 
                     dlg.Destroy()
                 self.Destroy()
-                sys.exit()
+                # sys.exit()
             except:
                 self.Destroy()
-                sys.exit()
+                # sys.exit()
 
     def OnMoveFrame(self, event):
         # Get the new default display if the frame is moved
@@ -4459,6 +4471,7 @@ class TwoDViewer(wx.Panel):
 
         self.slice_mode = None
 
+
     def OnTextContour2D(self, event):
         """
         First check that the input is valid.
@@ -4494,6 +4507,7 @@ class TwoDViewer(wx.Panel):
         reprocessing_frame.reprocess = True
         if self.parent.cwd != "":
             os.chdir(self.parent.cwd)
+        
 
     def OnSaveSessionButton2D(self, event):
         # Function to save the current session

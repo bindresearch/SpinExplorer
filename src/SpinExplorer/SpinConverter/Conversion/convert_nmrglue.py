@@ -28,6 +28,7 @@ import nmrglue as ng
 from typing import Dict
 from numpy.typing import NDArray
 import wx
+import traceback
 
 
 class Convert_nmrglue:
@@ -58,10 +59,15 @@ class Convert_nmrglue:
 
         u = self.create_conversion_dictionary()
 
-        self.perform_conversion(C, u, dic, data)
+        try:
+            self.perform_conversion(C, u, dic, data)
+            # Give an output to say that the conversion was successful
+            self.success_output_message()
 
-        # Give an output to say that the conversion was successful
-        self.success_output_message()
+        except:
+            message = traceback.format_exc()
+            self.fail_output_message(message)
+
 
     def success_output_message(self):
         """
@@ -72,6 +78,23 @@ class Convert_nmrglue:
             self.app,
             "Data conversion to nmrPipe format using nmrglue is complete.",
             "Complete",
+            wx.OK,
+        )
+        self.app.Raise()
+        self.app.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
+
+    def fail_output_message(self, message):
+        """
+        Provides an output message to the user to say that the
+        conversion did not complete correctly
+        """
+        dlg = wx.MessageDialog(
+            self.app,
+            "Data conversion to nmrPipe format using nmrglue did not complete correctly. The following error was reported:\n\n" + message,
+            "Error",
             wx.OK,
         )
         self.app.Raise()
@@ -95,8 +118,15 @@ class Convert_nmrglue:
 
         if len(self.app.format.N_complex_boxes) > 1:
             # Check to see if the NUS flag is ticked
-            if self.app.shared_format.NUS_tickbox.GetValue() == True:
-                data = self.reshape_nus_data(data)
+            try:
+                self.app.shared_format.NUS_tickbox
+                nusbox = True
+            except:
+                nusbox = False
+
+            if(nusbox == True):
+                if self.app.shared_format.NUS_tickbox.GetValue() == True:
+                    data = self.reshape_nus_data(data)
 
         # Rance-Kay/Echo-Antiecho reshuffling
         if self.rance_kay == True:
@@ -264,9 +294,18 @@ class Convert_nmrglue:
         u[dict_index]["sw"] = float(
             self.app.format.sweep_width_boxes[index].GetValue().strip()
         )
-        u[dict_index]["obs"] = float(
+        
+        obs = float(
             self.app.format.nuclei_frequency_boxes[index].GetValue().strip()
         )
+
+        if(obs!=0.0):
+            u[dict_index]["obs"] = obs
+        else:
+            # obs cannot be equal to zero in nmrglue as it performs car/obs which is undefined if obs is 0
+            u[dict_index]['obs'] = 1.0
+
+
         u[dict_index]["car"] = (
             float(self.app.format.carrier_frequency_boxes[index].GetValue().strip())
             * u[dict_index]["obs"]
@@ -276,6 +315,8 @@ class Convert_nmrglue:
         )
 
         return u
+    
+
 
     def add_intensity_scaling(self, pdata: NDArray) -> NDArray:
         """

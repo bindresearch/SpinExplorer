@@ -14,11 +14,13 @@ license-files = ["LICEN[CS]E*"]
 
 dependencies = [
     "wxPython >= 4.2.2",
-    "numpy == 2.3.0",
-    "matplotlib == 3.10.3",
+    "numpy == 2.3.5",
+    "matplotlib == 3.10.8",
     "nmrglue == 0.11",
-    "scipy == 1.15.3",
-    "darkdetect == 0.8.0"
+    "scipy == 1.16.3",
+    "darkdetect == 0.8.0",
+    "pandas == 2.2.3",
+    "appdirs == 1.4.4"
 ]
 
 [tool.setuptools]
@@ -32,3 +34,4 @@ Issues = "https://github.com/james-eaton-1/SpinExplorer/issues"
 SpinConverter = "SpinExplorer.SpinConverter.SpinConverter:main"
 SpinProcess = "SpinExplorer.SpinProcess.SpinProcess:main"
 SpinView = "SpinExplorer.SpinView.SpinView:main"
+SpinExplorer = "SpinExplorer.SpinExplorer.SpinExplorer:main"

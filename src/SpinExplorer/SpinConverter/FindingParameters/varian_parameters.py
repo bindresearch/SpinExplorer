@@ -105,7 +105,7 @@ class ParameterExtractorVarian:
             self.converter.tempframe.SetFocus()
             dlg.ShowModal()
             dlg.Destroy()
-            exit()
+            self.converter.app.Destroy()
 
         return self.size_direct, self.size_indirect
 
@@ -199,7 +199,7 @@ class ParameterExtractorVarian:
             self.converter.tempframe.SetFocus()
             dlg.ShowModal()
             dlg.Destroy()
-            exit()
+            self.converter.app.Destroy()
 
         if self.nucleus_frequencies_indirect == []:
             dlg = wx.MessageDialog(
@@ -214,7 +214,7 @@ class ParameterExtractorVarian:
             dlg.ShowModal()
             dlg.Destroy()
             if dlg.GetReturnCode() == wx.ID_NO:
-                exit()
+                self.converter.app.Destroy()
             else:
                 self.nucleus_frequencies_indirect = [0.0, 0.0, 0.0]
                 self.nucleus_frequencies_indirect_order = ["dfrq", "dfrq2", "dfrq3"]
@@ -297,7 +297,7 @@ class ParameterExtractorVarian:
         if self.pseudo_flag == True:
             self.labels_correct_order = (
                 [self.labels_indirect[0]]
-                + [self.converter.arrayed_parameter]
+                + [self.arrayed_parameter]
                 + self.labels_indirect[1:]
             )
         else:

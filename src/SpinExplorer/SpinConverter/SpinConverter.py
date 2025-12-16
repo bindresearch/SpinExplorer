@@ -47,6 +47,8 @@ import darkdetect
 import warnings
 import pathlib
 import wx.adv
+from appdirs import user_data_dir
+import os
 
 # Importing internal classes
 from SpinExplorer.SpinConverter.FindingParameters.parameters import FindingParameters
@@ -69,29 +71,8 @@ from SpinExplorer.SpinExpLogo import SpinExpLogo
 
 warnings.simplefilter("ignore", UserWarning)
 
-
-# Check to see if using mac, linux or windows
-if sys.platform == "darwin":
-    platform = "mac"
-elif sys.platform == "linux":
-    platform = "linux"
-else:
-    platform = "windows"
-
-# See if the nmrPipe command works, if not set the platform to windows
-if platform == "mac" or platform == "linux":
-    try:
-        p = subprocess.Popen(
-            "nmrPipe", stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
-        )
-        out, err = p.communicate()
-        if "NMRPipe System Version" in str(err):
-            platform = platform
-        else:
-            platform = "windows"
-
-    except:
-        platform = "windows"
+    # except:
+    #     platform = "windows"
 
 
 # James Eaton, 10/06/2025, University of Oxford
@@ -139,18 +120,21 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 
 
-class MyApp(wx.Frame):
-    def __init__(self):
+class SpinConverter(wx.Frame):
+    def __init__(self, explorer=False):
         """
         This class creates the GUI showing the found parameters with scope
         for changing the parameters.
         """
+        # Check the platform and if nmrpipe is installed
+        self.check_platform()
 
         # Get the title for the panels
         self.title = self.GetTitle()
         
         # Setup the dock/task bar with the logo
-        self.tbicon = TaskBarIcon(self)
+        if(explorer==False):
+            self.tbicon = TaskBarIcon(self)
 
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
@@ -168,7 +152,7 @@ class MyApp(wx.Frame):
         self.file_parser = False
 
         # Initialise the NMR data and parameter class
-        self.nmrdata = FindingParameters()
+        self.nmrdata = FindingParameters(self)
 
         # Creating a canvas and formatting the app on it
         self.create_canvas()
@@ -183,6 +167,40 @@ class MyApp(wx.Frame):
         self.SetIcon(SpinExpLogo.GetIcon())
         self.Show()
         self.Centre()
+
+
+    def check_platform(self):
+
+        appname = 'SpinExplorer'
+        appauthor = "James Eaton"
+        data_dir = user_data_dir(appname, appauthor)
+        os.makedirs(data_dir, exist_ok=True)
+        logfile_location = os.path.join(data_dir, 'logfile.txt')
+
+
+        # Check to see if using mac, linux or windows
+        if sys.platform == "darwin":
+            platform = "mac"
+        elif sys.platform == "linux":
+            platform = "linux"
+        else:
+            platform = "windows"
+
+
+        # See if the nmrPipe command works, if not set the platform to windows
+        if platform == "mac" or platform == "linux":
+
+                p = subprocess.Popen(["csh", "-c", 'nmrPipe'], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.PIPE)
+                out, err = p.communicate()
+                
+                if "NMRPipe System Version" in str(out) or "NMRPipe System Version" in str(err):
+                    platform = platform
+                else:
+                    platform = "windows"
+
+
+        self.platform = platform
 
     def GetTitle(self):
         """
@@ -200,14 +218,13 @@ class MyApp(wx.Frame):
         # If pdata/1/title exists, add this title too
         try:
             with open('pdata/1/title') as file:
-                lines = file.readlines()
-                title = title + ' ('
-                for line in lines:
-                    line = line.split('\n')[0]
-                    line = line + ' '
-                    title+= line 
+                line = file.readlines()[0]
+                title_extra = ''
+                line = line.split('\n')[0]
+                title_extra+= line 
+
                 
-                title +=')'
+                title = title + '(' + title_extra + ')'
         except:
             pass
 
@@ -219,7 +236,7 @@ class MyApp(wx.Frame):
         Ensuring the application is closed after pressing close
         """
         self.Destroy()
-        sys.exit()
+        # sys.exit()
 
     def create_canvas(self) -> None:
         """
@@ -228,10 +245,6 @@ class MyApp(wx.Frame):
         # Create the main sizer
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        if darkdetect.isDark() == True and platform != "windows":
-            self.SetBackgroundColour((53, 53, 53, 255))
-        else:
-            self.SetBackgroundColour("White")
 
     def create_sizers(self) -> None:
         self.parameters_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -327,7 +340,8 @@ class MyApp(wx.Frame):
         Checking to see that nmrPipe is installed and then performing
         nmrPipe conversion.
         """
-        if platform == "windows":
+        
+        if self.platform == "windows":
             # Outputting a message saying that nmrPipe conversion is not possible on windows
             dlg = wx.MessageDialog(
                 self,
@@ -349,7 +363,7 @@ class MyApp(wx.Frame):
 
 def main():
     app = wx.App()
-    frame = MyApp()
+    frame = SpinConverter()
     app.MainLoop()
 
 

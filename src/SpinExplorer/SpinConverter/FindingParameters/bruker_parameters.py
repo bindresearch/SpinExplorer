@@ -113,7 +113,6 @@ class ParameterExtractorBruker:
             self.tempframe.SetFocus()
             dlg.ShowModal()
             dlg.Destroy()
-            exit()
 
     # def find_indirect_bruker(self) -> List:
     #     """
@@ -213,7 +212,7 @@ class ParameterExtractorBruker:
             self.tempframe.SetFocus()
             dlg.ShowModal()
             dlg.Destroy()
-            exit()
+            self.nmrdata.app.Destroy()
 
         if self.size_indirect != [] and "acqu2s" not in os.listdir("./"):
             self.size_indirect = []
@@ -365,7 +364,7 @@ class ParameterExtractorBruker:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-                exit()
+                self.nmrdata.app.Destroy()
 
     def find_nucleus_frequencies_bruker(self) -> None:
         """

@@ -52,9 +52,15 @@ class ProcessNMRGlue:
             # Just initialising the class for bruker digital filter removal
             return
 
-        self.on_run_processing_nmrglue()
+        try:
+            self.on_run_processing_nmrglue()
+            self.success_output_message()
 
-        self.success_output_message()
+        except:
+            self.fail_output_message()
+
+        if self.notebook.parent.original_frame != None:
+            self.Destroy()
 
     def success_output_message(self):
         """
@@ -65,6 +71,24 @@ class ProcessNMRGlue:
             self.notebook,
             "Data processing using nmrglue is complete.",
             "Complete",
+            wx.OK,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
+
+
+    def fail_output_message(self):
+        """
+        Provides an output message to the user to say that the
+        conversion did not work correctly
+        """
+        dlg = wx.MessageDialog(
+            self.notebook,
+            "Data processing using nmrglue did not complete correctly.",
+            "Error",
             wx.OK,
         )
         self.notebook.Raise()
@@ -293,15 +317,16 @@ class ProcessNMRGlue:
         path = self.notebook.parent.original_frame.parent.path
         cwd = self.notebook.parent.original_frame.parent.cwd
         self.notebook.parent.original_frame.parent.reprocess = True
-        self.notebook.parent.original_frame.parent.Close()
+        self.notebook.parent.original_frame.parent.Destroy()
         if self.notebook.parent.original_frame.parent.path != "":
             os.chdir(self.notebook.parent.original_frame.parent.path)
-        from SpinExplorer.SpinView.SpinView import MyApp
+        from SpinExplorer.SpinView.SpinView import SpinView
 
-        app = MyApp()
+        app = SpinView()
         if self.notebook.parent.original_frame.parent.cwd != "":
             app.path = path
             app.cwd = cwd
+        
 
     def create_3D_projections(self, dic, data):
         """
