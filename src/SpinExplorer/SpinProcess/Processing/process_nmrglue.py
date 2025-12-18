@@ -23,12 +23,61 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
+
+"""
+    The functions listed below were originally obtained from nmrglue,
+    followed by editing and customisation:
+    remove_digital_filter, rm_digital_filter, sol_general_nd, sol_general,
+    suppress_solvent_3d, ext, base, base2, lp, lp2, zf
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are
+    met:
+
+
+    a. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+
+    b. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the
+    distribution.
+
+
+    c. Neither the name of the author nor the names of contributors may
+    be used to endorse or promote products derived from this software
+    without specific prior written permission.
+
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    """
+
+
+from SpinExplorer.SpinConverter.Conversion.convert_nmrglue import Convert_nmrglue
+
+
 import wx
 import numpy as np
 import nmrglue as ng
 import os
 import json
 import copy
+import traceback
 
 
 class ProcessNMRGlue:
@@ -53,14 +102,20 @@ class ProcessNMRGlue:
             return
 
         try:
+            # # If Bruker, need to re-convert the data using the correct phasing in order to remove frowns in the direct dimension
+            # converter = Convert_nmrglue()
+            
+            # Now need to process the data. Phasing in the direct dimension can be ignored if Bruker because this has 
+            # been applied during conversion
             self.on_run_processing_nmrglue()
             self.success_output_message()
 
         except:
-            self.fail_output_message()
+            message = traceback.format_exc()
+            self.fail_output_message(message)
 
         if self.notebook.parent.original_frame != None:
-            self.Destroy()
+            self.notebook.parent.Destroy()
 
     def success_output_message(self):
         """
@@ -80,14 +135,14 @@ class ProcessNMRGlue:
 
 
 
-    def fail_output_message(self):
+    def fail_output_message(self, message):
         """
         Provides an output message to the user to say that the
         conversion did not work correctly
         """
         dlg = wx.MessageDialog(
             self.notebook,
-            "Data processing using nmrglue did not complete correctly.",
+            "Data processing using nmrglue did not complete correctly. Traceback:\n\n" + message,
             "Error",
             wx.OK,
         )
@@ -615,6 +670,7 @@ class ProcessNMRGlue:
 
         if dimension == 0:
             digital_filter_removal = self.check_digital_filter_removal()
+            print(digital_filter_removal)
             if digital_filter_removal == True:
                 dic_bruker, dat_bruker = ng.bruker.read("./")
                 data = self.remove_digital_filter(dic_bruker, data, truncate=False)
@@ -756,6 +812,8 @@ class ProcessNMRGlue:
 
         return dic, data
 
+    
+
     """
     Obtained from nmrglue followed by customisation
     
@@ -810,6 +868,7 @@ class ProcessNMRGlue:
             grpdly = dic["acqus"]["GRPDLY"]
 
         return self.rm_dig_filter(data, decim, dspfvs, grpdly, truncate)
+    
 
     """
     Obtained from nmrglue followed by customisation

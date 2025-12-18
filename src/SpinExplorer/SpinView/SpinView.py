@@ -110,11 +110,13 @@ platform = "windows"
 
 # This class reads in the NMRPipe data
 class GetData:
-    def __init__(self, file=""):
+    def __init__(self, app, file=""):
 
         # Create a hidden frame to be used as a parent for popout messages
         self.tempframe = wx.Frame(None, title="Temporary Parent", size=(1, 1))
         self.tempframe.Hide()  # Hide the frame since we don't need it to be visible
+
+        self.app = app
 
         self.file = file
         self.path = os.getcwd()
@@ -174,7 +176,7 @@ class GetData:
             self.tempframe.SetFocus()
             dlg.ShowModal()
             dlg.Destroy()
-            exit()
+            self.app.Destroy()
         if len(spectrum_file) == 1:
             self.file = spectrum_file[0]
         if len(spectrum_file) > 1:
@@ -213,7 +215,8 @@ class GetData:
                 dlg.ShowModal()
                 dlg.Destroy()
                 self.found_file = True
-                exit()
+                self.app.Destroy()
+
 
         except:
             if self.found_file == False:
@@ -228,7 +231,7 @@ class GetData:
                 self.tempframe.SetFocus()
                 dlg.ShowModal()
                 dlg.Destroy()
-            exit()
+                self.app.Destroy()
 
     # Work out NMR spectrum dimensions in order to get the plotting correct (need contour plot for 2D/3D but not for 1D)
     def get_dimensions(self):
@@ -535,7 +538,7 @@ class SpinView(wx.Frame):
         if self.session_file != "":
             ReadSession(self, self.session_file)
         else:
-            self.nmrdata = GetData()
+            self.nmrdata = GetData(self)
             if self.nmrdata.dim == 1:
                 self.viewer = OneDViewer(parent=self, nmrdata=self.nmrdata)
                 self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
@@ -1153,10 +1156,16 @@ class OneDViewer(wx.Panel):
         self.P0_total_value = wx.StaticText(self, label="0.00", size=(70, height))
         self.P1_total_value = wx.StaticText(self, label="0.00", size=(70, height))
 
+        # Adding a button to change the range of the coarse and fine sliders (default to +/-180 and +/-10 degrees)
+        self.update_phasing_range = wx.Button(self, label="Change slider range")
+        self.update_phasing_range.Bind(wx.EVT_BUTTON, self.OnSliderRange1D)
+
         # Adding a button to set the pivot point for phasing
         self.pivot_button = wx.Button(self, label="Set Pivot Point")
         self.pivot_button.Bind(wx.EVT_BUTTON, self.OnPivotButton)
         self.pivot_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.pivot_sizer.Add(self.update_phasing_range)
+        self.pivot_sizer.AddSpacer(10)
         self.pivot_sizer.Add(self.pivot_button)
 
         # Adding a button to remove the pivot point
@@ -3585,6 +3594,14 @@ class OneDViewer(wx.Panel):
         self.files = FileDrop(self.canvas, self.ax, self)
         self.canvas.SetDropTarget(self.files)
 
+
+    def OnSliderRange1D(self, event):
+        """
+        Creating a popout where a user can update the slider range
+        """
+        self.slider_range_window = PhasingSliderRange("Phasing slider ranges",self)
+
+
     def OnSliderScroll1D(self, event):
         # Get all the slider values for P0 and P1 (coarse and fine), put the combined coarse and fine values on the screen
         self.total_P0 = self.P0_slider.GetValue() + self.P0_slider_fine.GetValue()
@@ -4177,10 +4194,16 @@ class TwoDViewer(wx.Panel):
         self.P1_slider_sizer.Add(self.P1_total_value, wx.ALIGN_CENTER_HORIZONTAL, 5)
         self.P1_slider_sizer.AddSpacer(10)
 
+        # Adding a button to change the range of the coarse and fine sliders (default to +/-180 and +/-10 degrees)
+        self.update_phasing_range = wx.Button(self, label="Change slider range")
+        self.update_phasing_range.Bind(wx.EVT_BUTTON, self.OnSliderRange2D)
+
         # Add a button to set the pivot point for phasing
         self.pivot_button = wx.Button(self, label="Set Pivot Point")
         self.pivot_button.Bind(wx.EVT_BUTTON, self.OnPivotButton2D)
         self.pivot_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.pivot_sizer.Add(self.update_phasing_range)
+        self.pivot_sizer.AddSpacer(20)
         self.pivot_sizer.Add(self.pivot_button)
 
         # Add a button to remove the pivot point
@@ -4470,6 +4493,12 @@ class TwoDViewer(wx.Panel):
         self.bottom_sizer.Add(self.bottom_right_sizer)
 
         self.slice_mode = None
+
+    def OnSliderRange2D(self, event):
+        """
+        Creating a popout where a user can update the slider range
+        """
+        self.slider_range_window = PhasingSliderRange("Phasing slider ranges",self)
 
 
     def OnTextContour2D(self, event):
@@ -7500,6 +7529,8 @@ class ThreeDViewer(wx.Panel):
         if self.parent.cwd != "":
             os.chdir(self.parent.cwd)
 
+
+
     def OnShowBoreButton(self, event):
         # Open a SpinBore frame
 
@@ -8493,6 +8524,162 @@ class ThreeDViewer(wx.Panel):
                 np.max(self.nmrdata.data[z_index]) / (intensity_percent / 100),
             )
             self.UpdateFrame()
+
+
+
+class PhasingSliderRange(wx.Frame):
+    def __init__(self, title, parent):
+        self.main_frame = parent
+        self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
+        width = 400
+        height = 200
+        wx.Frame.__init__(self, parent=parent, title=title, size=(width, height))
+        self.panel_slider_range = wx.Panel(self, -1)
+
+
+
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.make_slider_range_sizer()
+
+
+        self.SetSizer(self.main_sizer)
+        self.Show()
+
+    def make_slider_range_sizer(self):
+        self.P0_label = wx.StaticBox(self, -1, "P0 range:")
+        self.P0_sizer = wx.StaticBoxSizer(self.P0_label, wx.VERTICAL)
+        
+        self.coarse_label_p0 = wx.StaticText(self, -1, "Coarse (+/-):")
+        coarse_range_p0 = self.main_frame.P0_slider.GetMax()
+        self.coarse_box = wx.TextCtrl(self, -1, str(coarse_range_p0))
+
+        self.fine_label_p0 = wx.StaticText(self, -1, "Fine (+/-):")
+        fine_range_p0 = self.main_frame.P0_slider_fine.GetMax()
+        self.fine_box = wx.TextCtrl(self, -1, str(fine_range_p0))
+
+        self.p0_row1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p0_row1.Add(self.coarse_label_p0)
+        self.p0_row1.AddSpacer(5)
+        self.p0_row1.Add(self.coarse_box)
+
+        self.p0_row2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p0_row2.Add(self.fine_label_p0)
+        self.p0_row2.AddSpacer(5)
+        self.p0_row2.Add(self.fine_box)
+
+        self.P0_sizer.Add(self.p0_row1, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.P0_sizer.AddSpacer(10)
+        self.P0_sizer.Add(self.p0_row2, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.P1_label = wx.StaticBox(self, -1, "P1 range:")
+        self.P1_sizer = wx.StaticBoxSizer(self.P1_label, wx.VERTICAL)
+        
+        self.coarse_label_p1 = wx.StaticText(self, -1, "Coarse (+/-):")
+        coarse_range_p1 = self.main_frame.P1_slider.GetMax()
+        self.coarse_box_p1 = wx.TextCtrl(self, -1, str(coarse_range_p1))
+
+        self.fine_label_p1 = wx.StaticText(self, -1, "Fine (+/-):")
+        fine_range_p1 = self.main_frame.P1_slider_fine.GetMax()
+        self.fine_box_p1 = wx.TextCtrl(self, -1, str(fine_range_p1))
+
+        self.p1_row1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p1_row1.Add(self.coarse_label_p1)
+        self.p1_row1.AddSpacer(5)
+        self.p1_row1.Add(self.coarse_box_p1)
+
+        self.p1_row2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.p1_row2.Add(self.fine_label_p1)
+        self.p1_row2.AddSpacer(5)
+        self.p1_row2.Add(self.fine_box_p1)
+
+        self.P1_sizer.Add(self.p1_row1, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.P1_sizer.AddSpacer(10)
+        self.P1_sizer.Add(self.p1_row2, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.slider_range_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.slider_range_sizer.AddSpacer(10)
+        self.slider_range_sizer.Add(self.P0_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.slider_range_sizer.AddSpacer(10)
+        self.slider_range_sizer.Add(self.P1_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.main_sizer.AddSpacer(5)
+        self.main_sizer.Add(self.slider_range_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.update_button = wx.Button(self, -1, "Update Sliders")
+        self.update_button.Bind(wx.EVT_BUTTON, self.on_update_button)
+
+        self.main_sizer.AddSpacer(10)
+        self.main_sizer.Add(self.update_button, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.main_sizer.AddSpacer(10)
+
+    def on_update_button(self, event):
+        if(self.check_values()==True):
+            # Update the slider ranges with the new values
+            p0_coarse = float(self.coarse_box.GetValue())
+            self.main_frame.P0_slider.SetRange(-1*p0_coarse, p0_coarse)
+            p1_coarse = float(self.coarse_box_p1.GetValue())
+            self.main_frame.P1_slider.SetRange(-1*p1_coarse, p1_coarse)
+            p0_fine = float(self.fine_box.GetValue())
+            self.main_frame.P0_slider_fine.SetRange(-1*p0_fine, p0_fine)
+            p1_fine = float(self.fine_box_p1.GetValue())
+            self.main_frame.P1_slider_fine.SetRange(-1*p1_fine, p1_fine)
+
+            dlg = wx.MessageDialog(
+                self,
+                "Slider ranges have been updated successfully",
+                "Warning",
+                wx.OK
+            )
+            self.Raise()
+            self.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
+
+
+    def check_values(self):
+        # check that all the values can be converted to floats
+        try:
+            p0_coarse = float(self.coarse_box.GetValue())
+        except:
+            self.error_message("p0 coarse", self.coarse_box.GetValue())
+            return False
+
+        try:
+            p1_coarse = float(self.coarse_box_p1.GetValue())
+        except:
+            self.error_message("p1 coarse", self.coarse_box_p1.GetValue())
+            return False
+
+        try:
+            p0_fine = float(self.fine_box.GetValue())
+        except:
+            self.error_message("p0 fine", self.fine_box.GetValue())
+            return False
+
+        try:
+            p1_fine = float(self.fine_box_p1.GetValue())
+        except:
+            self.error_message("p1 fine", self.fine_box_p1.GetValue())
+            return False
+        
+        return True
+
+
+    def error_message(self, box, value):
+        dlg = wx.MessageDialog(
+                self,
+                "The value {} cannot be converted to a float for the {} box. Please edit this to a valid number and try again.".format(value, box),
+                "Warning",
+                wx.OK | wx.ICON_WARNING,
+            )
+        self.Raise()
+        self.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
+        
+        
 
 
 # A class which will overlay pseudo2D stacks on a OneDPlot
@@ -10307,7 +10494,7 @@ class Stack2D(wx.Frame):
         except:
             pass
         if self.main_frame.parent.nmrdata.dim == 2:
-            nmr_data_0 = GetData(file=self.main_frame.parent.nmrdata.file)
+            nmr_data_0 = GetData(self, file=self.main_frame.parent.nmrdata.file)
         else:
             projection_files = self.main_frame.parent.projection_files
             # Get current projection file
@@ -17799,7 +17986,7 @@ class ReadSession:
                     multiplot = True
                     # Get the file path of the original data
                     file_path_original = lines[2].split("\n")[0].split("file_path:")[1]
-                    self.main_frame.nmrdata = GetData(file_path_original)
+                    self.main_frame.nmrdata = GetData(self, file_path_original)
                     self.main_frame.viewer = OneDViewer(
                         parent=self.main_frame, nmrdata=self.main_frame.nmrdata
                     )
@@ -18034,7 +18221,7 @@ class ReadSession:
                                 pivot_x = float(line.split("\n")[0].split(":")[1])
                             elif line.split("\n")[0].split(":")[0] == "pivot_visible":
                                 pivot_visible = line.split("\n")[0].split(":")[1]
-                    self.main_frame.nmrdata = GetData(file_path)
+                    self.main_frame.nmrdata = GetData(self, file_path)
                     self.main_frame.viewer = OneDViewer(
                         parent=self.main_frame, nmrdata=self.main_frame.nmrdata
                     )
@@ -18082,7 +18269,7 @@ class ReadSession:
 
                     # Get the file path of the original data
                     file_path_original = lines[3].split("\n")[0].split("file_path:")[1]
-                    self.main_frame.nmrdata = GetData(file_path_original)
+                    self.main_frame.nmrdata = GetData(self, file_path_original)
                     self.main_frame.viewer = TwoDViewer(
                         parent=self.main_frame, nmrdata=self.main_frame.nmrdata
                     )

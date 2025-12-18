@@ -55,11 +55,13 @@ class FindingParameters:
         self.app=app
 
         # Get the NMR data and parameters
-        self.find_nmr_files()
+        found_fid = self.find_nmr_files()
+        if(found_fid == False):
+            return
         self.read_nmr_data()
         self.find_parameters()
 
-    def find_nmr_files(self) -> None:
+    def find_nmr_files(self) -> bool:
         """
         Finding the relevant NMR parameter and data files in the current
         directory.
@@ -90,6 +92,7 @@ class FindingParameters:
                 else:
                     dlg.Destroy()
                     self.app.Destroy()
+                    return False
             else:
                 # Give a popout error message saying that there are no bruker NMR files in the current directory, but found an acqus file
                 dlg = wx.MessageDialog(
@@ -103,6 +106,7 @@ class FindingParameters:
                 dlg.ShowModal()
                 dlg.Destroy()
                 self.app.Destroy()
+                return False
         if self.spectrometer == "Bruker":
             self.files = []
             for file in os.listdir("."):
@@ -126,6 +130,7 @@ class FindingParameters:
                 dlg.ShowModal()
                 dlg.Destroy()
                 self.app.Destroy()
+                return False
 
             elif len(self.files) == 2:
                 # Give a popout error message saying that there are two NMR files in the current directory
@@ -142,6 +147,7 @@ class FindingParameters:
                 dlg.ShowModal()
                 dlg.Destroy()
                 self.app.Destroy()
+                return False
         elif self.spectrometer == "Varian":
             self.files = []
             for file in os.listdir("."):
@@ -170,9 +176,13 @@ class FindingParameters:
                     else:
                         dlg.Destroy()
                         self.app.Destroy()
+                        return False
                 else:
                     dlg.Destroy()
                     self.app.Destroy()
+                    return False
+        
+        return True
 
     def read_nmr_data(self) -> None:
         """
