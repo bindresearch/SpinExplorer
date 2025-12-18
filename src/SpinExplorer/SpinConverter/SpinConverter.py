@@ -355,9 +355,15 @@ class SpinConverter(wx.Frame):
             dlg.Destroy()
             return
         else:
+            # Saving conversion parameters
+            self.on_save_parameters(wx.EVT_BUTTON)
+            # Performing nmrpipe conversion
             pipe_conversion = Convert_pipe(self, self.nmrdata.params, self.nmrdata)
 
     def on_convert_glue(self, event) -> None:
+        # Saving conversion parameters
+        self.on_save_parameters(wx.EVT_BUTTON)
+        # Performing nmrglue conversion
         glue_conversion = Convert_nmrglue(self, self.nmrdata.params, self.nmrdata)
 
 
