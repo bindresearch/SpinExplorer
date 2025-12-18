@@ -137,17 +137,7 @@ class Convert_nmrglue:
                 if self.app.format.digital_filter_radio_box.GetSelection() == 0:
                     # Removing Bruker digital filter pre-processing
                     # i.e. before Fourier transform
-                    import matplotlib.pyplot as plt
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111)
-                    ax.plot(np.linspace(0,1,len(data[0])), data[0])
-                    plt.show()
-                    data = self.remove_digital_filter_fid(data)
-                    import matplotlib.pyplot as plt
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111)
-                    ax.plot(np.linspace(0,1,len(data[0])), data[0])
-                    plt.show()
+                    dic, data = self.remove_digital_filter_fid(dic, data)
 
             C.from_bruker(dic, data, u)
         else:
@@ -351,8 +341,31 @@ class Convert_nmrglue:
         )
         data = ng.proc_base.expand_nus(data, shape, nuslist_tuple)
         return data
+    
+    
+    
+    def find_bruker_initial_point(self, fid, start):
+        """
+        Estimate initial complex amplitude and phase of the fid
+        """
+        c = 1j
+        amp = np.abs(fid[start])
+        ph = 0.0
+        n = 0
 
-    def remove_digital_filter_fid(self, data: NDArray) -> NDArray:
+        for i in range(start - 2, start // 2, -2):
+            val = fid[i]
+            if np.abs(val) > 0.0:
+                ph += np.angle(val)
+                n += 1
+
+        if n > 0:
+            ph /= n
+            c = amp * np.exp(1j * ph)
+
+        return c
+
+    def remove_digital_filter_fid(self, dic, data: NDArray) -> NDArray:
         """
         Removing the Bruker digital filter before Fourier transform
         (post_proc=False). This amounts to a circular shift of the
@@ -361,220 +374,92 @@ class Convert_nmrglue:
         decim = float(self.app.format.decim_textbox.GetValue())
         dspfvs = int(self.app.format.dspfvs_textbox.GetValue())
         grpdly = float(self.app.format.grpdly_textbox.GetValue())
-        data = self.rm_dig_filter(data, decim, dspfvs, grpdly, post_proc=False)
-        return data
 
-    def rm_dig_filter(
-        self, data, decim, dspfvs, grpdly=0, truncate_grpdly=True, post_proc=False
-    ):
-        """
-        Remove the digital filter from Bruker data.
+        # fid = the first slice
+        fid = data if data.ndim == 1 else data[0]
 
-        Parameters
-        ----------
-        data : ndarray
-            Array of NMR data to remove digital filter from.
-        decim : int
-            Decimation rate (Bruker DECIM parameter).
-        dspfvs : int
-            Firmware version (Bruker DSPFVS parameter).
-        grpdly : float, optional
-            Group delay. (Bruker GRPDLY parameter). When non-zero decim and
-            dspfvs are ignored.
-        truncate_grpdly : bool, optional
-            True to truncate the value of grpdly provided or determined from
-            the decim and dspfvs parameters before removing the digital filter.
-            This typically produces a better looking spectrum but may remove useful
-            data.  False uses a non-truncated grpdly value.
-        post_proc : bool, optional
-            True if the digital filter is to be removed post processing, i.e after
-            fourier transformation. The corrected time domain data will not be
-            returned, only the corrected spectrum in the frequency dimension will
-            be returned
+        if grpdly == 0.0:
+            return data
 
-        Returns
-        -------
-        ndata : ndarray
-            Array of NMR data with digital filter removed.
+        # Estimating the phase correction
+        start = int(grpdly + 0.5)
+        fid = np.asarray(fid, dtype=np.complex128)
+        ph0 = 0.0
+        init_pt = self.find_bruker_initial_point(fid, start)
+        p1 = np.rad2deg(np.angle(init_pt))
+        ph0 += p1
 
-        See Also
-        --------
-        remove_digital_filter : Remove digital filter using Bruker dictionary.
+        data = ng.proc_base.zf_double(data, 1)
 
-        """
-        # Case I: post_proc flag is set to False (default)
-        # This algorithm gives results similar but not exactly the same
-        # as NMRPipe.  It was worked out by examining sample FID converted using
-        # NMRPipe against spectra shifted with nmrglue's processing functions.
-        # When a frequency shifting with a fft first (fft->first order phase->ifft)
-        # the middle of the fid nearly matches NMRPipe's and the difference at the
-        # beginning is simply the end of the spectra reversed.  A few points at
-        # the end of the spectra are skipped entirely.
-        # -jjh 2010.12.01
+        # ax.plot(np.linspace(0,1,len(data[0])), data[0])
 
-        # The algorithm is as follows:
-        # 1. FFT the data
-        # 2. Apply a negative first order phase to the data.  The phase is
-        #    determined by the GRPDLY parameter or found in the DSPFVS/DECIM
-        #    lookup table.
-        # 3. Inverse FFT
-        # (these first three steps are a frequency shift with a FFT first, fsh2)
-        # 4. Round the applied first order phase up by two integers. For example
-        #    71.4 -> 73, 67.8 -> 69, and 48 -> 50, this is the number of points
-        #    removed from the end of the fid.
-        # 5. If the size of the removed portion is greater than 6, remove the first
-        #    6 points, reverse the remaining points, and add then to the beginning
-        #    of the spectra.  If less that 6 points were removed, leave the FID
-        #    alone.
-        # -----------------------------------------------------------------------
+        data = ng.proc_base.fft(data)
+        data = ng.proc_base.ps(data, p0=-ph0)
+        data = ng.bruker.remove_digital_filter(dic, data, post_proc=True)
+        from scipy.signal import hilbert
+        # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
+        data = ng.proc_base.ht(data, data.shape[-1])
+        
+        data_real = data.real
+        data_imag = ng.proc_base.ps(data, p0=180).imag
+        data = data_real + 1j*data_imag
+        # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
+        # data = hilbert(data_real, data.shape[0])
+        data = ng.proc_base.ifft(data)
 
-        # Case II : post_proc flag is True
-        # 1. In this case, it is assumed that the data is already fourier
-        #    transformed
-        # 2. A first order phase correction equal to 2*PI*GRPDLY is applied to the
-        #    data and the time-corrected FT data is returned
+        # data = data[..., start:start + data.shape[-1]]
+        midpoint = int(data.shape[-1]/2)
 
-        # The frequency dimension will have the same number of points as the
-        # original time domain data, but the time domain data will remain
-        # uncorrected
-        # -----------------------------------------------------------------------
+        data = data[...,:midpoint:]
 
-        if grpdly > 0:  # use group delay value if provided (not 0 or -1)
-            phase = grpdly
+        # ax.plot(np.linspace(0,1,len(data[0])), data[0])
 
-        # determine the phase correction
-        else:
-            if dspfvs >= 14:  # DSPFVS greater than 14 give no phase correction.
-                phase = 0.0
-            else:  # loop up the phase in the table
-                bruker_dsp_table = {
-                    10: {
-                        2: 44.75,
-                        3: 33.5,
-                        4: 66.625,
-                        6: 59.083333333333333,
-                        8: 68.5625,
-                        12: 60.375,
-                        16: 69.53125,
-                        24: 61.020833333333333,
-                        32: 70.015625,
-                        48: 61.34375,
-                        64: 70.2578125,
-                        96: 61.505208333333333,
-                        128: 70.37890625,
-                        192: 61.5859375,
-                        256: 70.439453125,
-                        384: 61.626302083333333,
-                        512: 70.4697265625,
-                        768: 61.646484375,
-                        1024: 70.48486328125,
-                        1536: 61.656575520833333,
-                        2048: 70.492431640625,
-                    },
-                    11: {
-                        2: 46.0,
-                        3: 36.5,
-                        4: 48.0,
-                        6: 50.166666666666667,
-                        8: 53.25,
-                        12: 69.5,
-                        16: 72.25,
-                        24: 70.166666666666667,
-                        32: 72.75,
-                        48: 70.5,
-                        64: 73.0,
-                        96: 70.666666666666667,
-                        128: 72.5,
-                        192: 71.333333333333333,
-                        256: 72.25,
-                        384: 71.666666666666667,
-                        512: 72.125,
-                        768: 71.833333333333333,
-                        1024: 72.0625,
-                        1536: 71.916666666666667,
-                        2048: 72.03125,
-                    },
-                    12: {
-                        2: 46.0,
-                        3: 36.5,
-                        4: 48.0,
-                        6: 50.166666666666667,
-                        8: 53.25,
-                        12: 69.5,
-                        16: 71.625,
-                        24: 70.166666666666667,
-                        32: 72.125,
-                        48: 70.5,
-                        64: 72.375,
-                        96: 70.666666666666667,
-                        128: 72.5,
-                        192: 71.333333333333333,
-                        256: 72.25,
-                        384: 71.666666666666667,
-                        512: 72.125,
-                        768: 71.833333333333333,
-                        1024: 72.0625,
-                        1536: 71.916666666666667,
-                        2048: 72.03125,
-                    },
-                    13: {
-                        2: 2.75,
-                        3: 2.8333333333333333,
-                        4: 2.875,
-                        6: 2.9166666666666667,
-                        8: 2.9375,
-                        12: 2.9583333333333333,
-                        16: 2.96875,
-                        24: 2.9791666666666667,
-                        32: 2.984375,
-                        48: 2.9895833333333333,
-                        64: 2.9921875,
-                        96: 2.9947916666666667,
-                    },
-                }
-                if dspfvs not in bruker_dsp_table:
-                    raise ValueError("dspfvs not in lookup table")
-                if decim not in bruker_dsp_table[dspfvs]:
-                    raise ValueError("decim not in lookup table")
-                phase = bruker_dsp_table[dspfvs][decim]
+        return dic,data
 
-        if truncate_grpdly:  # truncate the phase
-            phase = np.floor(phase)
 
-        # and the number of points to remove (skip) and add to the beginning
-        skip = int(np.floor(phase))  # round up two integers
-        add = int(max(skip - 6, 0))  # 6 less, or 0
 
-        # DEBUG
-        # print("phase: %f, skip: %i add: %i"%(phase,skip,add))
+    """
+    The functions shown below was originally obtained from nmrglue, 
+    followed by customisation.
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
 
-        if post_proc:
-            s = data.shape[-1]
-            pdata = data * np.exp(2.0j * np.pi * phase * np.arange(s) / s)
-            pdata = pdata.astype(data.dtype)
-            return pdata
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are
+    met:
 
-        else:
-            # frequency shift
-            pdata = ng.proc_base.fsh2(data, phase)
 
-            # add points at the end of the specta to beginning
-            pdata[..., :add] = pdata[..., :add] + pdata[..., :-(add + 1):-1]
-            # remove points at end of spectra
-            return pdata #pdata[..., :-skip]
-            # # Convert group delay to integer
-            # shift_points = int(np.round(grpdly))
-            # if(len(data.shape)==2):
-            #     corrected_fid = []
-            #     for row in data:
-            #         new_row = row[shift_points:]
-            #         # new_row = np.append(new_row, np.zeros(add))
-            #         corrected_fid.append(new_row)
-            #     corrected_fid = np.array(corrected_fid)
-            # else:
-            #     corrected_fid = data[shift_points:]
-            #     # corrected_fid = np.append(corrected_fid, np.zeros(add))
-            return corrected_fid
+    a. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+
+    b. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the
+    distribution.
+
+
+    c. Neither the name of the author nor the names of contributors may
+    be used to endorse or promote products derived from this software
+    without specific prior written permission.
+
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    """
+
+
 
     def rancekay_shuffling(self, dic, data, udic, rotate_phase=True, **kwargs):
         """

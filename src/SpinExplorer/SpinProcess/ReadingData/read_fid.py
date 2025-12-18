@@ -43,14 +43,16 @@ class ReadFID:
 
         self.app = app
 
-        self.find_fid()
+        found_fid = self.find_fid()
+        if(found_fid == False):
+            return
         self.read_fid()
         self.get_dimensions()
         self.find_pseudo_axes()
         self.guessing_FT_modes()
         self.find_sweep_widths()
 
-    def find_fid(self) -> None:
+    def find_fid(self) -> bool:
         """
         Searching through the current directories to find converter fids
         (with extension .fid)
@@ -68,13 +70,16 @@ class ReadFID:
             self.app.SetFocus()
             dlg.ShowModal()
             dlg.Destroy()
-            exit()
+            self.app.Destroy()
+            return False
         elif len(fid_files) > 1:
             res = ChooseFile(fid_files, self)
             res.ShowModal()
             res.Destroy()
+            return True
         else:
             self.fid_file = fid_files[0]
+            return True
 
     def read_fid(self) -> None:
         """
