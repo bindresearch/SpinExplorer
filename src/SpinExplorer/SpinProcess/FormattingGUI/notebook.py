@@ -247,6 +247,7 @@ class NotebookProcess(wx.Notebook):
         continue_processing = checking.check_parameter_validity()
         if continue_processing == True:
             if(checking.check_nmrpipe_fid(self.nmr_data)==True):
+                self.on_save_processing(wx.EVT_BUTTON)
                 processing = ProcessNMRPipe(self, self.tabs, self.nmr_data)
 
     def on_process_nmrglue(self, event):
@@ -278,6 +279,7 @@ class NotebookProcess(wx.Notebook):
         checking = CheckingParameters(self, self.tabs)
         if checking.check_parameter_validity() == True:
             if(checking.check_nmrglue_fid(self.nmr_data)==True):
+                self.on_save_processing(wx.EVT_BUTTON)
                 processing = ProcessNMRGlue(
                     self, self.tabs, self.nmr_data, interactive_phasing=False
                 )
