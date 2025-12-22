@@ -70,6 +70,7 @@ from SpinExplorer.SpinExplorer.SpinExplorerHeader import SpinExplorerHeader
 from SpinExplorer.SpinExplorer.SpinConverterButton import SpinConverterButton
 from SpinExplorer.SpinExplorer.SpinProcessButton import SpinProcessButton
 from SpinExplorer.SpinExplorer.SpinViewButton import SpinViewButton
+from SpinExplorer.SpinExplorer.Logo import Logo
 
 # Find out the version of operating system being used (Mac, Linux, Windows)
 if sys.platform == "linux":
@@ -310,11 +311,17 @@ class SpinExplorer(wx.Frame):
         self.bottom_box.Add(self.link_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.citation_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.citation_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
+
         self.bottom_box.Add(self.copyright_statement, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.copyright_statement1, 1, wx.ALIGN_CENTER_HORIZONTAL)
 
+        bmp = Logo.GetBitmap()
+        logo = wx.StaticBitmap(self, -1, bitmap=bmp)
+        
+
         self.main_sizer.AddSpacer(5)
         self.main_sizer.Add(self.bottom_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        self.main_sizer.Add(logo, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
 
     def OnOpenFileBrowser(self, event):
