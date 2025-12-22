@@ -77,7 +77,6 @@ from matplotlib.backend_bases import MouseEvent as MPLMouseEvent
 import nmrglue as ng
 import copy
 import wx.grid as gridlib
-import pandas as pd
 import struct
 import sys
 import re
