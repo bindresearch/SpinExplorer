@@ -4,7 +4,7 @@ Processing can be performed using nmrglue or nmrPipe. All processing except SMIL
 
 Video tutorials will be created shortly and made available at "https://www.youtube.com/@BindResearch".
 
-Written documentation is available (SpinExplorer_Documentation.pdf)
+Written documentation is available (SpinExplorerDocumentation.pdf)
 
 Releases
 --------
