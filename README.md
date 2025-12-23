@@ -2,7 +2,9 @@ A python-based graphical interface package to perform NMR data processing and an
 
 Processing can be performed using nmrglue or nmrPipe. All processing except SMILE NUS reconstruction can be performed using nmrglue.
 
-Video tutorials can be accessed at "https://www.youtube.com/@BindResearch"
+Video tutorials will be created shortly and made available at "https://www.youtube.com/@BindResearch".
+
+Written documentation is available (SpinExplorer_Documentation.pdf)
 
 Releases
 --------
