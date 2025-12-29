@@ -14995,7 +14995,7 @@ class DiffusionFit(wx.Frame):
 
             # Plot the fitted curve for the ROI data
             self.ax_diffusion_fit.errorbar(
-                (np.array(self.gradients_percent) / 100) ** 2,
+                (np.array(self.gradients_percent) / 100 * self.gradient_integral_factor) ** 2,
                 self.average_y_data_in_ROI_above_noise / self.I0_average_in_ROI,
                 yerr=self.error_I_I0_in_ROI,
                 fmt="o",
@@ -15006,7 +15006,7 @@ class DiffusionFit(wx.Frame):
 
             xvals = np.linspace(0, 1, 100)
             gradient_vals = self.gradients
-            self.gradients = np.sqrt(xvals) * self.max_gradient
+            self.gradients = np.sqrt(xvals) * self.max_gradient * self.gradient_integral_factor
             self.ax_diffusion_fit.plot(
                 xvals,
                 self.StejsktalTanner([self.mean_fitted_I0_ROI, self.mean_fitted_D_ROI])
