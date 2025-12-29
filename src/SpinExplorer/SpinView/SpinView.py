@@ -15006,7 +15006,7 @@ class DiffusionFit(wx.Frame):
 
             xvals = np.linspace(0, 1, 100)
             gradient_vals = self.gradients
-            self.gradients = np.sqrt(xvals) * self.max_gradient * self.gradient_integral_factor
+            self.gradients = np.sqrt(xvals) * self.max_gradient
             self.ax_diffusion_fit.plot(
                 xvals,
                 self.StejsktalTanner([self.mean_fitted_I0_ROI, self.mean_fitted_D_ROI])
