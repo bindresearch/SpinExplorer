@@ -13433,9 +13433,33 @@ class DiffusionFit(wx.Frame):
         self.little_delta_box.SetValue(str(self.small_delta))
         self.big_delta_box.SetValue(str(self.big_delta))
 
+
+    def error_message(self, parameter, value):
+        msg = wx.MessageDialog(
+            self,
+            "The following parameter ({}) in the main diffusion window with value {} cannot be converted to a float. Please input a float point number for this value and try again.".format(parameter, value),
+            "Error",
+            wx.OK | wx.ICON_ERROR,
+        )
+        msg.ShowModal()
+        msg.Destroy()
+        return
+
+
     def find_gradient_percentages(self, event):
+
         if self.spectrometer == "Bruker":
-            self.max_gradient = float(self.max_gradient_box.GetValue())
+            # Check the max gradient and integral factors are valid numbers
+            try:
+                self.max_gradient = float(self.max_gradient_box.GetValue())
+            except:
+                self.error_message('max gradient', self.max_gradient_box.GetValue())
+                return
+            try:
+                self.gradient_integral_factor = float(self.integral_factor_box.GetValue())
+            except:
+                self.error_message('integral factor', self.integral_factor_box.GetValue())
+                return
             # Search through the difframp file to get the gradient percentages used
             try:
                 with open("./lists/gp/Difframp", "r") as file:
@@ -13455,7 +13479,7 @@ class DiffusionFit(wx.Frame):
 
                 self.gradients = (
                     np.array(self.gradients_percent) / 100
-                ) * self.max_gradient
+                ) * self.max_gradient * self.gradient_integral_factor
 
                 if len(self.y_data) != len(self.gradients):
                     for i, deleted_slice in enumerate(self.deleted_slices):
@@ -13529,7 +13553,7 @@ class DiffusionFit(wx.Frame):
 
                     self.gradients = (
                         np.array(self.gradients_percent) / 100
-                    ) * self.max_gradient
+                    ) * self.max_gradient * self.gradient_integral_factor
 
                     if len(self.y_data) != len(self.gradients):
                         for i, deleted_slice in enumerate(self.deleted_slices):
@@ -13605,8 +13629,23 @@ class DiffusionFit(wx.Frame):
                     )
 
         else:
-            self.DAC_conversion = float(self.dac_conversion_box.GetValue())
-            self.max_gradient = float(self.max_gradient_box.GetValue())
+            # Check the max gradient and integral factors are valid numbers
+            try:
+                self.DAC_conversion = float(self.dac_conversion_box.GetValue())
+            except:
+                self.error_message('DAC conversion', self.dac_conversion_box.GetValue())
+                return
+            try:
+                self.gradient_integral_factor = float(self.integral_factor_box.GetValue())
+            except:
+                self.error_message('integral factor', self.integral_factor_box.GetValue())
+                return
+            try:
+                self.max_gradient = float(self.max_gradient_box.GetValue())
+            except:
+                self.error_message('max gradient', self.max_gradient_box.GetValue())
+                return
+            
             self.gradient_list = []
 
             # Search through the procpar file to get the gradient percentages used
@@ -13628,6 +13667,9 @@ class DiffusionFit(wx.Frame):
                     / self.max_gradient
                     * 100
                 )
+
+                # Multiplying gradients by the gradient integral factor
+                self.gradients = self.gradients * self.gradient_integral_factor
 
                 # Give a pop out window showing the gradient percentages and values used
                 gradient_percent_string = "Gradient Percentages (%): "
@@ -15254,6 +15296,17 @@ class GradientsManualTextInput(wx.Frame):
         self.main_gradients_text_input.Add(self.input_gradient_text_sizer)
 
     def OnSaveGradients(self, event):
+        # Check the max gradient and integral factors are valid numbers
+        try:
+            self.gradient_integral_factor = float(self.main_frame.integral_factor_box.GetValue())
+        except:
+            self.main_frame.error_message('integral factor', self.main_frame.integral_factor_box.GetValue())
+            return
+        try:
+            self.max_gradient = float(self.main_frame.max_gradient_box.GetValue())
+        except:
+            self.main_frame.error_message('max gradient', self.main_frame.max_gradient_box.GetValue())
+            return
         # Remove all extra empty lines at the end of the text box
         if self.gradient_box.GetValue().split("\n")[-1] == "":
             old_value = self.gradient_box.GetValue()
@@ -15346,6 +15399,12 @@ class GradientsManualTextInput(wx.Frame):
                         msg.ShowModal()
                         msg.Destroy()
                         return
+            
+            try:
+                self.DAC_conversion = float(self.main_frame.dac_conversion_box.GetValue())
+            except:
+                self.main_frame.error_message('DAC conversion', self.main_frame.dac_conversion_box.GetValue())
+                return
         # Ensure that the number of gradients entered is the same as the number of slices
         if len(self.gradient_box.GetValue().split("\n")) != len(self.main_frame.y_data):
             # Give an error message saying that the number of gradients must be the same as the number of slices
@@ -15363,6 +15422,7 @@ class GradientsManualTextInput(wx.Frame):
         file = open("gradients.txt", "w")
         file.write(self.gradient_box.GetValue())
         file.close()
+        
         if self.main_frame.spectrometer == "Bruker":
             self.main_frame.gradients_percent = []
             self.main_frame.gradients = []
@@ -15375,8 +15435,8 @@ class GradientsManualTextInput(wx.Frame):
             )
             self.main_frame.gradients = (
                 (self.main_frame.gradients_percent / 100)
-                * self.main_frame.max_gradient
-                * self.main_frame.integral_factor
+                * self.max_gradient
+                * self.gradient_integral_factor
             )
 
         else:
@@ -15387,16 +15447,16 @@ class GradientsManualTextInput(wx.Frame):
             self.gradients_DAC = np.array(self.gradients_DAC)
 
             self.gradients = (
-                np.array(self.gradients_DAC) * self.main_frame.DAC_conversion
+                np.array(self.gradients_DAC) * self.DAC_conversion
             )
             self.gradients_percent = (
                 np.array(self.gradients_DAC)
-                * self.main_frame.DAC_conversion
-                / self.main_frame.max_gradient
+                * self.DAC_conversion
+                / self.max_gradient
                 * 100
             )
             self.main_frame.gradients_percent = self.gradients_percent
-            self.main_frame.gradients = self.gradients
+            self.main_frame.gradients = self.gradients * self.gradient_integral_factor
 
 
 class DiffusionGradientManualInput(wx.Frame):
