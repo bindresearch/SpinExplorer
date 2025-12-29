@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinExplorer                         ")
 print("-------------------------------------------------------------")
-print("               (version 0.1) 16th December 2025              ")
+print("               (version 1.1) 16th December 2025              ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                     2025, Bind Research                     ")
 print("                        MIT License                          ")
@@ -294,6 +294,7 @@ class SpinExplorer(wx.Frame):
 
         self.copyright_statement = wx.StaticText(self, label="(c) 2025, James Eaton, Andrew Baldwin - University of Oxford")
         self.copyright_statement1 = wx.StaticText(self, label="(c) 2025, Bind Research")
+        self.version_info = wx.StaticText(self, label="Version 1.1")
 
         self.citation_box.Add(self.citation1)
         self.citation_box.AddSpacer(10)
@@ -314,6 +315,7 @@ class SpinExplorer(wx.Frame):
 
         self.bottom_box.Add(self.copyright_statement, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.copyright_statement1, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.version_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
 
         bmp = Logo.GetBitmap()
         logo = wx.StaticBitmap(self, -1, bitmap=bmp)
