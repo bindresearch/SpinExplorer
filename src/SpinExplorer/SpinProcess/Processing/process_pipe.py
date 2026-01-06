@@ -138,7 +138,7 @@ class ProcessNMRPipe:
 
         self.nmrfile = nmrfile
 
-        nmrPipeSubprocess(self)
+        self.subprocess_frame = nmrPipeSubprocess(self)
 
 
     def update_comment(self):
@@ -226,6 +226,7 @@ class ProcessNMRPipe:
         if are using the Reprocess SpinExplorer button.
         Also check for the processed nmrfile.
         """
+
         if self.notebook.parent.original_frame != None:
             if self.notebook.parent.original_frame.parent.cwd != "":
                 os.chdir(self.notebook.parent.original_frame.parent.cwd)
@@ -240,17 +241,28 @@ class ProcessNMRPipe:
             path = self.notebook.parent.original_frame.parent.path
             cwd = self.notebook.parent.original_frame.parent.cwd
             self.notebook.parent.original_frame.parent.reprocess = True
+            # self.notebook.parent.original_frame.parent.DestroyChildren()
+            # self.subprocess_frame.Destroy()
             self.notebook.parent.original_frame.parent.Destroy()
+            # self.notebook.parent.original_frame.parent.Hide()
             if self.notebook.parent.original_frame.parent.path != "":
                 os.chdir(self.notebook.parent.original_frame.parent.path)
             from SpinExplorer.SpinView.SpinView import SpinView
 
-            app = SpinView()
-            if self.notebook.parent.original_frame.parent.cwd != "":
-                app.path = path
-                app.cwd = cwd
+            wx.CallAfter(self.update_spinview, (path, cwd))
 
-            # self.check_for_processed_file(nmrfile, app, original_frame)
+
+    def update_spinview(self, a):
+        from SpinExplorer.SpinView.SpinView import SpinView
+        app = SpinView()
+        print('here')
+        if self.notebook.parent.original_frame.parent.cwd != "":
+            path = a[0]
+            cwd = a[1]
+            app.path = path
+            app.cwd = cwd
+
+        # self.check_for_processed_file(nmrfile, app, original_frame)
 
     def check_for_processed_file(self, nmrfile: str, app, original_frame: bool):
         """
@@ -616,6 +628,7 @@ class nmrPipeSubprocess(wx.Frame):
         # Open temp file in binary mode to avoid text buffering issues
         self.temp_file = tempfile.TemporaryFile(mode="w+b")
         self.last_pos = 0
+        
 
         # Start subprocess in a new process group
         if sys.platform == "win32":
@@ -632,11 +645,13 @@ class nmrPipeSubprocess(wx.Frame):
                 shell=True,
                 stdout=self.temp_file,
                 stderr=subprocess.STDOUT,
-                preexec_fn=os.setsid
+                start_new_session=True
+                # preexec_fn=os.setsid
             )
 
         # Start timer from main thread
         self.timer.Start(100)  # poll every 100ms
+        
 
         # Wait in background thread to stop timer when done
         def wait_process():
@@ -651,15 +666,83 @@ class nmrPipeSubprocess(wx.Frame):
                     self.append_text(str(remaining))
             if(self.process.returncode==0):
                 self.append_text(f"\nProcess finished with no detectable error.\n")
-                wx.CallAfter(self.parent.update_comment())
+                self.temp_file.flush()
+                self.temp_file.close()
+                self.temp_file = None
+                self.process = None
+                wx.CallAfter(self.parent.update_comment)
             else:
+                self.temp_file.flush()
+                self.temp_file.close()
+                self.temp_file = None
+                self.process = None
                 self.append_text(f"\nProcess finished with errors, check the traceback for sources of error.\n")
             wx.CallAfter(self.stop_btn.Disable)
-            self.temp_file.close()
-            self.temp_file = None
-            self.process = None
+            
 
-        threading.Thread(target=wait_process, daemon=True).start()
+        self.thread = threading.Thread(target=wait_process)
+        self.thread.start()
+
+    # def start_subprocess(self, command):
+    #     """Start the subprocess writing stdout/stderr to temp file."""
+    #     # Open temp file in binary mode to avoid text buffering issues
+    #     self.temp_file = tempfile.TemporaryFile(mode="w+b")
+    #     self.last_pos = 0
+        
+
+    #     # Start subprocess in a new process group
+    #     if sys.platform == "win32":
+    #         self.process = subprocess.Popen(
+    #             command,
+    #             shell=True,
+    #             stdout=self.temp_file,
+    #             stderr=subprocess.STDOUT,
+    #             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+    #         )
+    #     else:
+    #         self.process = subprocess.Popen(
+    #             command,
+    #             shell=True,
+    #             stdout=self.temp_file,
+    #             stderr=subprocess.STDOUT,
+    #             start_new_session=True
+    #             # preexec_fn=os.setsid
+    #         )
+
+    #     # Start timer from main thread
+    #     self.timer.Start(100)  # poll every 100ms
+        
+
+    #     # Wait in background thread to stop timer when done
+    #     def wait_process():
+    #         self.process.wait()
+    #         self.timer.Stop()
+    #         self.temp_file.seek(self.last_pos)
+    #         remaining = self.temp_file.read()
+    #         if remaining:
+    #             try:
+    #                 self.append_text(remaining.decode(errors="replace"))
+    #             except Exception:
+    #                 self.append_text(str(remaining))
+    #         if(self.process.returncode==0):
+    #             self.append_text(f"\nProcess finished with no detectable error.\n")
+    #             self.temp_file.flush()
+    #             self.temp_file.close()
+    #             self.temp_file = None
+    #             self.process = None
+    #             wx.CallAfter(lambda: self.parent.update_comment())
+    #         else:
+    #             self.temp_file.flush()
+    #             self.temp_file.close()
+    #             self.temp_file = None
+    #             self.process = None
+    #             self.append_text(f"\nProcess finished with errors, check the traceback for sources of error.\n")
+    #         wx.CallAfter(self.stop_btn.Disable)
+            
+
+    #     self.thread = threading.Thread(target=wait_process)
+    #     self.thread.start()
+        # threading.Thread(target=wait_process, daemon=True).start()
 
     def on_start(self):
         self.stop_btn.Enable()
