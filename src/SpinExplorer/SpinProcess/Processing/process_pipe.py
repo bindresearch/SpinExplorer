@@ -255,7 +255,6 @@ class ProcessNMRPipe:
     def update_spinview(self, a):
         from SpinExplorer.SpinView.SpinView import SpinView
         app = SpinView()
-        print('here')
         if self.notebook.parent.original_frame.parent.cwd != "":
             path = a[0]
             cwd = a[1]
