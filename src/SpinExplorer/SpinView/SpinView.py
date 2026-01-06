@@ -4211,8 +4211,6 @@ class TwoDViewer(wx.Panel):
         self.pivot_sizer.AddSpacer(20)
         self.pivot_sizer.Add(self.remove_pivot_button)
 
-        self.P1_slider_sizer.AddSpacer(5)
-        self.P1_slider_sizer.Add(self.pivot_sizer, wx.ALIGN_CENTER_HORIZONTAL, 1)
 
         self.phasing_sizer.Add(self.P0_label_sizer, wx.ALIGN_TOP)
         self.phasing_sizer.AddSpacer(10)
@@ -4221,6 +4219,10 @@ class TwoDViewer(wx.Panel):
         self.phasing_sizer.Add(self.P1_label_sizer, wx.ALIGN_TOP)
         self.phasing_sizer.AddSpacer(10)
         self.phasing_sizer.Add(self.P1_slider_sizer, wx.ALIGN_TOP)
+
+        self.phasing_sizer.AddSpacer(5)
+        self.phasing_sizer.Add(self.pivot_sizer, wx.ALIGN_CENTER_HORIZONTAL, 1)
+
 
         # Create a sizer for changing the contour levels of the spectrum
         self.contour_label = wx.StaticBox(self, -1, "Contour Start = max(data)/x")
