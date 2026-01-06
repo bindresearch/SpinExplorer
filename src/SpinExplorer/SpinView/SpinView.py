@@ -3995,63 +3995,64 @@ class TwoDViewer(wx.Panel):
 
         # Create a button to change the labels of the x and y axes (Don't include this button if in 3D mode)
         width = 100
+        height1 = 25
         if self.threeDprojection == False:
             self.label_button = wx.Button(
-                self, label="Change Labels", size=(width, height)
+                self, label="Change Labels", size=(width, height1)
             )
             self.label_button.Bind(wx.EVT_BUTTON, self.OnLabelButton)
 
             self.save_session_button = wx.Button(
-                self, label="Save Session", size=(width, height)
+                self, label="Save Session", size=(width, height1)
             )
             self.save_session_button.Bind(wx.EVT_BUTTON, self.OnSaveSessionButton2D)
 
-        self.reset_button = wx.Button(self, label="Reset", size=(width, height))
+        self.reset_button = wx.Button(self, label="Reset", size=(width, height1))
         self.reset_button.Bind(wx.EVT_BUTTON, self.OnResetButton2D)
 
         # Create a button to transpose the given NMR spectrum
-        self.transpose_button = wx.Button(self, label="Transpose", size=(width, height))
+        self.transpose_button = wx.Button(self, label="Transpose", size=(width, height1))
         self.transpose_button.Bind(wx.EVT_BUTTON, self.OnTransposeButton)
 
         # Create a button to stack the slices of the given NMR spectrum
-        self.stack_button = wx.Button(self, label="Stack Slices", size=(width, height))
+        self.stack_button = wx.Button(self, label="Stack Slices", size=(width, height1))
         self.stack_button.Bind(wx.EVT_BUTTON, self.OnStackButton)
 
         # Create a button for Re-Processing
         self.reprocess_button = wx.Button(
-            self, label="Re-Process", size=(width, height)
+            self, label="Re-Process", size=(width, height1)
         )
         self.reprocess_button.Bind(wx.EVT_BUTTON, self.OnReprocessButton)
 
         # Create a button to fit the diffusion data of the given NMR spectrum
         self.fit_diffusion_button = wx.Button(
-            self, label="Fit Diffusion", size=(width, height)
+            self, label="Fit Diffusion", size=(width, height1)
         )
         self.fit_diffusion_button.Bind(wx.EVT_BUTTON, self.OnFitDiffusionButton)
 
         # Create a button to fit the relaxation data of the given NMR spectrum
         self.fit_relax_button = wx.Button(
-            self, label="Fit Relaxation", size=(width, height)
+            self, label="Fit Relaxation", size=(width, height1)
         )
         self.fit_relax_button.Bind(wx.EVT_BUTTON, self.OnFitRelaxButton)
 
         # Create a button which will open a CESTView panel to analyse pseudo2D CEST data
-        self.CEST_button = wx.Button(self, label="CEST Analysis", size=(width, height))
+        self.CEST_button = wx.Button(self, label="CEST Analysis", size=(width, height1))
         self.CEST_button.Bind(wx.EVT_BUTTON, self.OnCESTButton)
 
         # Create a button which will make the correct files in order to perform uSTA analysis
-        self.uSTA_button = wx.Button(self, label="uSTA", size=(width, height))
+        self.uSTA_button = wx.Button(self, label="uSTA", size=(width, height1))
         self.uSTA_button.Bind(wx.EVT_BUTTON, self.OnuSTAButton)
 
         # Create a button to toggle the main sizer between shown and hidden
-        self.toggle_button = wx.Button(self, label="Hide Options", size=(width, height))
+        self.toggle_button = wx.Button(self, label="Hide Options", size=(width, height1))
         self.toggle_button.Bind(wx.EVT_BUTTON, self.OnHideButton)
 
-        self.peaklist_button = wx.Button(self, label="Read Peaks", size=(width, height))
+        self.peaklist_button = wx.Button(self, label="Read Peaks", size=(width, height1))
         self.peaklist_button.Bind(wx.EVT_BUTTON, self.OnReadPeaks)
 
         self.calc_intensity_button = wx.Button(
-            self, label="Find Intensity", size=(width, height)
+            self, label="Find Intensity", size=(width, height1)
         )
         self.calc_intensity_button.Bind(wx.EVT_BUTTON, self.OnCalculateIntensity2D)
 
@@ -4114,7 +4115,8 @@ class TwoDViewer(wx.Panel):
 
         # Create a sizer to phase the data
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
-        self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.HORIZONTAL)
+        self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
+        self.phasing_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
         self.P0_label = wx.StaticText(self, label="P0 (Coarse):")
         self.P1_label = wx.StaticText(self, label="P1 (Coarse):")
         self.P0_slider = FloatSlider(
@@ -4212,14 +4214,15 @@ class TwoDViewer(wx.Panel):
         self.pivot_sizer.Add(self.remove_pivot_button)
 
 
-        self.phasing_sizer.Add(self.P0_label_sizer, wx.ALIGN_TOP)
-        self.phasing_sizer.AddSpacer(10)
-        self.phasing_sizer.Add(self.P0_slider_sizer, wx.ALIGN_TOP)
-        self.phasing_sizer.AddSpacer(10)
-        self.phasing_sizer.Add(self.P1_label_sizer, wx.ALIGN_TOP)
-        self.phasing_sizer.AddSpacer(10)
-        self.phasing_sizer.Add(self.P1_slider_sizer, wx.ALIGN_TOP)
+        self.phasing_sizer1.Add(self.P0_label_sizer, wx.ALIGN_TOP)
+        self.phasing_sizer1.AddSpacer(10)
+        self.phasing_sizer1.Add(self.P0_slider_sizer, wx.ALIGN_TOP)
+        self.phasing_sizer1.AddSpacer(50)
+        self.phasing_sizer1.Add(self.P1_label_sizer, wx.ALIGN_TOP)
+        self.phasing_sizer1.AddSpacer(10)
+        self.phasing_sizer1.Add(self.P1_slider_sizer, wx.ALIGN_TOP)
 
+        self.phasing_sizer.Add(self.phasing_sizer1)
         self.phasing_sizer.AddSpacer(5)
         self.phasing_sizer.Add(self.pivot_sizer, wx.ALIGN_CENTER_HORIZONTAL, 1)
 
@@ -4482,14 +4485,14 @@ class TwoDViewer(wx.Panel):
         self.buttons_sizer.Add(
             self.general_options_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL
         )
-        self.buttons_sizer.AddSpacer(10)
+        self.buttons_sizer.AddSpacer(5)
         if self.threeDprojection == False:
             self.buttons_sizer.Add(self.fit_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
-        self.buttons_sizer.AddSpacer(10)
+        self.buttons_sizer.AddSpacer(5)
         self.buttons_sizer.Add(self.hide_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_right_sizer.Add(self.buttons_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
-        self.bottom_right_sizer.AddSpacer(20)
+        self.bottom_right_sizer.AddSpacer(5)
 
         self.bottom_sizer.Add(self.bottom_right_sizer)
 
