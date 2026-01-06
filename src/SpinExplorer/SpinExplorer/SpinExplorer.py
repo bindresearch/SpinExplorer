@@ -293,8 +293,7 @@ class SpinExplorer(wx.Frame):
         self.citation_box = wx.BoxSizer(wx.HORIZONTAL)
 
         self.copyright_statement = wx.StaticText(self, label="(c) 2025, James Eaton, Andrew Baldwin - University of Oxford")
-        self.copyright_statement1 = wx.StaticText(self, label="(c) 2025, Bind Research")
-        self.version_info = wx.StaticText(self, label="Version 1.1")
+        self.copyright_statement1 = wx.StaticText(self, label="(c) 2025, Bind Research (Version 1.1)")
 
         self.citation_box.Add(self.citation1)
         self.citation_box.AddSpacer(10)
@@ -315,7 +314,6 @@ class SpinExplorer(wx.Frame):
 
         self.bottom_box.Add(self.copyright_statement, 1, wx.ALIGN_CENTER_HORIZONTAL)
         self.bottom_box.Add(self.copyright_statement1, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.version_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
 
         bmp = Logo.GetBitmap()
         logo = wx.StaticBitmap(self, -1, bitmap=bmp)
