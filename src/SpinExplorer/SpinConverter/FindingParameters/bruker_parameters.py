@@ -459,11 +459,11 @@ class ParameterExtractorBruker:
                             )
                             < 1
                         ):
-                            if key in self.labels:
-                                if key in self.labels_correct_order:
-                                    self.labels_correct_order.append(key + "_1")
-                                else:
-                                    self.labels_correct_order.append(key)
+                            if key in self.labels_correct_order:
+                                self.labels_correct_order.append(key + "_1")
+                            else:
+                                self.labels_correct_order.append(key)
+        
 
     def find_aqseq(self) -> None:
         """
