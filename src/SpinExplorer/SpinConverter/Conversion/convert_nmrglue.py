@@ -346,7 +346,7 @@ class Convert_nmrglue:
     
     def find_bruker_initial_point(self, fid, start):
         """
-        Estimate initial complex amplitude and phase of the fid
+        Estimate initial complex amplitude and phase caused by the digital filter
         """
         c = 1j
         amp = np.abs(fid[start])

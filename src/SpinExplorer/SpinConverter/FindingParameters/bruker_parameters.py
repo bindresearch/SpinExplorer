@@ -222,11 +222,11 @@ class ParameterExtractorBruker:
         for size in self.size_indirect:
             if size != 1:
                 sizes_new.append(size)
-
         self.size_indirect = sizes_new
 
         # Try to go through acqu2s and acqu3s and find the nucleus labels and corresponding TD values
         self.indirect_sizes_dict = {}
+        self.skip_acqu2s = False
         if "acqu2s" in os.listdir("./"):
             # Look for TD in the acqu2s file
             nus = False
@@ -257,7 +257,11 @@ class ParameterExtractorBruker:
                         self.sizes_dim2 -= 1
                     self.indirect_sizes_dict[nuc] = self.sizes_dim2
                 else:
-                    self.indirect_sizes_dict[nuc] = self.sizes_dim2_nus
+                    if(self.sizes_dim2 > 1 and self.sizes_dim2_nus > 1):
+                        self.indirect_sizes_dict[nuc] = self.sizes_dim2_nus
+                    else:
+                        # Skipping acqu2s going forward as it only has 1 point
+                        self.skip_acqu2s = True
             except:
                 pass
 
@@ -316,7 +320,11 @@ class ParameterExtractorBruker:
                         line = self.acqus_file_lines[j].split()
                         self.sw_direct = float(line[1])
                         break
-            if i == 1:
+            if(self.skip_acqu2s==True):
+                val = i+1
+            else:
+                val = i
+            if val == 1:
                 try:
                     file = open("acqu2s", "r")
                     file_lines = file.readlines()
@@ -328,7 +336,7 @@ class ParameterExtractorBruker:
                             break
                 except:
                     self.sw_indirect.append(0)
-            if i == 2:
+            if val == 2:
                 try:
                     file = open("acqu3s", "r")
                     file_lines = file.readlines()
@@ -340,7 +348,7 @@ class ParameterExtractorBruker:
                             break
                 except:
                     self.sw_indirect.append(0)
-            if i == 3:
+            if val == 3:
                 try:
                     file = open("acqu4s", "r")
                     file_lines = file.readlines()
@@ -372,6 +380,7 @@ class ParameterExtractorBruker:
         of each nucleus recorded.
         """
         self.nucleus_frequencies = []
+        nuclei = []
         for i in range(len(self.size_indirect) + 1):
             if i == 0:
                 for j in range(len(self.acqus_file_lines)):
@@ -379,42 +388,74 @@ class ParameterExtractorBruker:
                         line = self.acqus_file_lines[j].split()
                         self.nucleus_frequencies.append(float(line[1]))
                         break
-            if i == 1:
+            if i >= 1:
                 try:
-                    file = open("acqu2s", "r")
+                    file = open("acqu"+str(i+1) + "s", "r")
                     file_lines = file.readlines()
                     file.close()
+                    nucleus=''
+                    param = ''
                     for j in range(len(file_lines)):
-                        if "##$SFO1=" in file_lines[j]:
+                        # There is a bug where sometimes O1 is set to 0 in acqu2s even though the
+                        # this was not the case. Check if O1=0, if it is, will need to get reference
+                        # from the acqus file
+                        if("##$NUC1=" in file_lines[j]):
                             line = file_lines[j].split()
+                            nucleus = line[1]
+                            nuclei.append(nucleus)
+
+                        # if("##$O1=" in file_lines[j]):
+                        #     line = file_lines[j].split()
+                        #     o1 = float(line[1])
+                        #     if(o1==0.0):
+                            # search acqus file for nucleus
+                        if(nucleus!='' and nuclei.count(nucleus)==1):
+                            for j in range(len(self.acqus_file_lines)):
+                                if('##$NUC' in self.acqus_file_lines[j]):
+                                    if(nucleus in self.acqus_file_lines[j]):
+                                        # count of this nucleus already in 
+                                        channel = self.acqus_file_lines[j].split('##$NUC')[1].split('=')[0]
+                                        param = '##$SFO' + channel + '='
+
+                                if(param!=''):
+                                    if param in self.acqus_file_lines[j]:
+                                        line = self.acqus_file_lines[j].split()
+                                        self.nucleus_frequencies.append(float(line[1]))
+                                        break
+                            break
+                        
+
+                        if "##$SFO1=" in file_lines[j] and param=='':
+                            line = file_lines[j].split()
+                            # Checking that sfo1_acqus is not equal to bf1
                             self.nucleus_frequencies.append(float(line[1]))
                             break
                 except:
                     self.nucleus_frequencies.append(0)
-            if i == 2:
-                try:
-                    file = open("acqu3s", "r")
-                    file_lines = file.readlines()
-                    file.close()
-                    for j in range(len(file_lines)):
-                        if "##$SFO1=" in file_lines[j]:
-                            line = file_lines[j].split()
-                            self.nucleus_frequencies.append(float(line[1]))
-                            break
-                except:
-                    self.nucleus_frequencies.append(0)
-            if i == 3:
-                try:
-                    file = open("acqu4s", "r")
-                    file_lines = file.readlines()
-                    file.close()
-                    for j in range(len(file_lines)):
-                        if "##$SFO1=" in file_lines[j]:
-                            line = file_lines[j].split()
-                            self.nucleus_frequencies.append(float(line[1]))
-                            break
-                except:
-                    self.nucleus_frequencies.append(0)
+            # if i == 2:
+            #     try:
+            #         file = open("acqu3s", "r")
+            #         file_lines = file.readlines()
+            #         file.close()
+            #         for j in range(len(file_lines)):
+            #             if "##$SFO1=" in file_lines[j]:
+            #                 line = file_lines[j].split()
+            #                 self.nucleus_frequencies.append(float(line[1]))
+            #                 break
+            #     except:
+            #         self.nucleus_frequencies.append(0)
+            # if i == 3:
+            #     try:
+            #         file = open("acqu4s", "r")
+            #         file_lines = file.readlines()
+            #         file.close()
+            #         for j in range(len(file_lines)):
+            #             if "##$SFO1=" in file_lines[j]:
+            #                 line = file_lines[j].split()
+            #                 self.nucleus_frequencies.append(float(line[1]))
+            #                 break
+            #     except:
+            #         self.nucleus_frequencies.append(0)
 
     def find_labels_bruker(self) -> None:
         """
@@ -457,7 +498,7 @@ class ParameterExtractorBruker:
                                 abs(field * self.gamma[key])
                                 - self.nucleus_frequencies[i]
                             )
-                            < 1
+                            < 0.1
                         ):
                             if key in self.labels_correct_order:
                                 self.labels_correct_order.append(key + "_1")
@@ -478,7 +519,7 @@ class ParameterExtractorBruker:
             with open("pulseprogram") as file:
                 lines = file.readlines()
                 for line in lines:
-                    if "aqseq" in line:
+                    if "aqseq" in line and line[0]!=';':
                         if line.split()[0] == "aqseq":
                             aqseq_value = line.split()[1]
         except:
@@ -486,7 +527,7 @@ class ParameterExtractorBruker:
                 with open("pulseprogram.precomp") as file:
                     lines = file.readlines()
                     for line in lines:
-                        if "aqseq" in line:
+                        if "aqseq" in line and line[0]!=';':
                             aqseq_value = line.split()[1]
 
             except:
@@ -612,8 +653,11 @@ class ParameterExtractorBruker:
             self.pseudo_flag = 0
 
             # Try to read through acqu2s and acqu3s to find the FnMODE parameter
-
-            with open("acqu2s", "r") as file:
+            if(self.skip_acqu2s==False):
+                file_dim2 = 'acqu2s'
+            else:
+                file_dim2 = 'acqu3s'
+            with open(file_dim2, "r") as file:
                 file_lines = file.readlines()
                 for line in file_lines:
                     if "##$FnMODE=" in line:
@@ -622,11 +666,12 @@ class ParameterExtractorBruker:
                             val = line
                         else:
                             val = fn_mode
-                        
+                            
                         self.acqusition_modes_indirect.append(int(val))
                         if int(val) == 0 or int(val) == 1:
                             self.pseudo_flag += 1
                         break
+
 
             if len(self.size_indirect) > 1:
                 with open("acqu3s", "r") as file:
@@ -954,16 +999,24 @@ class ParameterExtractorBruker:
             ):
                 # Calculate referenced carrier frequencies based on water chemical shifts
                 self.sfrq0 = self.nucleus_frequencies[0] / (1 + self.water_ppm * 1e-6)
+                print(self.nucleus_frequencies[0])
+                print(self.water_ppm)
+                print(self.sfrq0)
+                print(self.nucleus_frequencies)
                 # Frequency for nucleus A = sfrq0 * gammaH/gammaA
                 self.dfrq_13C = self.sfrq0 * 0.251449530
                 self.dfrq_15N = self.sfrq0 * 0.101329118
                 self.dfrq_P31 = self.sfrq0 * 0.4048064954
                 self.dfrq_F19 = self.sfrq0 * 0.9412866605363297
 
+                print(self.labels_correct_order)
+
                 for i, label in enumerate(self.labels_correct_order):
                     # if(i+1>len(self.nucleus_frequencies)):
                     #     break
                     if label == "15N" or label == "N15":
+                        print(self.nucleus_frequencies[i])
+                        print(self.dfrq_15N)
                         self.ppms_referenced.append(
                             (
                                 (self.nucleus_frequencies[i] - self.dfrq_15N)
