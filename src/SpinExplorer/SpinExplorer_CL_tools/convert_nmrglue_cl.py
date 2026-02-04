@@ -275,7 +275,6 @@ class Convert_nmrglue:
             pdic["FD2DPHASE"] = 0
 
         pdic['FDCOMMENT'] = 'nmrglue'
-        print('yyoyo', data.shape)
         ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
 
     def create_conversion_dictionary(self) -> Dict:

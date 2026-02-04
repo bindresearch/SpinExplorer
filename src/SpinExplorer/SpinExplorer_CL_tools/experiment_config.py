@@ -872,10 +872,10 @@ class DimensionConfig:
                 elif self.solvent_suppression_choice == LowpassChoices.SINE_SQUARED:
                     filter = np.cos(np.pi * np.linspace(-0.5, 0.5, filter_size))**2.0
             
-            data = sol_general(data, filter, w=filter_size, mode = "same")
-        
-        else:
-            print('other forms of solvent suppression not supported within nmrglue')
+                data = sol_general(data, filter, w=filter_size, mode = "same")
+                
+            else:
+                print('other forms of solvent suppression not supported within nmrglue')
 
         if self.lp_flag:
             if self.lp_choice != LPChoices.LINEAR_PREDICTION:
