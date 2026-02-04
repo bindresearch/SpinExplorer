@@ -3,6 +3,8 @@ import os
 from bruker_params_cl import ParameterExtractorBruker
 from convert_nmrglue_cl import Convert_nmrglue
 from make_parameter_file_cl import parameter_write_cl
+from pulse_sequence_parsing import PulseSequenceParser
+from config_register import registry
 from pathlib import Path
 
 #from SpinExplorer.SpinConverter.FindingParameters.bruker_parameters import ParameterExtractorBruker
@@ -202,14 +204,20 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import numpy as np
     input_dat = FindingParameters()
+    pp_parser = PulseSequenceParser()
+    sequence = pp_parser.parse()
+
+    # TODO: introduce possibility of an overwite so we can choose a specific config file
+    config = registry.get_default_config(sequence)
+    
+
     nmr_glue_conv = Convert_nmrglue(input_dat.params, input_dat)
     
-    from hsqc_config import hsqc_config_template
-    
-    params = parameter_write_cl(nmr_glue_conv, hsqc_config_template)
+    params = parameter_write_cl(nmr_glue_conv, config)
     params.write_out_dict(params.dictionary)
     
-    hsqc_config_template.process_data('test.fid','test.ft2')
+    # TODO: write out appropriate filename
+    config.process_data('test.fid','test.ft2')
     
     import subprocess
 
