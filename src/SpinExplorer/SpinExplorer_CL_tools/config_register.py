@@ -7,5 +7,9 @@ nitrogen_config = DimensionConfig.standard_nitrogen(ph_p0=90.0)
 registry = ConfigurationRegistry()
 
 hsqc_config = ExperimentConfigStore(['Dimension 0 (1H)', 'Dimension 1 (15N)'], [proton_config, nitrogen_config])
+standard_1H_1D = ExperimentConfigStore(['Dimension 0 (1H)'], [DimensionConfig.standard_proton(ph_p0 = 0.0)])
 
 registry.register("hsqcetfpf3gp", hsqc_config)
+registry.register("zgesgp", standard_1H_1D)
+registry.register("t1rho.rf", standard_1H_1D)
+registry.register("wlogsy.rf", standard_1H_1D)
