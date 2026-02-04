@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Optional, Dict, List
-from experiment_config import ExperimentConfigStore
+from SpinExplorer.SpinExplorer_CL_tools.experiment_config import ExperimentConfigStore
 
 
 class PulseSequenceError(Exception):

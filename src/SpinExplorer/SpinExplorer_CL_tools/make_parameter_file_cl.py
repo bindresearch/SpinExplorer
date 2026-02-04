@@ -1,6 +1,6 @@
 import json
-from convert_nmrglue_cl import Convert_nmrglue
-from experiment_config import ExperimentConfigStore
+from SpinExplorer.SpinExplorer_CL_tools.convert_nmrglue_cl import Convert_nmrglue
+from SpinExplorer.SpinExplorer_CL_tools.experiment_config import ExperimentConfigStore
 
 class parameter_write_cl:
     def __init__(self, conv_object: Convert_nmrglue, processing_config: ExperimentConfigStore):

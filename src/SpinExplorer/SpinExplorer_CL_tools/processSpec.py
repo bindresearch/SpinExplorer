@@ -1,10 +1,10 @@
 import nmrglue as ng # type: ignore
 import os
-from bruker_params_cl import ParameterExtractorBruker
-from convert_nmrglue_cl import Convert_nmrglue
-from make_parameter_file_cl import parameter_write_cl
-from pulse_sequence_parsing import PulseSequenceParser
-from config_register import registry
+from SpinExplorer.SpinExplorer_CL_tools.bruker_params_cl import ParameterExtractorBruker
+from SpinExplorer.SpinExplorer_CL_tools.convert_nmrglue_cl import Convert_nmrglue
+from SpinExplorer.SpinExplorer_CL_tools.make_parameter_file_cl import parameter_write_cl
+from SpinExplorer.SpinExplorer_CL_tools.pulse_sequence_parsing import PulseSequenceParser
+from SpinExplorer.SpinExplorer_CL_tools.config_register import registry
 from pathlib import Path
 
 #from SpinExplorer.SpinConverter.FindingParameters.bruker_parameters import ParameterExtractorBruker
