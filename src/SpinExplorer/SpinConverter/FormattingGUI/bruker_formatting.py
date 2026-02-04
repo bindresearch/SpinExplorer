@@ -201,6 +201,7 @@ class FormatParametersBruker:
             self.app, label="Acquisition mode:           "
         )
         self.acquisition_mode_options_direct = ["DQD", "Complex", "Sequential", "Real"]
+        
         if self.params.acqusition_mode_direct == 3:
             choice_direct = 0
         elif self.params.acqusition_mode_direct == 1:
