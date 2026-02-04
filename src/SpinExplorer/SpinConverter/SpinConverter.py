@@ -65,6 +65,7 @@ from SpinExplorer.SpinConverter.StoringParameters.save_parameters import Save_js
 from SpinExplorer.SpinConverter.StoringParameters.read_parameters import Read_json
 from SpinExplorer.SpinConverter.Conversion.convert_pipe import Convert_pipe
 from SpinExplorer.SpinConverter.Conversion.convert_nmrglue import Convert_nmrglue
+from SpinExplorer.SpinConverter.Conversion.add_fid import Add_fid
 
 from SpinExplorer.SpinExpLogo import SpinExpLogo
 
@@ -365,6 +366,17 @@ class SpinConverter(wx.Frame):
         self.on_save_parameters(wx.EVT_BUTTON)
         # Performing nmrglue conversion
         glue_conversion = Convert_nmrglue(self, self.nmrdata.params, self.nmrdata)
+
+    
+    def on_add_fids(self, event) -> None:
+        """
+        Creating a popout where users can select different fids to add up (.fid files)
+        and can also remove selected FIDs too. When the Add button is pressed, the user
+        chooses a new directory to call the folder (with added fid saved as test.fid).
+        If the addition fails, an error message pops out and no addition takes place
+        """
+        add_fid = Add_fid(self, self.nmrdata)
+
 
 
 def main():

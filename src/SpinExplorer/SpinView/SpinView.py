@@ -98,8 +98,6 @@ else:
     platform = "windows"
     height = 30
 
-platform = "windows"
-
 # James Eaton, 10/06/2025, University of Oxford
 # James Eaton, 25/09/2025, Bind Research
 # This code will read in 1D, 2D and 3D NMRPipe (as well as topspin processed) data files and plot them
@@ -4805,7 +4803,7 @@ class TwoDViewer(wx.Panel):
             xppms = self.new_x_ppms
             yppms = self.new_y_ppms
         else:
-            data = self.values_dictionary[self.active_plot_index]["z_data"]
+            data = self.values_dictionary[self.active_plot_index]["z_data"] * self.values_dictionary[self.active_plot_index]['multiply factor']
             xppms = self.values_dictionary[self.active_plot_index]["new_x_ppms"]
             yppms = self.values_dictionary[self.active_plot_index]["new_y_ppms"]
 
@@ -4881,8 +4879,8 @@ class TwoDViewer(wx.Panel):
                 self.move_y_slider.SetValue(0)
                 self.move_x_value_label.SetLabel("0.00")
                 self.move_y_value_label.SetLabel("0.00")
-                self.multiply_slider.SetValue(1)
-                self.multiply_value_label.SetLabel("0")
+                self.multiply_slider.SetValue(1.0)
+                self.multiply_value_label.SetLabel("1.0")
                 self.line_width_slider.SetValue(1)
                 # if(self.transposed2D==True):
                 #     self.OnTransposeButton(event)
@@ -18362,16 +18360,23 @@ class ReadSession:
                     self.main_frame.viewer = TwoDViewer(
                         parent=self.main_frame, nmrdata=self.main_frame.nmrdata
                     )
+
                     self.main_frame.main_sizer.Add(self.main_frame.viewer, 1, wx.EXPAND)
                     title = lines[4].split("\n")[0].split(":")[1]
                     p0_coarse = float(lines[5].split("\n")[0].split(":")[1])
                     p0_fine = float(lines[6].split("\n")[0].split(":")[1])
                     p1_coarse = float(lines[7].split("\n")[0].split(":")[1])
                     p1_fine = float(lines[8].split("\n")[0].split(":")[1])
-                    move_x = float(lines[9].split("\n")[0].split(":")[1])
-                    move_y = float(lines[10].split("\n")[0].split(":")[1])
-                    move_x_index = int(lines[11].split("\n")[0].split(":")[1])
-                    move_y_index = int(lines[12].split("\n")[0].split(":")[1])
+                    if(transposed2D==False):
+                        move_x = float(lines[9].split("\n")[0].split(":")[1])
+                        move_y = float(lines[10].split("\n")[0].split(":")[1])
+                        move_x_index = int(lines[11].split("\n")[0].split(":")[1])
+                        move_y_index = int(lines[12].split("\n")[0].split(":")[1])
+                    else:
+                        move_y = float(lines[9].split("\n")[0].split(":")[1])
+                        move_x = float(lines[10].split("\n")[0].split(":")[1])
+                        move_y_index = int(lines[11].split("\n")[0].split(":")[1])
+                        move_x_index = int(lines[12].split("\n")[0].split(":")[1])
                     contour_linewidth = float(lines[13].split("\n")[0].split(":")[1])
                     multiply_factor = float(lines[14].split("\n")[0].split(":")[1])
                     contour_levels = int(lines[15].split("\n")[0].split(":")[1])
@@ -18476,25 +18481,49 @@ class ReadSession:
                                 "contour linewidth"
                             ] = contour_linewidth
                         elif line.split("\n")[0].split(":")[0] == "move x":
-                            move_x = float(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move x"
-                            ] = move_x
+                            if(transposed2D=='False'):
+                                move_x = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x"
+                                ] = move_x
+                            else:
+                                move_y = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y"
+                                ] = move_y
                         elif line.split("\n")[0].split(":")[0] == "move x range index":
-                            move_x_index = int(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move x range index"
-                            ] = move_x_index
+                            if(transposed2D=='False'):
+                                move_x_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x range index"
+                                ] = move_x_index
+                            else:
+                                move_y_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y range index"
+                                ] = move_y_index
                         elif line.split("\n")[0].split(":")[0] == "move y":
-                            move_y = float(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move y"
-                            ] = move_y
+                            if(transposed2D=='False'):
+                                move_y = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y"
+                                ] = move_y
+                            else:
+                                move_x = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x"
+                                ] = move_x
                         elif line.split("\n")[0].split(":")[0] == "move y range index":
-                            move_y_index = int(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move y range index"
-                            ] = move_y_index
+                            if(transposed2D=='False'):
+                                move_y_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y range index"
+                                ] = move_y_index
+                            else:
+                                move_x_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x range index"
+                                ] = move_x_index
                         elif line.split("\n")[0].split(":")[0] == "multiply factor":
                             multiply_factor = float(line.split("\n")[0].split(":")[1])
                             self.main_frame.viewer.values_dictionary[count][
@@ -18815,10 +18844,6 @@ class ReadSession:
             self.main_frame.viewer.twoD_slices_horizontal[i][0].set_visible(False)
             self.main_frame.viewer.twoD_slices_vertical[i][0].set_visible(False)
 
-        self.main_frame.viewer.custom_labels = self.custom_labels
-        self.main_frame.viewer.ax.legend(
-            self.main_frame.viewer.files.custom_lines, self.custom_labels
-        )
         self.main_frame.viewer.ax.set_xlim(xlim)
         self.main_frame.viewer.ax.set_ylim(ylim)
         self.main_frame.viewer.ax.set_xlabel(xlabel)
@@ -18827,7 +18852,13 @@ class ReadSession:
         # Add labels of the extra plots to the select plot box
         self.main_frame.viewer.plot_combobox.Clear()
         self.main_frame.viewer.plot_combobox.AppendItems(self.custom_labels)
-        self.main_frame.viewer.plot_combobox.SetSelection(0)
+        self.main_frame.viewer.plot_combobox.SetSelection(self.main_frame.viewer.plot_combobox.GetCount()-1)
+        self.main_frame.viewer.OnSelectPlot2D(wx.EVT_COMBOBOX)
+
+        self.main_frame.viewer.custom_labels = self.custom_labels
+        self.main_frame.viewer.ax.legend(
+            self.main_frame.viewer.files.custom_lines, self.custom_labels
+        )
 
         self.main_frame.viewer.UpdateFrame()
 
