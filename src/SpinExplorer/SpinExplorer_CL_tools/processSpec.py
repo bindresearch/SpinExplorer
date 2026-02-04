@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     # Basic usage - waits for completion
     subprocess.Popen(
-    ['python', '/Users/gogs/Bind/NMR/source/SpinExplorer/src/SpinExplorer/SpinView/SpinView.py'],
+    ['SpinView'],
     stdin=subprocess.DEVNULL,
     stdout=subprocess.DEVNULL, 
     stderr=subprocess.DEVNULL,
