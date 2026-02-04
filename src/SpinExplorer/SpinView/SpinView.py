@@ -44,12 +44,12 @@ print("")
 
 import sys
 import os
-import wx
-import wx.adv
+import wx # type: ignore
+import wx.adv # type: ignore
 
 # Import relevant modules
 import numpy as np
-from appdirs import user_data_dir
+from appdirs import user_data_dir # type: ignore
 
 appname = 'SpinExplorer'
 appauthor = "James Eaton"
@@ -61,7 +61,7 @@ import matplotlib
 mpl_cache = os.path.join(data_dir, "mpl-cache")
 os.makedirs(mpl_cache, exist_ok=True)
 matplotlib.get_cachedir = lambda: mpl_cache
-from scipy.optimize import leastsq
+from scipy.optimize import leastsq # type: ignore
 import pathlib
 
 matplotlib.use("wxAgg")
@@ -74,13 +74,13 @@ import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 from matplotlib.backend_bases import MouseEvent as MPLMouseEvent
-import nmrglue as ng
+import nmrglue as ng # type: ignore
 import copy
-import wx.grid as gridlib
+import wx.grid as gridlib # type: ignore
 import struct
 import sys
 import re
-from scipy.interpolate import make_interp_spline
+from scipy.interpolate import make_interp_spline # type: ignore
 from SpinExplorer.SpinExpLogo import SpinExpLogo
 from SpinExplorer.SpinExplorer_CL_tools.processSpec import FindingParameters
 from SpinExplorer.SpinExplorer_CL_tools.pulse_sequence_parsing import PulseSequenceParser
@@ -19269,7 +19269,7 @@ class PeakListWindow2D(wx.Frame):
         """
         Read peaklist that has been exported from a CCPN peaklist table.
         """
-
+        import pandas as pd # TODO: may need to add pandas as a requirement
         df = pd.read_excel(peaklist_file, dtype=str)
 
         peak_names = df.iloc[:, 0].tolist()
@@ -21018,7 +21018,7 @@ class PeakListWindow3D(wx.Frame):
         """
         Read peaklist that has been exported from a CCPN peaklist table.
         """
-
+        import pandas as pd # TODO: may need to add pandas to the requirements
         df = pd.read_excel(peaklist_file, dtype=str)
 
         try:

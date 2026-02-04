@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 import numpy as np
-import nmrglue as ng
+import nmrglue as ng # type: ignore
 
 
 class SolventSuppressionFilter(Enum):
@@ -137,7 +137,7 @@ def sol_general(data, filter, w=16, mode="same"):
         NMR data with solvent filter applied
 
     """
-    import scipy
+    import scipy # type: ignore
 
     A = filter.sum()
     if data.ndim == 2:
@@ -176,7 +176,7 @@ def sol_general_nd(data, filter, axis=-1, mode="same"):
     filtered_data = np.zeros(shape=data.shape)
 
     # Apply filter to each trace
-    import scipy
+    import scipy # type: ignore
 
     if len(data.shape) == 1:
         filtered_data = data - scipy.signal.convolve(data, filter, mode=mode) / A
@@ -864,7 +864,7 @@ class DimensionConfig:
             if self.solvent_suppression_choice == SolventSuppressionFilter.LOW_PASS:
                 filter_size = self.solvent_suppression_filter_length
                 if self.solvent_suppression_choice == LowpassChoices.BOXCAR:
-                    from scipy.signal.windows import boxcar
+                    from scipy.signal.windows import boxcar # type: ignore
                     filter = boxcar(filter_size)
                 elif self.solvent_suppression_choice == LowpassChoices.SINE:
                     filter = np.cos(np.pi * np.linspace(-0.5, 0.5, filter_size))

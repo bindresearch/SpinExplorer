@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 import numpy as np
-import nmrglue as ng
+import nmrglue as ng # type: ignore
 from typing import Dict
 from numpy.typing import NDArray
 import traceback
