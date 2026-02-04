@@ -855,7 +855,6 @@ class DimensionConfig:
     
     def apply_processing(self, dic, data, dim):
         """
-        Docstring for apply_processing
         
         Apply processing steps directly to dic and data.
         Returns the processed dic and data.
@@ -873,7 +872,7 @@ class DimensionConfig:
                     filter = np.cos(np.pi * np.linspace(-0.5, 0.5, filter_size))**2.0
             
                 data = sol_general(data, filter, w=filter_size, mode = "same")
-                
+
             else:
                 print('other forms of solvent suppression not supported within nmrglue')
 
@@ -1076,6 +1075,8 @@ class ExperimentConfigStore:
     """
     dim_labels: list[str]
     dim_configs: list[DimensionConfig]
+    fid_name: str 
+    ft_name: str
 
     def __post_init__(self):
         """Validate that dim_labels and dim_configs have matching lengths."""
@@ -1102,7 +1103,7 @@ class ExperimentConfigStore:
         with open('parameters.json','w') as outy:
             json.dump(proc_dic, outy, indent = 4)
     
-    def process_data(self, input_file: str, output_file: str = None):
+    def process_data(self):
         """
         Process NMR data directly using the configuration.
         
@@ -1115,7 +1116,7 @@ class ExperimentConfigStore:
         """
 
         # Load data
-        dic, data = ng.pipe.read(input_file)
+        dic, data = ng.pipe.read(self.fid_name)
         
         # Process each dimension
         for i, (label, config) in enumerate(zip(self.dim_labels, self.dim_configs)):
@@ -1129,8 +1130,8 @@ class ExperimentConfigStore:
                 dic, data = ng.pipe_proc.tp(dic, data)
         
         # Save if output file specified
-        if output_file:
-            ng.pipe.write(output_file, dic, data, overwrite=True)
-            print(f"Saved processed data to {output_file}")
+        if self.ft_name:
+            ng.pipe.write(self.ft_name, dic, data, overwrite=True)
+            print(f"Saved processed data to {self.ft_name}")
         
         return dic, data

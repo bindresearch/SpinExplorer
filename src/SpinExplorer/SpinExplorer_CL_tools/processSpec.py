@@ -164,45 +164,9 @@ class FindingParameters:
         return dictionary
 
 
-def interactive_plot_make(dic, data):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from matplotlib.widgets import Slider, CheckButtons
-    uc0 = ng.pipe.make_uc(dic, data, dim=1)
-    uc1 = ng.pipe.make_uc(dic, data, dim=0)
-    
-    ppms_0 = uc0.ppm_scale()
-    ppms_1 = uc1.ppm_scale()
-    xx,yy = np.meshgrid(ppms_0,ppms_1)
 
-    fig,ax = plt.subplots()
-    one_d_proj = data[128]
-
-    line, = ax.plot(ppms_0, np.real(one_d_proj))
-    ax.invert_xaxis()
-
-    ax_phase = plt.axes([0.15, 0.02, 0.65, 0.02])
-
-    slider_phase = Slider(ax_phase, 'Phase', -180,180, valinit=0.0)
-    
-    def update(val):
-        phase_val = slider_phase.val 
-        adjusted_spec=one_d_proj*np.exp(1.0j*phase_val*np.pi/180.)
-        line.set_ydata(np.real(adjusted_spec))
-        #ax.relim()
-        #ax.autoscale_view()
-        fig.canvas.draw_idle() 
-    
-    
-    slider_phase.on_changed(update)
-    plt.show()
-
-def write_parameter_file():
-    pass
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import numpy as np
     input_dat = FindingParameters()
     pp_parser = PulseSequenceParser()
     sequence = pp_parser.parse()
@@ -216,8 +180,7 @@ if __name__ == "__main__":
     params = parameter_write_cl(nmr_glue_conv, config)
     params.write_out_dict(params.dictionary)
     
-    # TODO: write out appropriate filename
-    config.process_data('test.fid','test.ft2')
+    config.process_data()
     
     import subprocess
 
@@ -229,28 +192,3 @@ if __name__ == "__main__":
     stderr=subprocess.DEVNULL,
     start_new_session=True)
     print('opened Spinview...')
-
-    # interactive_plot_make(dic,data)
-    # one_d_proj = np.sum(data, axis=0)
-    # print(data.shape)
-    
-    # uc0 = ng.pipe.make_uc(dic, data, dim=1)
-    # uc1 = ng.pipe.make_uc(dic, data, dim=0)
-    
-    # ppms_0 = uc0.ppm_scale()
-    # ppms_1 = uc1.ppm_scale()
-    # plt.plot(ppms_0,one_d_proj)
-    # plt.gca().invert_xaxis()
-    # plt.show()
-    
-    # print('hello')
-    # print(data.shape)
-    # cl = [np.max(data*0.1)*1.2**x for x in range(14)]
-    # xx,yy = np.meshgrid(ppms_0,ppms_1)
-    # fig,ax = plt.subplots()
-    # print(xx.shape)
-    # print(yy.shape)
-    # ax.contour(xx,yy,data,cl)
-    # ax.set_xlim(max(ppms_0), min(ppms_0))
-    # ax.set_ylim(max(ppms_1), min(ppms_1))
-    # plt.show()
