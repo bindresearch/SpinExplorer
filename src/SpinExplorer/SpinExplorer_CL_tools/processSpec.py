@@ -161,21 +161,6 @@ class FindingParameters:
             }
         return dictionary
 
-def basic_hsqc_processing(dic,data):
-    dic,data = ng.pipe_proc.em(dic,data, lb = 5.0, c=0.5)
-    dic,data = ng.pipe_proc.zf(dic,data, zf = 1)
-    dic,data = ng.pipe_proc.ft(dic,data, auto = True)
-    dic,data = ng.pipe_proc.ps(dic,data, p0 = 14.0, p1 = 0.0)
-    dic,data = ng.pipe_proc.di(dic,data)
-    dic,data = ng.pipe_proc.tp(dic,data)
-    dic,data = ng.pipe_proc.em(dic,data, lb = 5.0, c=0.5)
-    dic,data = ng.pipe_proc.zf(dic,data,zf=2)
-    dic,data = ng.pipe_proc.ft(dic,data,auto=True)
-    dic,data = ng.pipe_proc.ps(dic,data, p0 = 90.0, p1 = 0.0)
-    dic,data = ng.pipe_proc.di(dic,data)
-    return dic, data
-
-
 
 def interactive_plot_make(dic, data):
     import numpy as np
@@ -225,11 +210,6 @@ if __name__ == "__main__":
     params.write_out_dict(params.dictionary)
     
     hsqc_config_template.process_data('test.fid','test.ft2')
-
-    # dic, data = ng.pipe.read(Path.cwd() / "test.fid")
-    
-    # dic, data = basic_hsqc_processing(dic,data)
-    # ng.pipe.write("test.ft2", dic, data, overwrite=True)
     
     import subprocess
 
