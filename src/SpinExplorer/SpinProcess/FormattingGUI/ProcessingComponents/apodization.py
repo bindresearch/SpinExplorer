@@ -78,8 +78,8 @@ class Apodization:
         self.power = 1.0
 
         # Initial values for Gauss Broadening apodization
-        self.a = 1.0
-        self.b = 1.0
+        self.a = -1.0 
+        self.b = 0.2
 
         # Initial values for Trapezoid apodization
         self.t1 = int((self.nmr_data.number_of_points[self.dimension_index] / 2) / 4)
@@ -300,7 +300,7 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the b value
             self.apodization_b_label = wx.StaticText(
-                parent, -1, "Gaussian Broadening (Hz):"
+                parent, -1, "GB factor (0.0-1.0):"
             )
             self.apodization_sizer.Add(
                 self.apodization_b_label, 0, wx.ALIGN_CENTER_VERTICAL
@@ -644,10 +644,10 @@ class Apodization:
             line2_x, line2_y = self.line2.get_data()
             ax.plot(line2_x, line2_y, color="k")
         ax.set_xlim(
-            -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+            -(self.npoints)
             / self.nmr_data.spectral_width[self.dimension_index]
             / 20,
-            (self.nmr_data.number_of_points[self.dimension_index] / 2)
+            (self.npoints)
             / self.nmr_data.spectral_width[self.dimension_index]
             * 21
             / 20,
@@ -713,12 +713,25 @@ class Apodization:
 
         data = copy.deepcopy(self.data)
 
-        x = np.linspace(
-            0,
-            (self.nmr_data.number_of_points[self.dimension_index] / 2)
-            / self.nmr_data.spectral_width[self.dimension_index],
-            int(self.nmr_data.number_of_points[self.dimension_index] / 2),
-        )
+        
+
+        if(self.dimension_index==0):
+            self.npoints = self.nmr_data.number_of_points[self.dimension_index]
+            x = np.linspace(
+                0,
+                (self.nmr_data.number_of_points[self.dimension_index])
+                / self.nmr_data.spectral_width[self.dimension_index],
+                int(self.nmr_data.number_of_points[self.dimension_index]),
+            )
+        else:
+            self.npoints = int(self.nmr_data.number_of_points[self.dimension_index]/2)
+            x = np.linspace(
+                0,
+                (self.nmr_data.number_of_points[self.dimension_index]/2)
+                / self.nmr_data.spectral_width[self.dimension_index],
+                int(self.nmr_data.number_of_points[self.dimension_index]/2),
+            )
+
         x_data = np.linspace(
             0,
             (len(data)) / self.nmr_data.spectral_width[self.dimension_index],
@@ -743,10 +756,10 @@ class Apodization:
             )
             self.apodization_plot_ax.set_ylim(-1.5, 1.5)
             self.apodization_plot_ax.set_xlim(
-                -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                -(self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 / 20,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 * 21
                 / 20,
@@ -754,78 +767,95 @@ class Apodization:
 
         elif self.apodization_combobox_selection == 2:
             # Lorentz to Gauss window function
+            g1 = self.g1/self.nmr_data.spectral_width[self.dimension_index]
+            g2 = self.g2/self.nmr_data.spectral_width[self.dimension_index]
+            x1 = np.arange(self.npoints)
             e = (
                 np.pi
-                * self.nmr_data.number_of_points[self.dimension_index]
-                / self.nmr_data.spectral_width[self.dimension_index]
-                * self.g1
+                * x1
+                * g1
             )
             g = (
                 0.6
                 * np.pi
-                * self.g2
+                * g2
                 * (
                     self.g3
                     * (
-                        (self.nmr_data.number_of_points[self.dimension_index] / 2)
-                        / self.nmr_data.spectral_width[self.dimension_index]
+                        self.npoints
                         - 1
                     )
-                    - x
+                    - x1
                 )
             )
             func = np.exp(e - g * g)
             (self.line1,) = self.apodization_plot_ax.plot(x, func, color="#1f77b4")
             self.apodization_plot_ax.set_ylim(-1.5, 1.5)
             self.apodization_plot_ax.set_xlim(
-                -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                -(self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 / 20,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 * 21
                 / 20,
             )
         elif self.apodization_combobox_selection == 3:
             # Sinebell window function
-            func = (
+            x1 = np.arange(self.npoints)
+            func = np.flip(
                 np.sin(
-                    (np.pi * self.offset + np.pi * (self.end - self.offset) * x)
-                    / (
-                        (
-                            (
-                                (
-                                    self.nmr_data.number_of_points[self.dimension_index]
-                                    / 2
-                                )
-                                / self.nmr_data.spectral_width[self.dimension_index]
-                            )
-                        )
+                    (np.pi * self.offset + np.pi * (self.end - self.offset) * x1)
+                    / (self.npoints-1
                     )
                 )
                 ** self.power
             )
+            # func = (
+            #     np.sin(
+            #         (np.pi * self.offset + np.pi * (self.end - self.offset) * x)
+            #         / (
+            #             (
+            #                 (
+            #                     (
+            #                         self.nmr_data.number_of_points[self.dimension_index]
+            #                         / 2
+            #                     )
+            #                     / self.nmr_data.spectral_width[self.dimension_index]
+            #                 )
+            #             )
+            #         )
+            #     )
+            #     ** self.power
+            # )
             (self.line1,) = self.apodization_plot_ax.plot(x, func, color="#1f77b4")
             self.apodization_plot_ax.set_ylim(-1.5, 1.5)
             self.apodization_plot_ax.set_xlim(
-                -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                -(self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 / 20,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 * 21
                 / 20,
             )
         elif self.apodization_combobox_selection == 4:
             # Gauss broadening window function
-            func = np.exp(-self.a * (x**2) - self.b * x)
+            x1 = np.arange(self.npoints)
+            t = x1/self.nmr_data.spectral_width[self.dimension_index]
+            aq = self.npoints/self.nmr_data.spectral_width[self.dimension_index]
+
+            a = np.pi * self.a 
+            b = -a / (2.0 * self.b * aq)
+            x1 = np.arange(self.npoints)
+            func = np.exp(-a * t - (b * (t**2)))
             (self.line1,) = self.apodization_plot_ax.plot(x, func, color="#1f77b4")
             self.apodization_plot_ax.set_ylim(-1.5, 1.5)
             self.apodization_plot_ax.set_xlim(
-                -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                -(self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 / 20,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 * 21
                 / 20,
@@ -836,7 +866,7 @@ class Apodization:
                 (
                     np.linspace(0, 1, int(self.t1)),
                     np.ones(
-                        int(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                        int(self.npoints)
                         - int(self.t1)
                         - int(self.t2)
                     ),
@@ -846,10 +876,10 @@ class Apodization:
             (self.line1,) = self.apodization_plot_ax.plot(x, func, color="#1f77b4")
             self.apodization_plot_ax.set_ylim(-1.5, 1.5)
             self.apodization_plot_ax.set_xlim(
-                -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                -(self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 / 20,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 * 21
                 / 20,
@@ -863,7 +893,7 @@ class Apodization:
                         1,
                         int(
                             self.loc
-                            * (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                            * (self.npoints)
                         ),
                     ),
                     np.linspace(
@@ -871,7 +901,7 @@ class Apodization:
                         0,
                         int(
                             (1 - self.loc)
-                            * (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                            * (self.npoints)
                         ),
                     ),
                 )
@@ -880,20 +910,20 @@ class Apodization:
 
             self.apodization_plot_ax.set_ylim(-1.5, 1.5)
             self.apodization_plot_ax.set_xlim(
-                -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                -(self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 / 20,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index]
                 * 21
                 / 20,
             )
 
         self.apodization_plot_ax.set_xlim(
-            -(self.nmr_data.number_of_points[self.dimension_index] / 2)
+            -(self.npoints)
             / self.nmr_data.spectral_width[self.dimension_index]
             / 20,
-            (self.nmr_data.number_of_points[self.dimension_index] / 2)
+            (self.npoints)
             / self.nmr_data.spectral_width[self.dimension_index]
             * 21
             / 20,
@@ -909,19 +939,31 @@ class Apodization:
     def update_window_function_plot(self):
         data = self.data
         if self.before_processing == False and self.dimension_index == 0:
+            self.npoints = self.nmr_data.number_of_points[0]
             x = np.linspace(
                 0,
-                (self.nmr_data.number_of_points[0] / 2)
+                (self.nmr_data.number_of_points[0])
                 / self.nmr_data.spectral_width[0],
-                int(self.nmr_data.number_of_points[0] / 2),
+                int(self.nmr_data.number_of_points[0]),
             )
         else:
-            x = np.linspace(
-                0,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
-                / self.nmr_data.spectral_width[self.dimension_index],
-                int(self.nmr_data.number_of_points[self.dimension_index] / 2),
+            if(self.dimension_index==0):
+                self.npoints = self.nmr_data.number_of_points[self.dimension_index]
+                x = np.linspace(
+                    0,
+                    (self.nmr_data.number_of_points[self.dimension_index])
+                    / self.nmr_data.spectral_width[self.dimension_index],
+                    int(self.nmr_data.number_of_points[self.dimension_index]),
             )
+            else:
+                self.npoints = int(self.nmr_data.number_of_points[self.dimension_index]/2)
+                x = np.linspace(
+                    0,
+                    (self.nmr_data.number_of_points[self.dimension_index]/2)
+                    / self.nmr_data.spectral_width[self.dimension_index],
+                    int(self.nmr_data.number_of_points[self.dimension_index]/2),
+                )
+
             # if self.dimension_index == 0:
             #     x = np.linspace(
             #         0, (len(data)) / self.nmr_data.spectral_width[0], int(len(data))
@@ -946,7 +988,7 @@ class Apodization:
         except:
             # Give a popout window saying that the values are not valid
             msg = wx.MessageDialog(
-                self,
+                self.app,
                 "The value entered for apodization first point scaling is not valid (use 0.5 or 1.0)",
                 "Error",
                 wx.OK | wx.ICON_ERROR,
@@ -959,7 +1001,7 @@ class Apodization:
             return
         if c != 0.5 and c != 1.0:
             msg = wx.MessageDialog(
-                self,
+                self.app,
                 "The value entered for apodization first point scaling is not valid (use 0.5 or 1.0)",
                 "Error",
                 wx.OK | wx.ICON_ERROR,
@@ -977,7 +1019,7 @@ class Apodization:
             except:
                 # Give a popout window saying that the values are not valid
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "The values entered are not valid",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1000,7 +1042,7 @@ class Apodization:
             except:
                 # Give a popout window saying that the values are not valid
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "The values entered are not valid",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1014,7 +1056,7 @@ class Apodization:
             # Check to see if g3 is between 0 and 1
             if g3 < 0 or g3 > 1:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "Gaussian shift must be between 0 and 1",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1026,34 +1068,39 @@ class Apodization:
             self.g1 = g1
             self.g2 = g2
             self.g3 = g3
+            x1 = np.arange(self.npoints)
+
+
+            g1 = g1/self.nmr_data.spectral_width[self.dimension_index]
+            g2 = g2/self.nmr_data.spectral_width[self.dimension_index]
+
             e = (
                 np.pi
-                * self.nmr_data.number_of_points[self.dimension_index]
-                / 2
-                / self.nmr_data.spectral_width[self.dimension_index]
-                * self.g1
+                * x1
+                * g1
             )
             g = (
                 0.6
                 * np.pi
-                * self.g2
+                * g2
                 * (
                     self.g3
                     * (
-                        (self.nmr_data.number_of_points[self.dimension_index] / 2)
-                        / self.nmr_data.spectral_width[self.dimension_index]
+                        self.npoints
                         - 1
                     )
-                    - x
+                    - x1
                 )
             )
+
+
 
             func = np.exp(e - g * g)
             self.line1.set_ydata(func)
 
             self.apodization_plot_ax.set_xlim(
                 0,
-                (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                (self.npoints)
                 / self.nmr_data.spectral_width[self.dimension_index],
             )
 
@@ -1065,7 +1112,7 @@ class Apodization:
                 power = int(power)
             except:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "The values entered are not valid",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1079,7 +1126,7 @@ class Apodization:
             # Check that offset and end are between 0 and 1
             if offset < 0 or offset > 1:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "Offset values must be between 0 and 1",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1090,7 +1137,7 @@ class Apodization:
                 return
             if end < 0 or end > 1:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "End values must be between 0 and 1",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1102,7 +1149,7 @@ class Apodization:
             # Check that power is greater than 0
             if power < 0:
                 msg = wx.MessageDialog(
-                    self, "Power must be greater than 0", "Error", wx.OK | wx.ICON_ERROR
+                    self.app, "Power must be greater than 0", "Error", wx.OK | wx.ICON_ERROR
                 )
                 msg.ShowModal()
                 msg.Destroy()
@@ -1111,23 +1158,32 @@ class Apodization:
             self.offset = offset
             self.end = end
             self.power = power
-            func = (
+            x1 = np.arange(self.npoints)
+            func = np.flip(
                 np.sin(
-                    (np.pi * self.offset + np.pi * (self.end - self.offset) * x)
-                    / (
-                        (
-                            (
-                                (
-                                    self.nmr_data.number_of_points[self.dimension_index]
-                                    / 2
-                                )
-                                / self.nmr_data.spectral_width[self.dimension_index]
-                            )
-                        )
+                    (np.pi * self.offset + np.pi * (self.end - self.offset) * x1)
+                    / (self.npoints-1
                     )
                 )
                 ** self.power
             )
+            # func = (
+            #     np.sin(
+            #         (np.pi * self.offset + np.pi * (self.end - self.offset) * x)
+            #         / (
+            #             (
+            #                 (
+            #                     (
+            #                         self.nmr_data.number_of_points[self.dimension_index]
+            #                         / 2
+            #                     )
+            #                     / self.nmr_data.spectral_width[self.dimension_index]
+            #                 )
+            #             )
+            #         )
+            #     )
+            #     ** self.power
+            # )
             self.line1.set_ydata(func)
         elif self.apodization_combobox_selection == 4:
             try:
@@ -1135,7 +1191,7 @@ class Apodization:
                 b = float(self.apodization_b_textcontrol.GetValue())
             except:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "The values entered are not valid",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1147,7 +1203,15 @@ class Apodization:
                 return
             self.a = a
             self.b = b
-            func = np.exp(-self.a * (x**2) - self.b * x)
+
+            x1 = np.arange(self.npoints)
+            t = x1/self.nmr_data.spectral_width[self.dimension_index]
+            aq = self.npoints/self.nmr_data.spectral_width[self.dimension_index]
+
+            a = np.pi * a 
+            b = -a / (2.0 * b * aq)
+            x1 = np.arange(self.npoints)
+            func = np.exp(-a * t - (b * (t**2)))
             self.line1.set_ydata(func)
         elif self.apodization_combobox_selection == 5:
             try:
@@ -1155,7 +1219,7 @@ class Apodization:
                 t2 = float(self.apodization_t2_textcontrol.GetValue())
             except:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "The values entered are not valid",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1168,7 +1232,7 @@ class Apodization:
             # Ensure that t1 and t2 are greater than 0
             if t1 < 0 or t2 < 0:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "Ramp up and ramp down points must be greater than 0",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1179,13 +1243,13 @@ class Apodization:
                 self.apodization_t2_textcontrol.SetValue(str(self.t2))
                 return
             # Ensure that t1 + t2 is less than the number of points
-            if t1 + t2 > (self.nmr_data.number_of_points[self.dimension_index] / 2):
+            if t1 + t2 > (self.npoints):
                 message = (
                     "Ramp up and ramp down points must be less than the number of points ("
-                    + str(self.nmr_data.number_of_points[self.dimension_index])
+                    + str(self.npoints)
                     + ")"
                 )
-                msg = wx.MessageDialog(self, message, "Error", wx.OK | wx.ICON_ERROR)
+                msg = wx.MessageDialog(self.app, message, "Error", wx.OK | wx.ICON_ERROR)
                 msg.ShowModal()
                 msg.Destroy()
                 self.apodization_t1_textcontrol.SetValue(str(self.t1))
@@ -1197,7 +1261,7 @@ class Apodization:
                 (
                     np.linspace(0, 1, int(self.t1)),
                     np.ones(
-                        int(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                        int(self.npoints)
                         - int(self.t1)
                         - int(self.t2)
                     ),
@@ -1210,7 +1274,7 @@ class Apodization:
                 loc = float(self.apodization_loc_textcontrol.GetValue())
             except:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "The values entered are not valid",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1222,7 +1286,7 @@ class Apodization:
             # Ensure that loc is between 0 and 1
             if self.loc < 0 or self.loc > 1:
                 msg = wx.MessageDialog(
-                    self,
+                    self.app,
                     "Location of maximum must be between 0 and 1",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
@@ -1239,17 +1303,17 @@ class Apodization:
                         1,
                         int(
                             self.loc
-                            * (self.nmr_data.number_of_points[self.dimension_index] / 2)
+                            * (self.npoints)
                         ),
                     ),
                     np.linspace(
                         1,
                         0,
-                        int(self.nmr_data.number_of_points[self.dimension_index] / 2)
+                        int(self.npoints)
                         - int(
                             self.loc
                             * int(
-                                self.nmr_data.number_of_points[self.dimension_index] / 2
+                                self.npoints
                             )
                         ),
                     ),

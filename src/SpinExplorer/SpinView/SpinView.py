@@ -511,7 +511,10 @@ class SpinView(wx.Frame):
 
         # Setup the dock/task bar with the logo
         if(explorer==False):
-            self.tbicon = TaskBarIcon(self)
+            try:
+                self.tbicon = TaskBarIcon(self)
+            except:
+                pass
 
         self.app_frame = wx.Frame.__init__(
             self,
@@ -5996,6 +5999,7 @@ class TwoDViewer(wx.Panel):
                     zorder=1,
                 )
                 self.ax.legend(self.files.custom_lines, self.files.custom_labels)
+                
 
             if self.twoD_slices_horizontal[0][0].get_visible() == True:
                 # for i in range(len(self.twoD_slices_horizontal)):
@@ -18855,7 +18859,7 @@ class ReadSession:
         self.main_frame.viewer.plot_combobox.SetSelection(self.main_frame.viewer.plot_combobox.GetCount()-1)
         self.main_frame.viewer.OnSelectPlot2D(wx.EVT_COMBOBOX)
 
-        self.main_frame.viewer.custom_labels = self.custom_labels
+        self.main_frame.viewer.files.custom_labels = self.custom_labels
         self.main_frame.viewer.ax.legend(
             self.main_frame.viewer.files.custom_lines, self.custom_labels
         )
@@ -19040,7 +19044,7 @@ class PeakListWindow2D(wx.Frame):
         self.row_pickpeaks.Add(self.row_pickpeaks2, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
         self.row2_label = wx.StaticBox(
-            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key)"
+            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key, command+k moves selected peak to local maximum)"
         )
         self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
 
@@ -20289,6 +20293,12 @@ class PeakListWindow2D(wx.Frame):
         data = self.main_frame.nmrdata.data
         x_values = self.main_frame.ppms_0
         y_values = self.main_frame.ppms_1
+
+        if(self.main_frame.transposed2D==True):
+            x_values = self.main_frame.ppms_1
+            y_values = self.main_frame.ppms_0
+
+
         x = self.peak_list_dictionary[self.selected_peaklist]["shift1"][
             self.selected_peak_indexes[0]
         ]
@@ -20409,6 +20419,10 @@ class PeakListWindow3D(wx.Frame):
         self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
         ID_BUTTON_s = wx.NewIdRef()
 
+        self.add_borepeak_button = wx.ToggleButton(self, label="Add Bore Peak (b)")
+        self.add_borepeak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddBorePeak)
+        ID_BUTTON_b = wx.NewIdRef()
+
         # self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
         # self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
         # ID_BUTTON_g = wx.NewIdRef()
@@ -20434,6 +20448,7 @@ class PeakListWindow3D(wx.Frame):
             [
                 (wx.ACCEL_CTRL, ord("a"), ID_BUTTON_a),
                 (wx.ACCEL_CTRL, ord("r"), ID_BUTTON_r),
+                (wx.ACCEL_CTRL, ord("b"), ID_BUTTON_b),
                 (wx.ACCEL_CTRL, ord("f"), ID_BUTTON_f),
                 (wx.ACCEL_CTRL, ord("m"), ID_BUTTON_m),
                 (wx.ACCEL_CTRL, ord("z"), ID_BUTTON_z),
@@ -20451,6 +20466,7 @@ class PeakListWindow3D(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
 
         self.main_frame.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnAddBorePeak, id=ID_BUTTON_b)
         self.main_frame.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeak, id=ID_BUTTON_m)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeakz, id=ID_BUTTON_z)
@@ -20463,7 +20479,7 @@ class PeakListWindow3D(wx.Frame):
         self.row2_label = wx.StaticBox(
             self,
             -1,
-            "Manipulate Peaklists: (shorcuts for Mac - cmd+key, cmd+k moves peak to local maximum)",
+            "Manipulate Peaklists: (shorcuts for Mac - cmd+key)",
         )
         self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
 
@@ -20471,6 +20487,8 @@ class PeakListWindow3D(wx.Frame):
         self.row2.Add(self.add_peaks_button)
         self.row2.AddSpacer(5)
         self.row2.Add(self.select_peak_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.add_borepeak_button)
         self.row2.AddSpacer(5)
         self.row2.Add(self.move_peaks_button)
         self.row2.AddSpacer(5)
@@ -20806,12 +20824,13 @@ class PeakListWindow3D(wx.Frame):
                 intensity_list = []
                 for p in peak:
                     intensity_list.append(p[-1])
-                for i,zval in enumerate(z_list):
-                    names1.append(names[i])
+                for j,zval in enumerate(z_list):
+                    names1.append(names[i]+'_'+str(j+1))
                     x.append(xval)
                     y.append(yval)
                     z.append(zval)
-                    intensities.append(intensity_list[i])
+                    intensities.append(intensity_list[j])
+
 
             
 
@@ -21764,6 +21783,18 @@ class PeakListWindow3D(wx.Frame):
             self.selected_peakname = self.peak_list_dictionary[
                 self.current_peaklist_box.GetValue()
             ]["peak_name"][min_index]
+
+
+            # def strip_name(name):
+            #     name1 = name.split('_')[:-2]
+
+            # # Find all peaks which contain the same name after the last _ (these are from the same bore)
+            # indexes = []
+            # for p in self.peak_list_dictionary[self.current_peaklist_box.GetValue()]["peak_name"]:
+            #     initial_name
+                
+
+
             self.remove_peak = True
 
         else:
@@ -21835,6 +21866,18 @@ class PeakListWindow3D(wx.Frame):
             self.move_peak_connect = self.main_frame.fig_bore.canvas.mpl_connect(
                 "button_press_event", self.on_click_movepeak3d
             )
+
+
+    def OnAddBorePeak(self, event):
+        # This functionality will be added shortly
+        dlg = wx.MessageDialog(
+                    self,
+                    "This feature is not yet implemented, but is planned to be added to a future release.",
+                    "Not yet implemented",
+                    wx.OK)
+        dlg.ShowModal()
+        dlg.Destroy()
+
 
     def on_click_movepeak3d(self, event):
         """
