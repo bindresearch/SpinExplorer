@@ -723,6 +723,7 @@ class ProcessNMRGlue:
             p0 = float(tab.phase_correction_p0_textcontrol_indirect.GetValue())
             p1 = float(tab.phase_correction_p1_textcontrol_indirect.GetValue())
 
+
         if check == True:
             dic, data = ng.pipe_proc.ps(
                 dic,

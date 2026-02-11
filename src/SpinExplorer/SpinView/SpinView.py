@@ -103,8 +103,6 @@ else:
     platform = "windows"
     height = 30
 
-platform = "windows"
-
 # James Eaton, 10/06/2025, University of Oxford
 # James Eaton, 25/09/2025, Bind Research
 # This code will read in 1D, 2D and 3D NMRPipe (as well as topspin processed) data files and plot them
@@ -539,7 +537,10 @@ class SpinView(wx.Frame):
 
         # Setup the dock/task bar with the logo
         if(explorer==False):
-            self.tbicon = TaskBarIcon(self)
+            try:
+                self.tbicon = TaskBarIcon(self)
+            except:
+                pass
 
         self.app_frame = wx.Frame.__init__(
             self,
@@ -4831,14 +4832,10 @@ class TwoDViewer(wx.Panel):
             xppms = self.new_x_ppms
             yppms = self.new_y_ppms
         else:
-            data = self.values_dictionary[self.active_plot_index]["z_data"]
+            data = self.values_dictionary[self.active_plot_index]["z_data"] * self.values_dictionary[self.active_plot_index]['multiply factor']
             xppms = self.values_dictionary[self.active_plot_index]["new_x_ppms"]
             yppms = self.values_dictionary[self.active_plot_index]["new_y_ppms"]
 
-        print(xlim)
-        print(ylim)
-        print(xppms[0])
-        print(yppms[0])
 
         if (
             xlim[0] < np.min(xppms)
@@ -4911,8 +4908,8 @@ class TwoDViewer(wx.Panel):
                 self.move_y_slider.SetValue(0)
                 self.move_x_value_label.SetLabel("0.00")
                 self.move_y_value_label.SetLabel("0.00")
-                self.multiply_slider.SetValue(1)
-                self.multiply_value_label.SetLabel("0")
+                self.multiply_slider.SetValue(1.0)
+                self.multiply_value_label.SetLabel("1.0")
                 self.line_width_slider.SetValue(1)
                 # if(self.transposed2D==True):
                 #     self.OnTransposeButton(event)
@@ -6028,6 +6025,7 @@ class TwoDViewer(wx.Panel):
                     zorder=1,
                 )
                 self.ax.legend(self.files.custom_lines, self.files.custom_labels)
+                
 
             if self.twoD_slices_horizontal[0][0].get_visible() == True:
                 # for i in range(len(self.twoD_slices_horizontal)):
@@ -10669,6 +10667,8 @@ class SpinBore(wx.Frame):
 
         # Read the projection file
         self.nmrdata = ReadProjection(projection)
+        # Checking if the projection data needs transposing to match the main frame
+        self.check_for_transpose()
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -10900,6 +10900,29 @@ class SpinBore(wx.Frame):
         )
         self.peak_lists3D.Show()
 
+
+    def check_for_transpose(self):
+        """
+        Check to see if the projection needs transposing in order to
+        match that in the main spectrum x/y axes etc.
+
+        For example: if the current 3D is showing (15N, 15N_1), 1H and the
+        15N_1.15N.dat projection file is being read then the projection data
+        needs to be transposed after reading (without setting transposed equal
+        to true)
+        """
+
+        main_frame_axes = self.main_frame.orientation_chooser.GetValue()[1:].split(')')[0].split(',')
+        projection_axes = self.nmrdata.axislabels
+
+        self.swap_labels = False
+
+        if(main_frame_axes!=projection_axes):
+            # transpose the data
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.tp(copy.deepcopy(self.nmrdata.dic), copy.deepcopy(self.nmrdata.data))
+            self.swap_labels = True
+
+
     def plot_bore_data(self):
         # Make a figure containing 2 plots, one large 2D contour plot and a vertical smaller plot showing the bore down a selected 2D coordinate
         self.ax_bore, self.ax_bore_2, self.ax_bore_3 = self.fig_bore.subplots(
@@ -10944,8 +10967,12 @@ class SpinBore(wx.Frame):
             colors=self.cmap_neg,
             linewidths=0.5,
         )
-        self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
-        self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
+        if(self.swap_labels==False):
+            self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
+            self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
+        else:
+            self.ax_bore.set_xlabel(self.nmrdata.axislabels[0])
+            self.ax_bore.set_ylabel(self.nmrdata.axislabels[1])
         self.ax_bore.set_xlim(max(self.ppms_0), min(self.ppms_0))
         self.ax_bore.set_ylim(max(self.ppms_1), min(self.ppms_1))
 
@@ -18363,16 +18390,23 @@ class ReadSession:
                     self.main_frame.viewer = TwoDViewer(
                         parent=self.main_frame, nmrdata=self.main_frame.nmrdata
                     )
+
                     self.main_frame.main_sizer.Add(self.main_frame.viewer, 1, wx.EXPAND)
                     title = lines[4].split("\n")[0].split(":")[1]
                     p0_coarse = float(lines[5].split("\n")[0].split(":")[1])
                     p0_fine = float(lines[6].split("\n")[0].split(":")[1])
                     p1_coarse = float(lines[7].split("\n")[0].split(":")[1])
                     p1_fine = float(lines[8].split("\n")[0].split(":")[1])
-                    move_x = float(lines[9].split("\n")[0].split(":")[1])
-                    move_y = float(lines[10].split("\n")[0].split(":")[1])
-                    move_x_index = int(lines[11].split("\n")[0].split(":")[1])
-                    move_y_index = int(lines[12].split("\n")[0].split(":")[1])
+                    if(transposed2D==False):
+                        move_x = float(lines[9].split("\n")[0].split(":")[1])
+                        move_y = float(lines[10].split("\n")[0].split(":")[1])
+                        move_x_index = int(lines[11].split("\n")[0].split(":")[1])
+                        move_y_index = int(lines[12].split("\n")[0].split(":")[1])
+                    else:
+                        move_y = float(lines[9].split("\n")[0].split(":")[1])
+                        move_x = float(lines[10].split("\n")[0].split(":")[1])
+                        move_y_index = int(lines[11].split("\n")[0].split(":")[1])
+                        move_x_index = int(lines[12].split("\n")[0].split(":")[1])
                     contour_linewidth = float(lines[13].split("\n")[0].split(":")[1])
                     multiply_factor = float(lines[14].split("\n")[0].split(":")[1])
                     contour_levels = int(lines[15].split("\n")[0].split(":")[1])
@@ -18477,25 +18511,49 @@ class ReadSession:
                                 "contour linewidth"
                             ] = contour_linewidth
                         elif line.split("\n")[0].split(":")[0] == "move x":
-                            move_x = float(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move x"
-                            ] = move_x
+                            if(transposed2D=='False'):
+                                move_x = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x"
+                                ] = move_x
+                            else:
+                                move_y = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y"
+                                ] = move_y
                         elif line.split("\n")[0].split(":")[0] == "move x range index":
-                            move_x_index = int(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move x range index"
-                            ] = move_x_index
+                            if(transposed2D=='False'):
+                                move_x_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x range index"
+                                ] = move_x_index
+                            else:
+                                move_y_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y range index"
+                                ] = move_y_index
                         elif line.split("\n")[0].split(":")[0] == "move y":
-                            move_y = float(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move y"
-                            ] = move_y
+                            if(transposed2D=='False'):
+                                move_y = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y"
+                                ] = move_y
+                            else:
+                                move_x = float(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x"
+                                ] = move_x
                         elif line.split("\n")[0].split(":")[0] == "move y range index":
-                            move_y_index = int(line.split("\n")[0].split(":")[1])
-                            self.main_frame.viewer.values_dictionary[count][
-                                "move y range index"
-                            ] = move_y_index
+                            if(transposed2D=='False'):
+                                move_y_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move y range index"
+                                ] = move_y_index
+                            else:
+                                move_x_index = int(line.split("\n")[0].split(":")[1])
+                                self.main_frame.viewer.values_dictionary[count][
+                                    "move x range index"
+                                ] = move_x_index
                         elif line.split("\n")[0].split(":")[0] == "multiply factor":
                             multiply_factor = float(line.split("\n")[0].split(":")[1])
                             self.main_frame.viewer.values_dictionary[count][
@@ -18816,10 +18874,6 @@ class ReadSession:
             self.main_frame.viewer.twoD_slices_horizontal[i][0].set_visible(False)
             self.main_frame.viewer.twoD_slices_vertical[i][0].set_visible(False)
 
-        self.main_frame.viewer.custom_labels = self.custom_labels
-        self.main_frame.viewer.ax.legend(
-            self.main_frame.viewer.files.custom_lines, self.custom_labels
-        )
         self.main_frame.viewer.ax.set_xlim(xlim)
         self.main_frame.viewer.ax.set_ylim(ylim)
         self.main_frame.viewer.ax.set_xlabel(xlabel)
@@ -18828,7 +18882,13 @@ class ReadSession:
         # Add labels of the extra plots to the select plot box
         self.main_frame.viewer.plot_combobox.Clear()
         self.main_frame.viewer.plot_combobox.AppendItems(self.custom_labels)
-        self.main_frame.viewer.plot_combobox.SetSelection(0)
+        self.main_frame.viewer.plot_combobox.SetSelection(self.main_frame.viewer.plot_combobox.GetCount()-1)
+        self.main_frame.viewer.OnSelectPlot2D(wx.EVT_COMBOBOX)
+
+        self.main_frame.viewer.files.custom_labels = self.custom_labels
+        self.main_frame.viewer.ax.legend(
+            self.main_frame.viewer.files.custom_lines, self.custom_labels
+        )
 
         self.main_frame.viewer.UpdateFrame()
 
@@ -18963,11 +19023,15 @@ class PeakListWindow2D(wx.Frame):
         self.row1 = wx.StaticBoxSizer(self.row1_label, wx.HORIZONTAL)
 
         self.row_pickpeaks_label = wx.StaticBox(self, -1, "Peak Picking (nmrglue):")
-        self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.HORIZONTAL)
+        self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.VERTICAL)
 
         self.peak_picking_threshold_text = wx.StaticText(self,-1,"Threshold (% of maximum):")
-        self.peak_picking_threshold_box = wx.TextCtrl(self,value='1.0',
+        self.peak_picking_threshold_box = wx.TextCtrl(self,value='10.0',
                 size=(50, 20))
+        
+        self.peak_picking_type_text = wx.StaticText(self,-1,"Option:")
+        types = ['Positive Peaks', 'Negative Peaks', 'Positive + Negative Peaks']
+        self.peak_picking_type = wx.ComboBox(self, choices = types, style=wx.CB_READONLY)
         
         self.peak_picking_algorithm_text = wx.StaticText(self,-1,"Algorithm:")
         algorithms = ['thres', 'thres-fast', 'downward', 'connected']
@@ -18975,27 +19039,38 @@ class PeakListWindow2D(wx.Frame):
 
         self.peaklist_name_text = wx.StaticText(self,-1,"Peaklist name:")
         self.peaklist_name_box = wx.TextCtrl(self,value='peaks_nmrglue.list',
-                size=(50, 20))
+                size=(200, 20))
 
         self.peak_pick_button = wx.Button(self, label='Peak Pick')
         self.peak_pick_button.Bind(wx.EVT_BUTTON, self.OnPickPeaks)
+
+        self.row_pickpeaks1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row_pickpeaks2 = wx.BoxSizer(wx.HORIZONTAL)
         
-        self.row_pickpeaks.Add(self.peak_picking_threshold_text)
-        self.row_pickpeaks.AddSpacer(5)
-        self.row_pickpeaks.Add(self.peak_picking_threshold_box)
+        self.row_pickpeaks1.Add(self.peak_picking_threshold_text)
+        self.row_pickpeaks1.AddSpacer(5)
+        self.row_pickpeaks1.Add(self.peak_picking_threshold_box)
+        self.row_pickpeaks1.AddSpacer(10)
+        self.row_pickpeaks1.Add(self.peaklist_name_text)
+        self.row_pickpeaks1.AddSpacer(10)
+        self.row_pickpeaks1.Add(self.peaklist_name_box)
+        self.row_pickpeaks1.AddSpacer(5)
+        self.row_pickpeaks1.Add(self.peak_pick_button)
+
+        self.row_pickpeaks2.Add(self.peak_picking_type_text)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.peak_picking_type)
+        self.row_pickpeaks2.AddSpacer(10)
+        self.row_pickpeaks2.Add(self.peak_picking_algorithm_text)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.peak_picking_algorithm_box)
+
+        self.row_pickpeaks.Add(self.row_pickpeaks1, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.peak_picking_algorithm_text)
-        self.row_pickpeaks.AddSpacer(5)
-        self.row_pickpeaks.Add(self.peak_picking_algorithm_box)
-        self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.peaklist_name_text)
-        self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.peaklist_name_box)
-        self.row_pickpeaks.AddSpacer(5)
-        self.row_pickpeaks.Add(self.peak_pick_button)
+        self.row_pickpeaks.Add(self.row_pickpeaks2, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
         self.row2_label = wx.StaticBox(
-            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key)"
+            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key, command+k moves selected peak to local maximum)"
         )
         self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
 
@@ -19086,7 +19161,8 @@ class PeakListWindow2D(wx.Frame):
         file_name = p.parts[-1]
         last_directories_path = str(pathlib.Path(*dirs))
         if ".xlsx" in file_name:
-            peaklist = self.ReadCCPNList(peaklist_file)
+            # peaklist = self.ReadCCPNList(peaklist_file)
+            pass
         else:
             peaklist = self.ReadPeakList(peaklist_file, new_peaklist)
         if type(peaklist) != dict:
@@ -19265,33 +19341,33 @@ class PeakListWindow2D(wx.Frame):
 
         return dictionary
 
-    def ReadCCPNList(self, peaklist_file):
-        """
-        Read peaklist that has been exported from a CCPN peaklist table.
-        """
-        import pandas as pd # TODO: may need to add pandas as a requirement
-        df = pd.read_excel(peaklist_file, dtype=str)
+    # def ReadCCPNList(self, peaklist_file):
+    #     """
+    #     Read peaklist that has been exported from a CCPN peaklist table.
+    #     """
 
-        peak_names = df.iloc[:, 0].tolist()
-        shift1 = df.iloc[:, 7].to_numpy()
-        shift2 = df.iloc[:, 8].to_numpy()
+    #     df = pd.read_excel(peaklist_file, dtype=str)
 
-        shift1_1 = []
-        shift2_1 = []
+    #     peak_names = df.iloc[:, 0].tolist()
+    #     shift1 = df.iloc[:, 7].to_numpy()
+    #     shift2 = df.iloc[:, 8].to_numpy()
 
-        for i in range(len(shift1)):
-            shift1_1.append(float(shift1[i]))
-            shift2_1.append(float(shift2[i]))
+    #     shift1_1 = []
+    #     shift2_1 = []
 
-        dictionary = {}
-        dictionary["peak_name"] = peak_names
-        dictionary["shift1"] = shift1_1
-        dictionary["shift2"] = shift2_1
+    #     for i in range(len(shift1)):
+    #         shift1_1.append(float(shift1[i]))
+    #         shift2_1.append(float(shift2[i]))
 
-        # Try to see if the chemical shifts of the peaks are within the 2D spectral range
-        dictionary = self.check_peaklist(dictionary)
+    #     dictionary = {}
+    #     dictionary["peak_name"] = peak_names
+    #     dictionary["shift1"] = shift1_1
+    #     dictionary["shift2"] = shift2_1
 
-        return dictionary
+    #     # Try to see if the chemical shifts of the peaks are within the 2D spectral range
+    #     dictionary = self.check_peaklist(dictionary)
+
+    #     return dictionary
 
     def check_peaklist(self, dictionary: dict):
         """
@@ -20171,11 +20247,22 @@ class PeakListWindow2D(wx.Frame):
 
         threshold = float(threshold_box_value)/100 *np.max(data)
 
-        algorithm_selection =self.peak_picking_algorithm_box.GetValue()
+        algorithm_selection = self.peak_picking_algorithm_box.GetValue()
+        sign_option = self.peak_picking_type.GetValue()
         if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
-            peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1])
+            if(sign_option == 'Positive Peaks'):
+                peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1])
+            elif(sign_option == 'Negative Peaks'):
+                peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection, msep=[1,1])
+            else:
+                peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection, msep=[1,1])
         else:
-            peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
+            if(sign_option == 'Positive Peaks'):
+                peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
+            elif(sign_option == 'Negative Peaks'):
+                peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection)
+            else:
+                peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection)
         
 
         x = self.main_frame.uc0.ppm(peaks["Y_AXIS"])
@@ -20232,6 +20319,12 @@ class PeakListWindow2D(wx.Frame):
         data = self.main_frame.nmrdata.data
         x_values = self.main_frame.ppms_0
         y_values = self.main_frame.ppms_1
+
+        if(self.main_frame.transposed2D==True):
+            x_values = self.main_frame.ppms_1
+            y_values = self.main_frame.ppms_0
+
+
         x = self.peak_list_dictionary[self.selected_peaklist]["shift1"][
             self.selected_peak_indexes[0]
         ]
@@ -20352,6 +20445,10 @@ class PeakListWindow3D(wx.Frame):
         self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
         ID_BUTTON_s = wx.NewIdRef()
 
+        self.add_borepeak_button = wx.ToggleButton(self, label="Add Bore Peak (b)")
+        self.add_borepeak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddBorePeak)
+        ID_BUTTON_b = wx.NewIdRef()
+
         # self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
         # self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
         # ID_BUTTON_g = wx.NewIdRef()
@@ -20377,6 +20474,7 @@ class PeakListWindow3D(wx.Frame):
             [
                 (wx.ACCEL_CTRL, ord("a"), ID_BUTTON_a),
                 (wx.ACCEL_CTRL, ord("r"), ID_BUTTON_r),
+                (wx.ACCEL_CTRL, ord("b"), ID_BUTTON_b),
                 (wx.ACCEL_CTRL, ord("f"), ID_BUTTON_f),
                 (wx.ACCEL_CTRL, ord("m"), ID_BUTTON_m),
                 (wx.ACCEL_CTRL, ord("z"), ID_BUTTON_z),
@@ -20394,6 +20492,7 @@ class PeakListWindow3D(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
 
         self.main_frame.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnAddBorePeak, id=ID_BUTTON_b)
         self.main_frame.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeak, id=ID_BUTTON_m)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeakz, id=ID_BUTTON_z)
@@ -20406,7 +20505,7 @@ class PeakListWindow3D(wx.Frame):
         self.row2_label = wx.StaticBox(
             self,
             -1,
-            "Manipulate Peaklists: (shorcuts for Mac - cmd+key, cmd+k moves peak to local maximum)",
+            "Manipulate Peaklists: (shorcuts for Mac - cmd+key)",
         )
         self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
 
@@ -20414,6 +20513,8 @@ class PeakListWindow3D(wx.Frame):
         self.row2.Add(self.add_peaks_button)
         self.row2.AddSpacer(5)
         self.row2.Add(self.select_peak_button)
+        self.row2.AddSpacer(5)
+        self.row2.Add(self.add_borepeak_button)
         self.row2.AddSpacer(5)
         self.row2.Add(self.move_peaks_button)
         self.row2.AddSpacer(5)
@@ -20427,11 +20528,15 @@ class PeakListWindow3D(wx.Frame):
 
 
         self.row_pickpeaks_label = wx.StaticBox(self, -1, "Peak Picking (nmrglue):")
-        self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.HORIZONTAL)
+        self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.VERTICAL)
 
         self.peak_picking_threshold_text = wx.StaticText(self,-1,"Threshold (% of maximum):")
-        self.peak_picking_threshold_box = wx.TextCtrl(self,value='1.0',
+        self.peak_picking_threshold_box = wx.TextCtrl(self,value='10.0',
                 size=(30, 20))
+        
+        self.peak_picking_type_text = wx.StaticText(self,-1,"Option:")
+        types = ['Positive Peaks', 'Negative Peaks', 'Positive + Negative Peaks']
+        self.peak_picking_type = wx.ComboBox(self, choices = types, style=wx.CB_READONLY)
         
         self.peak_picking_algorithm_text = wx.StaticText(self,-1,"Algorithm:")
         algorithms = ['thres', 'thres-fast', 'downward', 'connected']
@@ -20442,26 +20547,42 @@ class PeakListWindow3D(wx.Frame):
 
         self.peaklist_name_text = wx.StaticText(self,-1,"Peaklist name:")
         self.peaklist_name_box = wx.TextCtrl(self,value='peaks_nmrglue.list',
-                size=(100, 20))
+                size=(200, 20))
 
         self.peak_pick_button = wx.Button(self, label='Peak Pick')
         self.peak_pick_button.Bind(wx.EVT_BUTTON, self.OnPickPeaks)
+
+
+        self.row_pickpeaks1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row_pickpeaks2 = wx.BoxSizer(wx.HORIZONTAL)
         
-        self.row_pickpeaks.Add(self.peak_picking_threshold_text)
-        self.row_pickpeaks.AddSpacer(5)
-        self.row_pickpeaks.Add(self.peak_picking_threshold_box)
+        self.row_pickpeaks1.Add(self.peak_picking_threshold_text)
+        self.row_pickpeaks1.AddSpacer(5)
+        self.row_pickpeaks1.Add(self.peak_picking_threshold_box)
+        self.row_pickpeaks1.AddSpacer(10)
+
+
+        self.row_pickpeaks1.Add(self.reference_plane_button)
+        self.row_pickpeaks1.AddSpacer(10)
+        self.row_pickpeaks1.Add(self.peaklist_name_text)
+        self.row_pickpeaks1.AddSpacer(10)
+        self.row_pickpeaks1.Add(self.peaklist_name_box)
+        self.row_pickpeaks1.AddSpacer(5)
+        self.row_pickpeaks1.Add(self.peak_pick_button)
+
+
+        self.row_pickpeaks2.Add(self.peak_picking_type_text)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.peak_picking_type)
+        self.row_pickpeaks2.AddSpacer(10)
+        self.row_pickpeaks2.Add(self.peak_picking_algorithm_text)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.peak_picking_algorithm_box)
+
+        self.row_pickpeaks.Add(self.row_pickpeaks1, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.peak_picking_algorithm_text)
-        self.row_pickpeaks.AddSpacer(5)
-        self.row_pickpeaks.Add(self.peak_picking_algorithm_box)
-        self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.reference_plane_button)
-        self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.peaklist_name_text)
-        self.row_pickpeaks.AddSpacer(10)
-        self.row_pickpeaks.Add(self.peaklist_name_box)
-        self.row_pickpeaks.AddSpacer(5)
-        self.row_pickpeaks.Add(self.peak_pick_button)
+        self.row_pickpeaks.Add(self.row_pickpeaks2, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
 
         self.row1 = wx.BoxSizer(wx.HORIZONTAL)
         self.row1.Add(self.add_peaklist_button)
@@ -20570,10 +20691,21 @@ class PeakListWindow3D(wx.Frame):
             threshold = float(threshold_box_value)/100 *np.max(data)
 
             algorithm_selection =self.peak_picking_algorithm_box.GetValue()
+            sign_option = self.peak_picking_type.GetValue()
             if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
-                peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1,1])
+                if(sign_option=='Positive Peaks'):
+                    peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1,1])
+                elif(sign_option=='Negative Peaks'):
+                    peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection, msep=[1,1,1])
+                else:
+                    peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection, msep=[1,1,1])
             else:
-                peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
+                if(sign_option=='Positive Peaks'):
+                    peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
+                elif(sign_option=='Negative Peaks'):
+                    peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection)
+                else:
+                    peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection)
             
             if(self.main_frame.transposed2D == False):
                 x = self.main_frame.uc0.ppm(peaks["X_AXIS"])
@@ -20669,18 +20801,30 @@ class PeakListWindow3D(wx.Frame):
 
 
             algorithm_selection =self.peak_picking_algorithm_box.GetValue()
+            sign_option = self.peak_picking_type.GetValue()
             if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
                 peaks = []
                 for k, data_slice in enumerate(data_1D_slices):
                     try:
-                        peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, algorithm=algorithm_selection, msep=1))
+                        if(sign_option=='Positive Peaks'):
+                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, algorithm=algorithm_selection, msep=1))
+                        elif(sign_option=='Negative Peaks'):
+                            peaks.append(ng.peakpick.pick(data_slice, nthres=threshold, algorithm=algorithm_selection, msep=1))
+                        else:
+                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection, msep=1))
+
                     except:
                         peaks.append(0)
             else:
                 peaks = []
                 for k, data_slice in enumerate(data_1D_slices):
                     try:
-                        peaks.append(ng.peakpick.pick(data_1D_slices, pthres=threshold, algorithm=algorithm_selection))
+                        if(sign_option=='Positive Peaks'):
+                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, algorithm=algorithm_selection))
+                        elif(sign_option=='Negative Peaks'):
+                            peaks.append(ng.peakpick.pick(data_slice, nthres=threshold, algorithm=algorithm_selection))
+                        else:
+                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection))
                     except:
                         peaks.append(0)
             
@@ -20706,12 +20850,13 @@ class PeakListWindow3D(wx.Frame):
                 intensity_list = []
                 for p in peak:
                     intensity_list.append(p[-1])
-                for i,zval in enumerate(z_list):
-                    names1.append(names[i])
+                for j,zval in enumerate(z_list):
+                    names1.append(names[i]+'_'+str(j+1))
                     x.append(xval)
                     y.append(yval)
                     z.append(zval)
-                    intensities.append(intensity_list[i])
+                    intensities.append(intensity_list[j])
+
 
             
 
@@ -20954,14 +21099,14 @@ class PeakListWindow3D(wx.Frame):
                 with open(peaklist_file) as file:
                     lines = file.readlines()
                     if len(lines) != 0:
-                        for line in lines:
+                        for i, line in enumerate(lines):
                             line = line.split("\n")[0].split()
                             if len(line) >= 3:
                                 try:
                                     dictionary["peak_name"].append(line[0])
-                                    dictionary["shift1"].append(float(line[1]))
-                                    dictionary["shift2"].append(float(line[2]))
-                                    dictionary["shift3"].append(float(line[3]))
+                                    dictionary['shift1'].append(float(line[1]))
+                                    dictionary['shift2'].append(float(line[2]))
+                                    dictionary['shift3'].append(float(line[3]))
                                     try:
                                         dictionary["intensity"].append(float(line[4]))
                                     except:
@@ -20978,7 +21123,8 @@ class PeakListWindow3D(wx.Frame):
                 return None
 
             # Try to see if the chemical shifts of the peaks are within the 2D spectral range
-            dictionary = self.check_peaklist(dictionary)
+            if(new_peaklist==False):
+                dictionary = self.check_peaklist(dictionary)
 
         else:
             dictionary = {}
@@ -21018,64 +21164,76 @@ class PeakListWindow3D(wx.Frame):
         """
         Read peaklist that has been exported from a CCPN peaklist table.
         """
-        import pandas as pd # TODO: may need to add pandas to the requirements
-        df = pd.read_excel(peaklist_file, dtype=str)
 
-        try:
-            if(reference_plane==False):
-                peak_names = df.iloc[:, 0].tolist()
-                shift1 = df.iloc[:, 8].to_numpy()
-                shift2 = df.iloc[:, 9].to_numpy()
-                shift3 = df.iloc[:, 10].to_numpy()
-                intensity = df.iloc[:, 14].to_numpy()
+        message = 'Reading in a peaklist from an excel file is not currently implemented. Please use tabular (.tab format).'
+        dlg = wx.MessageDialog(
+                self,
+                message,
+                "Warning",
+                wx.OK,
+            )
+        dlg.ShowModal()
+        dlg.Destroy()
+        return None
 
-                shift1_1 = []
-                shift2_1 = []
-                shift3_1 = []
-                intensity_1 = []
 
-                for i in range(len(shift1)):
-                    shift1_1.append(float(shift1[i]))
-                    shift2_1.append(float(shift2[i]))
-                    shift3_1.append(float(shift3[i]))
-                    intensity_1.append(float(intensity[i]))
+        # df = pd.read_excel(peaklist_file, dtype=str)
 
-                dictionary = {}
-                dictionary["peak_name"] = peak_names
-                dictionary["shift1"] = shift1_1
-                dictionary["shift2"] = shift2_1
-                dictionary["shift3"] = shift3_1
-                dictionary["intensity"] = intensity_1
+        # try:
+        #     if(reference_plane==False):
+        #         peak_names = df.iloc[:, 0].tolist()
+        #         shift1 = df.iloc[:, 8].to_numpy()
+        #         shift2 = df.iloc[:, 9].to_numpy()
+        #         shift3 = df.iloc[:, 10].to_numpy()
+        #         intensity = df.iloc[:, 14].to_numpy()
 
-                # Try to see if the chemical shifts of the peaks are within the 2D spectral range
-                dictionary = self.check_peaklist(dictionary)
+        #         shift1_1 = []
+        #         shift2_1 = []
+        #         shift3_1 = []
+        #         intensity_1 = []
 
-                return dictionary
-            else:
-                peak_names = df.iloc[:, 0].tolist()
-                shift1 = df.iloc[:, 8].to_numpy()
-                shift2 = df.iloc[:, 9].to_numpy()
+        #         for i in range(len(shift1)):
+        #             shift1_1.append(float(shift1[i]))
+        #             shift2_1.append(float(shift2[i]))
+        #             shift3_1.append(float(shift3[i]))
+        #             intensity_1.append(float(intensity[i]))
 
-                shift1_1 = []
-                shift2_1 = []
+        #         dictionary = {}
+        #         dictionary["peak_name"] = peak_names
+        #         dictionary["shift1"] = shift1_1
+        #         dictionary["shift2"] = shift2_1
+        #         dictionary["shift3"] = shift3_1
+        #         dictionary["intensity"] = intensity_1
 
-                for i in range(len(shift1)):
-                    shift1_1.append(float(shift1[i]))
-                    shift2_1.append(float(shift2[i]))
+        #         # Try to see if the chemical shifts of the peaks are within the 2D spectral range
+        #         dictionary = self.check_peaklist(dictionary)
 
-                dictionary = {}
-                dictionary["peak_name"] = peak_names
-                dictionary["shift1"] = shift1_1
-                dictionary["shift2"] = shift2_1
+        #         return dictionary
+        #     else:
+        #         peak_names = df.iloc[:, 0].tolist()
+        #         shift1 = df.iloc[:, 8].to_numpy()
+        #         shift2 = df.iloc[:, 9].to_numpy()
 
-                # Try to see if the chemical shifts of the peaks are within the 2D spectral range
-                dictionary = self.check_reference_peaklist(dictionary)
+        #         shift1_1 = []
+        #         shift2_1 = []
 
-                return dictionary
+        #         for i in range(len(shift1)):
+        #             shift1_1.append(float(shift1[i]))
+        #             shift2_1.append(float(shift2[i]))
 
-        except:
-            self.peaklist_error_message()
-            return None
+        #         dictionary = {}
+        #         dictionary["peak_name"] = peak_names
+        #         dictionary["shift1"] = shift1_1
+        #         dictionary["shift2"] = shift2_1
+
+        #         # Try to see if the chemical shifts of the peaks are within the 2D spectral range
+        #         dictionary = self.check_reference_peaklist(dictionary)
+
+        #         return dictionary
+
+        # except:
+        #     self.peaklist_error_message()
+        #     return None
         
 
     def check_reference_peaklists(self, x, y, xpeaks, ypeaks):
@@ -21154,6 +21312,9 @@ class PeakListWindow3D(wx.Frame):
         mean_0 = np.mean(ppms_0)
         mean_1 = np.mean(ppms_1)
         mean_2 = np.mean(ppms_2)
+
+
+        # If there are two dimensions with the same ppm axis (e.g. (H)N(CA)NH), then the bore should be dimension 3
 
         # find out which chemical shift is the bore dimension
         if mean_0 > np.min(self.main_frame.main_frame.ppms_2) and mean_0 < np.max(
@@ -21447,16 +21608,6 @@ class PeakListWindow3D(wx.Frame):
         The code will also disable all the other buttons which have been
         selected
         """
-        # self.add_peaks_button.SetValue(False)
-        # dlg = wx.MessageDialog(
-        #     self,
-        #     "Add peaks is not currently implemented on 3D data. This functionality will be added soon",
-        #     "Information",
-        #     wx.OK,
-        # )
-        # dlg.ShowModal()
-        # dlg.Destroy()
-        # return
 
         if self.active_add == True:
             self.active_add = False
@@ -21658,6 +21809,18 @@ class PeakListWindow3D(wx.Frame):
             self.selected_peakname = self.peak_list_dictionary[
                 self.current_peaklist_box.GetValue()
             ]["peak_name"][min_index]
+
+
+            # def strip_name(name):
+            #     name1 = name.split('_')[:-2]
+
+            # # Find all peaks which contain the same name after the last _ (these are from the same bore)
+            # indexes = []
+            # for p in self.peak_list_dictionary[self.current_peaklist_box.GetValue()]["peak_name"]:
+            #     initial_name
+                
+
+
             self.remove_peak = True
 
         else:
@@ -21729,6 +21892,18 @@ class PeakListWindow3D(wx.Frame):
             self.move_peak_connect = self.main_frame.fig_bore.canvas.mpl_connect(
                 "button_press_event", self.on_click_movepeak3d
             )
+
+
+    def OnAddBorePeak(self, event):
+        # This functionality will be added shortly
+        dlg = wx.MessageDialog(
+                    self,
+                    "This feature is not yet implemented, but is planned to be added to a future release.",
+                    "Not yet implemented",
+                    wx.OK)
+        dlg.ShowModal()
+        dlg.Destroy()
+
 
     def on_click_movepeak3d(self, event):
         """

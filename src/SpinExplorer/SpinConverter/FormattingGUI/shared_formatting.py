@@ -460,6 +460,15 @@ class SharedFormatting:
         self.fid_conversion_box.AddSpacer(20)
         self.fid_conversion_box.Add(self.convert_button2)
 
+        # Have a button to open a popout to add nmr FID's together (post conversion)
+        self.add_button = wx.Button(
+            self.app, label="Add FIDs", size=(175, 20)
+        )
+        self.add_button.Bind(wx.EVT_BUTTON, self.app.on_add_fids)
+        self.fid_conversion_box.AddSpacer(20)
+        self.fid_conversion_box.Add(self.add_button)
+
+
         self.app.extra_boxes.AddSpacer(20)
         self.app.extra_boxes.Add(self.fid_conversion_box)
 

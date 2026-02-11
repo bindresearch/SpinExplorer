@@ -346,7 +346,7 @@ class Convert_nmrglue:
     
     def find_bruker_initial_point(self, fid, start):
         """
-        Estimate initial complex amplitude and phase of the fid
+        Estimate initial complex amplitude and phase caused by the digital filter
         """
         c = 1j
         amp = np.abs(fid[start])
@@ -390,29 +390,19 @@ class Convert_nmrglue:
         ph0 += p1
 
         data = ng.proc_base.zf_double(data, 1)
-
-        # ax.plot(np.linspace(0,1,len(data[0])), data[0])
-
         data = ng.proc_base.fft(data)
         data = ng.proc_base.ps(data, p0=-ph0)
         data = ng.bruker.remove_digital_filter(dic, data, post_proc=True)
-        from scipy.signal import hilbert
-        # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
         data = ng.proc_base.ht(data, data.shape[-1])
         
         data_real = data.real
         data_imag = ng.proc_base.ps(data, p0=180).imag
         data = data_real + 1j*data_imag
-        # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
-        # data = hilbert(data_real, data.shape[0])
         data = ng.proc_base.ifft(data)
 
-        # data = data[..., start:start + data.shape[-1]]
         midpoint = int(data.shape[-1]/2)
 
         data = data[...,:midpoint:]
-
-        # ax.plot(np.linspace(0,1,len(data[0])), data[0])
 
         return dic,data
 
