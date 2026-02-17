@@ -35,7 +35,7 @@ Build information
 -----------------
 The application was built on the following systems:
 
-- SpinExplorer_MacOS_AppleSilicon - MacBook Pro (2024), M4 Pro, macOS Tahoe 26.1
+- SpinExplorer_MacOS_AppleSilicon - MacBook Pro (2024), M4 Pro, macOS Tahoe 26.3
 - SpinExplorer_MacOS_x86_64 - MacBook Air (early 2015), 1.6GHz Dual-Core Intel i5, macOS Monterey 12.7.6
 - SpinExplorer_Windows_AMD64 - HP Z2 Tower Workstation, Intel(R) Core(TM) i7-14700K 3.40GHz, Windows 11 Pro 23H2
 
