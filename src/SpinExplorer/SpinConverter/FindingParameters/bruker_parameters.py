@@ -389,45 +389,50 @@ class ParameterExtractorBruker:
                         self.nucleus_frequencies.append(float(line[1]))
                         break
             if i >= 1:
+                print(i)
                 try:
                     file = open("acqu"+str(i+1) + "s", "r")
                     file_lines = file.readlines()
                     file.close()
                     nucleus=''
                     param = ''
+                    cont=True
                     for j in range(len(file_lines)):
                         # There is a bug where sometimes O1 is set to 0 in acqu2s even though the
                         # this was not the case. Check if O1=0, if it is, will need to get reference
                         # from the acqus file
+                        if(cont==False):
+                            break
+
                         if("##$NUC1=" in file_lines[j]):
                             line = file_lines[j].split()
                             nucleus = line[1]
                             nuclei.append(nucleus)
 
-                        # if("##$O1=" in file_lines[j]):
-                        #     line = file_lines[j].split()
-                        #     o1 = float(line[1])
-                        #     if(o1==0.0):
-                            # search acqus file for nucleus
-                        if(nucleus!=''):
-                            for j in range(len(self.acqus_file_lines)):
-                                if('##$NUC' in self.acqus_file_lines[j]):
-                                    if(nucleus in self.acqus_file_lines[j]):
+        
+                        if(nucleus!='' and nucleus!='<off>'):
+                            for k in range(len(self.acqus_file_lines)):
+                                if('##$NUC' in self.acqus_file_lines[k]):
+                                    if(nucleus in self.acqus_file_lines[k]):
                                         # count of this nucleus already in 
-                                        channel = self.acqus_file_lines[j].split('##$NUC')[1].split('=')[0]
+                                        channel = self.acqus_file_lines[k].split('##$NUC')[1].split('=')[0]
                                         param = '##$SFO' + channel + '='
                                 
                                 if(param!=''):
-                                    if param in self.acqus_file_lines[j]:
-                                        line = self.acqus_file_lines[j].split()
+                                    if param in self.acqus_file_lines[k]:
+                                        line = self.acqus_file_lines[k].split()
                                         self.nucleus_frequencies.append(float(line[1]))
+                                        cont = False
+                                        break
                         
+                                if "##$SFO1=" in file_lines[j] and param=='':
+                                    line = file_lines[j].split()
+                                    # Checking that sfo1_acqus is not equal to bf1
+                                    self.nucleus_frequencies.append(float(line[1]))
+                                    break
+                        elif(nucleus=='<off>'):
+                            self.nucleus_frequencies.append(0)
 
-                        if "##$SFO1=" in file_lines[j] and param=='':
-                            line = file_lines[j].split()
-                            # Checking that sfo1_acqus is not equal to bf1
-                            self.nucleus_frequencies.append(float(line[1]))
-                            break
                 except:
                     self.nucleus_frequencies.append(0)
             # if i == 2:
@@ -454,6 +459,8 @@ class ParameterExtractorBruker:
             #                 break
             #     except:
             #         self.nucleus_frequencies.append(0)
+
+
 
     def find_labels_bruker(self) -> None:
         """

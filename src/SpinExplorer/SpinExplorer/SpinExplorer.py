@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinExplorer                         ")
 print("-------------------------------------------------------------")
-print("               (version 1.2) 17th February 2026              ")
+print("               (version 1.3) 17th February 2026              ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
@@ -293,7 +293,7 @@ class SpinExplorer(wx.Frame):
         self.citation_box = wx.BoxSizer(wx.HORIZONTAL)
 
         self.copyright_statement = wx.StaticText(self, label="(c) 2025, James Eaton, Andrew Baldwin - University of Oxford")
-        self.copyright_statement1 = wx.StaticText(self, label="(c) 2025-2026, Bind Research (Version 1.2)")
+        self.copyright_statement1 = wx.StaticText(self, label="(c) 2025-2026, Bind Research (Version 1.3)")
 
         self.citation_box.Add(self.citation1)
         self.citation_box.AddSpacer(10)

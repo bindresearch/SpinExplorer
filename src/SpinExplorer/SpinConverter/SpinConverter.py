@@ -26,7 +26,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinConverter                        ")
 print("-------------------------------------------------------------")
-print("               (version 1.2) 17th February 2026              ")
+print("               (version 1.3) 17th February 2026              ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
