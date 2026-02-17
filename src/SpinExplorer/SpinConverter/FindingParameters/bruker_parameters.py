@@ -409,20 +409,18 @@ class ParameterExtractorBruker:
                         #     o1 = float(line[1])
                         #     if(o1==0.0):
                             # search acqus file for nucleus
-                        if(nucleus!='' and nuclei.count(nucleus)==1):
+                        if(nucleus!=''):
                             for j in range(len(self.acqus_file_lines)):
                                 if('##$NUC' in self.acqus_file_lines[j]):
                                     if(nucleus in self.acqus_file_lines[j]):
                                         # count of this nucleus already in 
                                         channel = self.acqus_file_lines[j].split('##$NUC')[1].split('=')[0]
                                         param = '##$SFO' + channel + '='
-
+                                
                                 if(param!=''):
                                     if param in self.acqus_file_lines[j]:
                                         line = self.acqus_file_lines[j].split()
                                         self.nucleus_frequencies.append(float(line[1]))
-                                        break
-                            break
                         
 
                         if "##$SFO1=" in file_lines[j] and param=='':
@@ -485,12 +483,15 @@ class ParameterExtractorBruker:
         # Find the correct order of labels
         self.labels_correct_order = []
         self.labels_correct_order.append(self.nuc1)
+
         for i in range(len(self.nucleus_frequencies)):
             if i == 0:
                 continue
             else:
+                added_nuc = 0
                 if self.nucleus_frequencies[i] == 0:
                     self.labels_correct_order.append("ID")
+                    added_nuc = 1
                 else:
                     for key in self.gamma:
                         if (
@@ -502,8 +503,13 @@ class ParameterExtractorBruker:
                         ):
                             if key in self.labels_correct_order:
                                 self.labels_correct_order.append(key + "_1")
+                                added_nuc = 1
                             else:
                                 self.labels_correct_order.append(key)
+                                added_nuc = 1
+                if(added_nuc==0):
+                    self.labels_correct_order.append('ID')
+                    
         
 
     def find_aqseq(self) -> None:
@@ -545,15 +551,16 @@ class ParameterExtractorBruker:
 
         self.size_indirect.reverse()
         self.sw_indirect.reverse()
-        freq1 = self.nucleus_frequencies[-1]
-        freq2 = self.nucleus_frequencies[-2]
-        self.nucleus_frequencies[-1] = freq2
-        self.nucleus_frequencies[-2] = freq1
+        freq1 = self.nucleus_frequencies[1]
+        freq2 = self.nucleus_frequencies[2]
+        self.nucleus_frequencies[1] = freq2
+        self.nucleus_frequencies[2] = freq1
         self.acqusition_modes_indirect.reverse()
-        lab1 = self.labels_correct_order[-1]
-        lab2 = self.labels_correct_order[-2]
-        self.labels_correct_order[-1] = lab2
-        self.labels_correct_order[-2] = lab1
+        lab1 = self.labels_correct_order[1]
+        lab2 = self.labels_correct_order[2]
+        self.labels_correct_order[1] = lab2
+        self.labels_correct_order[2] = lab1
+
 
     def find_gamma_bruker(self) -> None:
         """
@@ -687,6 +694,7 @@ class ParameterExtractorBruker:
                             if int(val) == 0 or int(val) == 1:
                                 self.pseudo_flag += 1
                             break
+            
 
             # try:
             #     self.pulseprogram_file = open("pulseprogram.precomp", "r")
@@ -999,24 +1007,18 @@ class ParameterExtractorBruker:
             ):
                 # Calculate referenced carrier frequencies based on water chemical shifts
                 self.sfrq0 = self.nucleus_frequencies[0] / (1 + self.water_ppm * 1e-6)
-                print(self.nucleus_frequencies[0])
-                print(self.water_ppm)
-                print(self.sfrq0)
-                print(self.nucleus_frequencies)
+
                 # Frequency for nucleus A = sfrq0 * gammaH/gammaA
                 self.dfrq_13C = self.sfrq0 * 0.251449530
                 self.dfrq_15N = self.sfrq0 * 0.101329118
                 self.dfrq_P31 = self.sfrq0 * 0.4048064954
                 self.dfrq_F19 = self.sfrq0 * 0.9412866605363297
 
-                print(self.labels_correct_order)
 
                 for i, label in enumerate(self.labels_correct_order):
                     # if(i+1>len(self.nucleus_frequencies)):
                     #     break
                     if label == "15N" or label == "N15":
-                        print(self.nucleus_frequencies[i])
-                        print(self.dfrq_15N)
                         self.ppms_referenced.append(
                             (
                                 (self.nucleus_frequencies[i] - self.dfrq_15N)
@@ -1085,6 +1087,8 @@ class ParameterExtractorBruker:
             self.references_other_labels.append("O2/BF2")
             self.references_other_labels.append("O3/BF3")
 
+
+
     def find_bruker_digital_filter_parameters(self):
         # Search through the acqus file to find the parameters
         acqus_file_lines = open(self.nmrdata.parameter_file, "r").readlines()
@@ -1093,6 +1097,7 @@ class ParameterExtractorBruker:
         self.decim = 0
         self.dspfvs = 0
         self.grpdly = 0
+        self.remove_filter_before_processing=False
         try:
             for i in range(len(acqus_file_lines)):
                 if "##$DECIM=" in acqus_file_lines[i]:
@@ -1104,12 +1109,24 @@ class ParameterExtractorBruker:
                 if "##$GRPDLY=" in acqus_file_lines[i]:
                     line = acqus_file_lines[i].split()
                     self.grpdly = float(line[1])
+
+                # Finding out what the digitiser mode is (need baseopt - 4) for nmrglue filter removal before processing
+                if "##$DIGMOD=" in acqus_file_lines[i]:
+                    line = acqus_file_lines[i].split()
+                    digimod = int(line[1])
+                    if(digimod==4):
+                        self.remove_filter_before_processing=True
+                        
+            
             self.include_digital_filter = True
+
+            
 
         except:
             self.decim = 0
             self.dspfvs = 0
             self.grpdly = 0
+            self.remove_filter_before_processing=False
             self.include_digital_filter = False
 
     def find_bruker_scaling_parameters(self):

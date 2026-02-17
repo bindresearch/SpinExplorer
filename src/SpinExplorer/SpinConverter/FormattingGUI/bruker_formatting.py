@@ -681,7 +681,10 @@ class FormatParametersBruker:
             majorDimension=1,
             style=wx.RA_SPECIFY_ROWS,
         )
-        self.digital_filter_radio_box.SetSelection(1)
+        if(self.params.remove_filter_before_processing==True):
+            self.digital_filter_radio_box.SetSelection(0)
+        else:
+            self.digital_filter_radio_box.SetSelection(1)
         self.digital_filter_box_sizer_total.AddSpacer(10)
         self.digital_filter_box_sizer_total.Add(self.digital_filter_radio_box)
 

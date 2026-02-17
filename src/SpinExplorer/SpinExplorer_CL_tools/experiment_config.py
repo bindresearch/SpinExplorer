@@ -613,6 +613,228 @@ def base2(data, nl, nw=0):
 
     return data
 
+
+
+"""
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
+def remove_digital_filter(dic, data, truncate=True):
+        """
+        Remove the digital filter from Bruker data.
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of Bruker parameters.
+        data : ndarray
+            Array of NMR data to remove digital filter from.
+        truncate : bool, optional
+            True to truncate the phase shift prior to removing the digital filter.
+            This typically produces a better looking spectrum but may remove
+            useful data.  False uses a non-truncated phase.
+        post_proc : bool, optional
+            True if the digital filter is to be removed post processing, i.e after
+            fourier transformation. The corrected FID will not be returned, only a
+            corrected spectrum in the frequency dimension will be returned
+
+        Returns
+        -------
+        ndata : ndarray
+            Array of NMR data with digital filter removed
+
+        See Also
+        ---------
+        rm_dig_filter : Remove digital filter by specifying parameters.
+
+        """
+        if "acqus" not in dic:
+            raise ValueError("dictionary does not contain acqus parameters")
+
+        if "DECIM" not in dic["acqus"]:
+            raise ValueError("dictionary does not contain DECIM parameter")
+        decim = dic["acqus"]["DECIM"]
+
+        if "DSPFVS" not in dic["acqus"]:
+            raise ValueError("dictionary does not contain DSPFVS parameter")
+        dspfvs = dic["acqus"]["DSPFVS"]
+
+        if "GRPDLY" not in dic["acqus"]:
+            grpdly = 0
+        else:
+            grpdly = dic["acqus"]["GRPDLY"]
+
+        return rm_dig_filter(data, decim, dspfvs, grpdly, truncate)
+    
+
+"""
+Obtained from nmrglue followed by customisation
+
+Copyright Notice and Statement for the nmrglue Project
+Copyright (c) 2010-2015 Jonathan J. Helmus
+All rights reserved.
+"""
+
+def rm_dig_filter(data, decim, dspfvs, grpdly=0, truncate_grpdly=True):
+        """
+        Remove the digital filter from Bruker data.
+
+        Parameters
+        ----------
+        data : ndarray
+            Array of NMR data to remove digital filter from.
+        decim : int
+            Decimation rate (Bruker DECIM parameter).
+        dspfvs : int
+            Firmware version (Bruker DSPFVS parameter).
+        grpdly : float, optional
+            Group delay. (Bruker GRPDLY parameter). When non-zero decim and
+            dspfvs are ignored.
+        truncate_grpdly : bool, optional
+            True to truncate the value of grpdly provided or determined from
+            the decim and dspfvs parameters before removing the digital filter.
+            This typically produces a better looking spectrum but may remove useful
+            data.  False uses a non-truncated grpdly value.
+        post_proc : bool, optional
+            True if the digital filter is to be removed post processing, i.e after
+            fourier transformation. The corrected time domain data will not be
+            returned, only the corrected spectrum in the frequency dimension will
+            be returned
+
+        Returns
+        -------
+        ndata : ndarray
+            Array of NMR data with digital filter removed.
+
+        See Also
+        --------
+        remove_digital_filter : Remove digital filter using Bruker dictionary.
+
+        """
+        #    A first order phase correction equal to 2*PI*GRPDLY is applied to the
+        #    data and the time-corrected FT data is returned
+
+        # The frequency dimension will have the same number of points as the
+        # original time domain data, but the time domain data will remain
+        # uncorrected
+        # -----------------------------------------------------------------------
+
+        if grpdly > 0:  # use group delay value if provided (not 0 or -1)
+            phase = grpdly
+
+        # determine the phase correction
+        else:
+            if dspfvs >= 14:  # DSPFVS greater than 14 give no phase correction.
+                phase = 0.0
+            else:  # loop up the phase in the table
+                bruker_dsp_table = {
+                    10: {
+                        2: 44.75,
+                        3: 33.5,
+                        4: 66.625,
+                        6: 59.083333333333333,
+                        8: 68.5625,
+                        12: 60.375,
+                        16: 69.53125,
+                        24: 61.020833333333333,
+                        32: 70.015625,
+                        48: 61.34375,
+                        64: 70.2578125,
+                        96: 61.505208333333333,
+                        128: 70.37890625,
+                        192: 61.5859375,
+                        256: 70.439453125,
+                        384: 61.626302083333333,
+                        512: 70.4697265625,
+                        768: 61.646484375,
+                        1024: 70.48486328125,
+                        1536: 61.656575520833333,
+                        2048: 70.492431640625,
+                    },
+                    11: {
+                        2: 46.0,
+                        3: 36.5,
+                        4: 48.0,
+                        6: 50.166666666666667,
+                        8: 53.25,
+                        12: 69.5,
+                        16: 72.25,
+                        24: 70.166666666666667,
+                        32: 72.75,
+                        48: 70.5,
+                        64: 73.0,
+                        96: 70.666666666666667,
+                        128: 72.5,
+                        192: 71.333333333333333,
+                        256: 72.25,
+                        384: 71.666666666666667,
+                        512: 72.125,
+                        768: 71.833333333333333,
+                        1024: 72.0625,
+                        1536: 71.916666666666667,
+                        2048: 72.03125,
+                    },
+                    12: {
+                        2: 46.0,
+                        3: 36.5,
+                        4: 48.0,
+                        6: 50.166666666666667,
+                        8: 53.25,
+                        12: 69.5,
+                        16: 71.625,
+                        24: 70.166666666666667,
+                        32: 72.125,
+                        48: 70.5,
+                        64: 72.375,
+                        96: 70.666666666666667,
+                        128: 72.5,
+                        192: 71.333333333333333,
+                        256: 72.25,
+                        384: 71.666666666666667,
+                        512: 72.125,
+                        768: 71.833333333333333,
+                        1024: 72.0625,
+                        1536: 71.916666666666667,
+                        2048: 72.03125,
+                    },
+                    13: {
+                        2: 2.75,
+                        3: 2.8333333333333333,
+                        4: 2.875,
+                        6: 2.9166666666666667,
+                        8: 2.9375,
+                        12: 2.9583333333333333,
+                        16: 2.96875,
+                        24: 2.9791666666666667,
+                        32: 2.984375,
+                        48: 2.9895833333333333,
+                        64: 2.9921875,
+                        96: 2.9947916666666667,
+                    },
+                }
+                if dspfvs not in bruker_dsp_table:
+                    raise ValueError("dspfvs not in lookup table")
+                if decim not in bruker_dsp_table[dspfvs]:
+                    raise ValueError("decim not in lookup table")
+                phase = bruker_dsp_table[dspfvs][decim]
+
+        if truncate_grpdly:  # truncate the phase
+            phase = np.floor(phase)
+
+        s = data.shape[-1]
+        pdata = data * np.exp(-2.0j * np.pi * phase * np.arange(s) / s)
+        pdata = pdata.astype(data.dtype)
+        return pdata
+
+
+
+
+
+
 @dataclass
 class DimensionConfig:
     """Holds information on dimension processing parameters."""
@@ -853,7 +1075,7 @@ class DimensionConfig:
         }
         return proc_dic
     
-    def apply_processing(self, dic, data, dim):
+    def apply_processing(self, dic, data, dim, filter_removal):
         """
         
         Apply processing steps directly to dic and data.
@@ -941,6 +1163,10 @@ class DimensionConfig:
                 dic, data = ng.pipe_proc.ft(dic, data, neg=True)
             elif self.ft_option == FTOptions.ALT_NEG:
                 dic, data = ng.pipe_proc.ft(dic, data, alt = True, neg=True)
+            
+            if(dim==0 and filter_removal==True):
+                dic_bruker, dat_bruker = ng.bruker.read("./")
+                data = remove_digital_filter(dic_bruker, data, truncate=False)
         
         if self.ph_flag:
             dic, data = ng.pipe_proc.ps(dic, data, p0=self.ph_p0, p1=self.ph_p1)
@@ -1066,6 +1292,185 @@ class DimensionConfig:
         }
         defaults.update(overrides)
         return cls(**defaults)
+    
+    @classmethod
+    def nitrogen_alt(cls, **overrides) -> "DimensionConfig":
+        """Create a 15N processing configuration with the sign alternation FTMODE."""
+        defaults = {
+            "solvent_suppression_flag": False,
+            "solvent_suppression_filter_length": 0,
+            "solvent_suppression_choice": SolventSuppressionFilter.LOW_PASS,
+            "solvent_suppression_low_pass": LowpassChoices.BOXCAR,
+            "lp_flag": False,
+            "lp_choice": LPChoices.LINEAR_PREDICTION,
+            "lp_predicted_point": LPPredictedPoints.AFTER_FID,
+            "lp_predicted_coefficient": LPPredictedCoefficients.FORWARD,
+            "nus_file": "",
+            "nus_extension": 0,
+            "nus_cpu": 0,
+            "nus_iterations": 0,
+            "apod_flag": True,
+            "apod_type": ApodTypes.EXPONENTIAL,
+            "apod_correction": 0.5,
+            "apod_lb": 1.0,
+            "zf_flag": True,
+            "zf_type": ZFTypes.DOUBLING_SPECTRUM_SIZE,
+            "zf_additional_param": ZFAdditionalParams.DOUBLING_NUMBER,
+            "zf_additional_value": 1,
+            "zf_filling_round": True,
+            "ft_flag": True,
+            "ft_option": FTOptions.ALT,
+            "ph_flag": True,
+            "ph_f1180_flag": False,
+            "ph_p0": 0.0,
+            "ph_p1": 0.0,
+            "ph_magnitude_mode": False,
+            "ex_flag": False,
+            "ex_start_ppm": 90.0,
+            "ex_end_ppm": 140.0,
+            "bl_flag": False,
+            "bl_method": BaselineOptions.LINEAR,
+            "bl_params_node_width": 2,
+            "bl_params_node_list": [0, 5, 95, 100],
+            "bl_params_polynomial_order": 2,
+        }
+        defaults.update(overrides)
+        return cls(**defaults)
+    
+
+    @classmethod
+    def nus_nitrogen(cls, **overrides) -> "DimensionConfig":
+        """Create a nus 15N processing configuration."""
+        defaults = {
+            "solvent_suppression_flag": False,
+            "solvent_suppression_filter_length": 0,
+            "solvent_suppression_choice": SolventSuppressionFilter.LOW_PASS,
+            "solvent_suppression_low_pass": LowpassChoices.BOXCAR,
+            "lp_flag": False,
+            "lp_choice": LPChoices.NUS_RECONSTRUCTION,
+            "lp_predicted_point": LPPredictedPoints.AFTER_FID,
+            "lp_predicted_coefficient": LPPredictedCoefficients.FORWARD,
+            "nus_file": "nuslist",
+            "nus_extension": 0,
+            "nus_cpu": 2,
+            "nus_iterations": 50,
+            "apod_flag": True,
+            "apod_type": ApodTypes.EXPONENTIAL,
+            "apod_correction": 0.5,
+            "apod_lb": 1.0,
+            "zf_flag": True,
+            "zf_type": ZFTypes.DOUBLING_SPECTRUM_SIZE,
+            "zf_additional_param": ZFAdditionalParams.DOUBLING_NUMBER,
+            "zf_additional_value": 1,
+            "zf_filling_round": True,
+            "ft_flag": True,
+            "ft_option": FTOptions.STANDARD,
+            "ph_flag": True,
+            "ph_f1180_flag": False,
+            "ph_p0": 0.0,
+            "ph_p1": 0.0,
+            "ph_magnitude_mode": False,
+            "ex_flag": False,
+            "ex_start_ppm": 90.0,
+            "ex_end_ppm": 140.0,
+            "bl_flag": False,
+            "bl_method": BaselineOptions.LINEAR,
+            "bl_params_node_width": 2,
+            "bl_params_node_list": [0, 5, 95, 100],
+            "bl_params_polynomial_order": 2,
+        }
+        defaults.update(overrides)
+        return cls(**defaults)
+    
+
+    @classmethod
+    def standard_carbon(cls, **overrides) -> "DimensionConfig":
+        """Create a standard 13C processing configuration."""
+        defaults = {
+            "solvent_suppression_flag": False,
+            "solvent_suppression_filter_length": 0,
+            "solvent_suppression_choice": SolventSuppressionFilter.LOW_PASS,
+            "solvent_suppression_low_pass": LowpassChoices.BOXCAR,
+            "lp_flag": False,
+            "lp_choice": LPChoices.LINEAR_PREDICTION,
+            "lp_predicted_point": LPPredictedPoints.AFTER_FID,
+            "lp_predicted_coefficient": LPPredictedCoefficients.FORWARD,
+            "nus_file": "",
+            "nus_extension": 0,
+            "nus_cpu": 0,
+            "nus_iterations": 0,
+            "apod_flag": True,
+            "apod_type": ApodTypes.EXPONENTIAL,
+            "apod_correction": 0.5,
+            "apod_lb": 1.0,
+            "zf_flag": True,
+            "zf_type": ZFTypes.DOUBLING_SPECTRUM_SIZE,
+            "zf_additional_param": ZFAdditionalParams.DOUBLING_NUMBER,
+            "zf_additional_value": 1,
+            "zf_filling_round": True,
+            "ft_flag": True,
+            "ft_option": FTOptions.STANDARD,
+            "ph_flag": True,
+            "ph_f1180_flag": False,
+            "ph_p0": 0.0,
+            "ph_p1": 0.0,
+            "ph_magnitude_mode": False,
+            "ex_flag": False,
+            "ex_start_ppm": 90.0,
+            "ex_end_ppm": 140.0,
+            "bl_flag": False,
+            "bl_method": BaselineOptions.LINEAR,
+            "bl_params_node_width": 2,
+            "bl_params_node_list": [0, 5, 95, 100],
+            "bl_params_polynomial_order": 2,
+        }
+        defaults.update(overrides)
+        return cls(**defaults)
+    
+
+    @classmethod
+    def nus_carbon(cls, **overrides) -> "DimensionConfig":
+        """Create a nus 13C processing configuration."""
+        defaults = {
+            "solvent_suppression_flag": False,
+            "solvent_suppression_filter_length": 0,
+            "solvent_suppression_choice": SolventSuppressionFilter.LOW_PASS,
+            "solvent_suppression_low_pass": LowpassChoices.BOXCAR,
+            "lp_flag": False,
+            "lp_choice": LPChoices.NUS_RECONSTRUCTION,
+            "lp_predicted_point": LPPredictedPoints.AFTER_FID,
+            "lp_predicted_coefficient": LPPredictedCoefficients.FORWARD,
+            "nus_file": "nuslist",
+            "nus_extension": 0,
+            "nus_cpu": 2,
+            "nus_iterations": 50,
+            "apod_flag": True,
+            "apod_type": ApodTypes.EXPONENTIAL,
+            "apod_correction": 0.5,
+            "apod_lb": 1.0,
+            "zf_flag": True,
+            "zf_type": ZFTypes.DOUBLING_SPECTRUM_SIZE,
+            "zf_additional_param": ZFAdditionalParams.DOUBLING_NUMBER,
+            "zf_additional_value": 1,
+            "zf_filling_round": True,
+            "ft_flag": True,
+            "ft_option": FTOptions.STANDARD,
+            "ph_flag": True,
+            "ph_f1180_flag": False,
+            "ph_p0": 0.0,
+            "ph_p1": 0.0,
+            "ph_magnitude_mode": False,
+            "ex_flag": False,
+            "ex_start_ppm": 90.0,
+            "ex_end_ppm": 140.0,
+            "bl_flag": False,
+            "bl_method": BaselineOptions.LINEAR,
+            "bl_params_node_width": 2,
+            "bl_params_node_list": [0, 5, 95, 100],
+            "bl_params_polynomial_order": 2,
+        }
+        defaults.update(overrides)
+        return cls(**defaults)
 
 
 @dataclass
@@ -1102,8 +1507,24 @@ class ExperimentConfigStore:
 
         with open('parameters.json','w') as outy:
             json.dump(proc_dic, outy, indent = 4)
+
+    def set_pseudo_flag(self, flag: bool)->None:
+        """
+        Setting the pseudo flag to either true or false
+        (required to get the right axis labels for nmrglue processing)
+        """
+        self.pseudo_flag = flag
+
+
+
+    def process_data_pipe(self):
+        """
+        Process NMR data using nmrpipe (for data requiring
+        NUS reconstruction)
+        """
+
     
-    def process_data(self):
+    def process_data(self, filter_removal=False):
         """
         Process NMR data directly using the configuration.
         
@@ -1117,14 +1538,25 @@ class ExperimentConfigStore:
 
         # Load data
         dic, data = ng.pipe.read(self.fid_name)
+
+        # Set the comment to nmrglue so that the fact nmrglue processing was used is noted in the processed spectrum header
+        dic['FDCOMMENT'] = 'nmrglue'
+        
+        try:
+            if(self.pseudo_flag==True):
+                # Adding the fact that there is a pseudo axis to the FDCOMMENT
+                dic['FDCOMMENT'] += '_pseudo'
+        except:
+            pass
+
         
         # Process each dimension
         for i, (label, config) in enumerate(zip(self.dim_labels, self.dim_configs)):
             print(f"Processing dimension {i} ({label})...")
             
             # Apply processing for this dimension
-            dic, data = config.apply_processing(dic, data, i)
-            
+            dic, data = config.apply_processing(dic, data, i, filter_removal==False)
+
             # Transpose if not the last dimension
             if i < len(self.dim_configs) - 1:
                 dic, data = ng.pipe_proc.tp(dic, data)
@@ -1135,3 +1567,4 @@ class ExperimentConfigStore:
             print(f"Saved processed data to {self.ft_name}")
         
         return dic, data
+    

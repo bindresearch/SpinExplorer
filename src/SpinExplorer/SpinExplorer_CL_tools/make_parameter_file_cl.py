@@ -62,8 +62,8 @@ class parameter_write_cl:
         Adding the complex dimension sizes to the dictionary
         """
         dictionary["conversion"]["spectral parameters"]["sizes"] = {}
-        dictionary["conversion"]["spectral parameters"]["sizes"]["complex"] = [str(size) for size in self.conv.complex_sizes]
-        dictionary["conversion"]["spectral parameters"]["sizes"]["real"] = [str(size) for size in self.conv.real_sizes]
+        dictionary["conversion"]["spectral parameters"]["sizes"]["complex"] = [str(int(size)) for size in self.conv.complex_sizes]
+        dictionary["conversion"]["spectral parameters"]["sizes"]["real"] = [str(int(size)) for size in self.conv.real_sizes]
         return dictionary
 
     def add_acqusition_mode(self, dictionary: dict) -> dict:
@@ -178,8 +178,14 @@ class parameter_write_cl:
         # Remove digital filter checkbox
         remove_digital_filter = True
 
+        if(self.conv.params.remove_filter_before_processing==True):
+            remove='Before'
+        else:
+            remove='After'
+
+
         dictionary["conversion"]["digital filter parameters"]["Remove Digital Filter"] = remove_digital_filter
-        dictionary["conversion"]["digital filter parameters"]["Remove Before/After Fourier Transform"] = 'Before'
+        dictionary["conversion"]["digital filter parameters"]["Remove Before/After Fourier Transform"] = remove
         dictionary["conversion"]["digital filter parameters"]["Decimation Rate (decim)"] = str(decim)
         dictionary["conversion"]["digital filter parameters"]["DSP Firmware Version (dspfvs)"] = str(dspfvs)
         dictionary["conversion"]["digital filter parameters"]["Group Delay (grpdly)"] = str(grpdly)

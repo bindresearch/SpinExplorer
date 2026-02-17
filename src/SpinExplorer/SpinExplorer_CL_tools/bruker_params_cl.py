@@ -313,12 +313,14 @@ class ParameterExtractorBruker:
             if i > 3:
                 print("Error: Only able to convert data with up to 4 indirect dimensions. Unable to convert data to NMRPipe format. Please check the acqus file and try again.")
 
+
     def find_nucleus_frequencies_bruker(self) -> None:
         """
         Searching through the Bruker acqus file for the Larmor frequency
         of each nucleus recorded.
         """
         self.nucleus_frequencies = []
+        nuclei = []
         for i in range(len(self.size_indirect) + 1):
             if i == 0:
                 for j in range(len(self.acqus_file_lines)):
@@ -326,42 +328,72 @@ class ParameterExtractorBruker:
                         line = self.acqus_file_lines[j].split()
                         self.nucleus_frequencies.append(float(line[1]))
                         break
-            if i == 1:
+            if i >= 1:
                 try:
-                    file = open("acqu2s", "r")
+                    file = open("acqu"+str(i+1) + "s", "r")
                     file_lines = file.readlines()
                     file.close()
+                    nucleus=''
+                    param = ''
                     for j in range(len(file_lines)):
-                        if "##$SFO1=" in file_lines[j]:
+                        # There is a bug where sometimes O1 is set to 0 in acqu2s even though the
+                        # this was not the case. Check if O1=0, if it is, will need to get reference
+                        # from the acqus file
+                        if("##$NUC1=" in file_lines[j]):
                             line = file_lines[j].split()
+                            nucleus = line[1]
+                            nuclei.append(nucleus)
+
+                        # if("##$O1=" in file_lines[j]):
+                        #     line = file_lines[j].split()
+                        #     o1 = float(line[1])
+                        #     if(o1==0.0):
+                            # search acqus file for nucleus
+                        if(nucleus!=''):
+                            for j in range(len(self.acqus_file_lines)):
+                                if('##$NUC' in self.acqus_file_lines[j]):
+                                    if(nucleus in self.acqus_file_lines[j]):
+                                        # count of this nucleus already in 
+                                        channel = self.acqus_file_lines[j].split('##$NUC')[1].split('=')[0]
+                                        param = '##$SFO' + channel + '='
+                                
+                                if(param!=''):
+                                    if param in self.acqus_file_lines[j]:
+                                        line = self.acqus_file_lines[j].split()
+                                        self.nucleus_frequencies.append(float(line[1]))
+                        
+
+                        if "##$SFO1=" in file_lines[j] and param=='':
+                            line = file_lines[j].split()
+                            # Checking that sfo1_acqus is not equal to bf1
                             self.nucleus_frequencies.append(float(line[1]))
                             break
                 except:
                     self.nucleus_frequencies.append(0)
-            if i == 2:
-                try:
-                    file = open("acqu3s", "r")
-                    file_lines = file.readlines()
-                    file.close()
-                    for j in range(len(file_lines)):
-                        if "##$SFO1=" in file_lines[j]:
-                            line = file_lines[j].split()
-                            self.nucleus_frequencies.append(float(line[1]))
-                            break
-                except:
-                    self.nucleus_frequencies.append(0)
-            if i == 3:
-                try:
-                    file = open("acqu4s", "r")
-                    file_lines = file.readlines()
-                    file.close()
-                    for j in range(len(file_lines)):
-                        if "##$SFO1=" in file_lines[j]:
-                            line = file_lines[j].split()
-                            self.nucleus_frequencies.append(float(line[1]))
-                            break
-                except:
-                    self.nucleus_frequencies.append(0)
+            # if i == 2:
+            #     try:
+            #         file = open("acqu3s", "r")
+            #         file_lines = file.readlines()
+            #         file.close()
+            #         for j in range(len(file_lines)):
+            #             if "##$SFO1=" in file_lines[j]:
+            #                 line = file_lines[j].split()
+            #                 self.nucleus_frequencies.append(float(line[1]))
+            #                 break
+            #     except:
+            #         self.nucleus_frequencies.append(0)
+            # if i == 3:
+            #     try:
+            #         file = open("acqu4s", "r")
+            #         file_lines = file.readlines()
+            #         file.close()
+            #         for j in range(len(file_lines)):
+            #             if "##$SFO1=" in file_lines[j]:
+            #                 line = file_lines[j].split()
+            #                 self.nucleus_frequencies.append(float(line[1]))
+            #                 break
+            #     except:
+            #         self.nucleus_frequencies.append(0)
 
     def find_labels_bruker(self) -> None:
         """
@@ -391,12 +423,15 @@ class ParameterExtractorBruker:
         # Find the correct order of labels
         self.labels_correct_order = []
         self.labels_correct_order.append(self.nuc1)
+
         for i in range(len(self.nucleus_frequencies)):
             if i == 0:
                 continue
             else:
+                added_nuc = 0
                 if self.nucleus_frequencies[i] == 0:
                     self.labels_correct_order.append("ID")
+                    added_nuc = 1
                 else:
                     for key in self.gamma:
                         if (
@@ -404,13 +439,116 @@ class ParameterExtractorBruker:
                                 abs(field * self.gamma[key])
                                 - self.nucleus_frequencies[i]
                             )
-                            < 1
+                            < 0.1
                         ):
-                            if key in self.labels:
-                                if key in self.labels_correct_order:
-                                    self.labels_correct_order.append(key + "_1")
-                                else:
-                                    self.labels_correct_order.append(key)
+                            if key in self.labels_correct_order:
+                                self.labels_correct_order.append(key + "_1")
+                                added_nuc = 1
+                            else:
+                                self.labels_correct_order.append(key)
+                                added_nuc = 1
+                if(added_nuc==0):
+                    self.labels_correct_order.append('ID')
+
+
+    # def find_nucleus_frequencies_bruker(self) -> None:
+    #     """
+    #     Searching through the Bruker acqus file for the Larmor frequency
+    #     of each nucleus recorded.
+    #     """
+    #     self.nucleus_frequencies = []
+    #     for i in range(len(self.size_indirect) + 1):
+    #         if i == 0:
+    #             for j in range(len(self.acqus_file_lines)):
+    #                 if "##$SFO1=" in self.acqus_file_lines[j]:
+    #                     line = self.acqus_file_lines[j].split()
+    #                     self.nucleus_frequencies.append(float(line[1]))
+    #                     break
+    #         if i == 1:
+    #             try:
+    #                 file = open("acqu2s", "r")
+    #                 file_lines = file.readlines()
+    #                 file.close()
+    #                 for j in range(len(file_lines)):
+    #                     if "##$SFO1=" in file_lines[j]:
+    #                         line = file_lines[j].split()
+    #                         self.nucleus_frequencies.append(float(line[1]))
+    #                         break
+    #             except:
+    #                 self.nucleus_frequencies.append(0)
+    #         if i == 2:
+    #             try:
+    #                 file = open("acqu3s", "r")
+    #                 file_lines = file.readlines()
+    #                 file.close()
+    #                 for j in range(len(file_lines)):
+    #                     if "##$SFO1=" in file_lines[j]:
+    #                         line = file_lines[j].split()
+    #                         self.nucleus_frequencies.append(float(line[1]))
+    #                         break
+    #             except:
+    #                 self.nucleus_frequencies.append(0)
+    #         if i == 3:
+    #             try:
+    #                 file = open("acqu4s", "r")
+    #                 file_lines = file.readlines()
+    #                 file.close()
+    #                 for j in range(len(file_lines)):
+    #                     if "##$SFO1=" in file_lines[j]:
+    #                         line = file_lines[j].split()
+    #                         self.nucleus_frequencies.append(float(line[1]))
+    #                         break
+    #             except:
+    #                 self.nucleus_frequencies.append(0)
+
+    # def find_labels_bruker(self) -> None:
+    #     """
+    #     Search through the Bruker acqus file to find the labels for each
+    #     dimension.
+    #     """
+    #     self.labels = []
+    #     for j in range(len(self.acqus_file_lines)):
+    #         if (
+    #             "##$NUC" in self.acqus_file_lines[j]
+    #             and "##$NUCLEUS" not in self.acqus_file_lines[j]
+    #             and "##$NUCLEI" not in self.acqus_file_lines[j]
+    #         ):
+    #             line = self.acqus_file_lines[j].split()
+    #             self.labels.append(line[1].split("<")[1].split(">")[0])
+
+    #     # If the labels are off, then change them to ID
+    #     for i in range(len(self.labels)):
+    #         if self.labels[i] == "off":
+    #             self.labels[i] = "ID"
+
+    #     # Work out what the correct order of labels is (i.e. if the nuclei match their frequencies etc)
+    #     self.find_gamma_bruker()
+    #     self.nuc1 = self.labels[0]
+    #     # Find out the field strength using gamma and the carrier frequency
+    #     field = self.nucleus_frequencies[0] / self.gamma[self.nuc1]
+    #     # Find the correct order of labels
+    #     self.labels_correct_order = []
+    #     self.labels_correct_order.append(self.nuc1)
+    #     for i in range(len(self.nucleus_frequencies)):
+    #         if i == 0:
+    #             continue
+    #         else:
+    #             if self.nucleus_frequencies[i] == 0:
+    #                 self.labels_correct_order.append("ID")
+    #             else:
+    #                 for key in self.gamma:
+    #                     if (
+    #                         abs(
+    #                             abs(field * self.gamma[key])
+    #                             - self.nucleus_frequencies[i]
+    #                         )
+    #                         < 1
+    #                     ):
+    #                         if key in self.labels:
+    #                             if key in self.labels_correct_order:
+    #                                 self.labels_correct_order.append(key + "_1")
+    #                             else:
+    #                                 self.labels_correct_order.append(key)
 
     def find_aqseq(self) -> None:
         """
@@ -829,6 +967,7 @@ class ParameterExtractorBruker:
         self.decim = 0
         self.dspfvs = 0
         self.grpdly = 0
+        self.remove_filter_before_processing=False
         try:
             for i in range(len(acqus_file_lines)):
                 if "##$DECIM=" in acqus_file_lines[i]:
@@ -840,12 +979,24 @@ class ParameterExtractorBruker:
                 if "##$GRPDLY=" in acqus_file_lines[i]:
                     line = acqus_file_lines[i].split()
                     self.grpdly = float(line[1])
+
+                # Finding out what the digitiser mode is (need baseopt - 4) for nmrglue filter removal before processing
+                if "##$DIGMOD=" in acqus_file_lines[i]:
+                    line = acqus_file_lines[i].split()
+                    digimod = int(line[1])
+                    if(digimod==4):
+                        self.remove_filter_before_processing=True
+                        
+            
             self.include_digital_filter = True
+
+            
 
         except:
             self.decim = 0
             self.dspfvs = 0
             self.grpdly = 0
+            self.remove_filter_before_processing=False
             self.include_digital_filter = False
 
     def find_bruker_scaling_parameters(self):

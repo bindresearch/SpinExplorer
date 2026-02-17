@@ -193,7 +193,6 @@ class ProcessNMRGlue:
                     elif self.nmr_data.index == 1:
                         # If the pseudo axis is the central axis then need to move the third axis
                         dic, data = self.transpose_3d(dic, data, auto=True)
-
                         dic, data = self.zero_transpose_3d(dic, data)
                 else:
                     dic, data = self.transpose_3d(dic, data, auto=True)
@@ -670,7 +669,6 @@ class ProcessNMRGlue:
 
         if dimension == 0:
             digital_filter_removal = self.check_digital_filter_removal()
-            print(digital_filter_removal)
             if digital_filter_removal == True:
                 dic_bruker, dat_bruker = ng.bruker.read("./")
                 data = self.remove_digital_filter(dic_bruker, data, truncate=False)

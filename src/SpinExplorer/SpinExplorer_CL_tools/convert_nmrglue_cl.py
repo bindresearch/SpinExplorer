@@ -251,8 +251,12 @@ class Convert_nmrglue:
 
         if self.nmrdata.spectrometer == "Bruker":
             if self.params.include_digital_filter:
-                # default to remove digital filter before fourier transform
-                dic, data = self.remove_digital_filter_fid(dic, data)
+                if(self.params.remove_filter_before_processing==True):
+                    p0_only=False
+                else:
+                    p0_only=True
+                dic, data = self.remove_digital_filter_fid(dic, data, p0_only)
+                
 
             C.from_bruker(dic, data, u)
         else:
@@ -462,7 +466,7 @@ class Convert_nmrglue:
 
         return c
 
-    def remove_digital_filter_fid(self, dic, data: NDArray) -> NDArray:
+    def remove_digital_filter_fid(self, dic, data: NDArray, p0_only=False) -> NDArray:
         """
         Removing the Bruker digital filter before Fourier transform
         (post_proc=False). This amounts to a circular shift of the
@@ -473,7 +477,29 @@ class Convert_nmrglue:
         grpdly = self.params.grpdly
 
         # fid = the first slice
-        fid = data if data.ndim == 1 else data[0]
+        if(data.ndim == 1):
+            fid = data
+        elif(data.ndim == 2):
+            # Take the slice with the highest overall intensity for the phasing of the first point
+            max_index = 0
+            max_value = 0
+            for i in range(len(data)):
+                if(np.max(data[i])>max_value):
+                    max_index=i
+                    max_value=np.max(data[i])
+            fid = data[max_index]
+        else:
+            # Take the slice with the highest overall intensity for the phasing of the first point
+            max_index1 = 0
+            max_index2 = 0
+            max_value = 0
+            for i in range(len(data)):
+                for j in range(len(data[i])):
+                    if(np.max(data[i][j])>max_value):
+                        max_index1=i
+                        max_index2=j
+                        max_value=np.max(data[i][j])
+            fid = data[max_index1][max_index2]
 
         if grpdly == 0.0:
             return data
@@ -492,16 +518,20 @@ class Convert_nmrglue:
 
         data = ng.proc_base.fft(data)
         data = ng.proc_base.ps(data, p0=-ph0)
-        data = ng.bruker.remove_digital_filter(dic, data, post_proc=True)
-        from scipy.signal import hilbert # type: ignore
-        # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
-        data = ng.proc_base.ht(data, data.shape[-1])
-        
-        data_real = data.real
-        data_imag = ng.proc_base.ps(data, p0=180).imag
-        data = data_real + 1j*data_imag
-        # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
-        # data = hilbert(data_real, data.shape[0])
+
+
+        if(p0_only==False):
+            data = ng.bruker.remove_digital_filter(dic, data, post_proc=True)
+            from scipy.signal import hilbert # type: ignore
+            # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
+            data = ng.proc_base.ht(data, data.shape[-1])
+            
+            data_real = data.real
+            data_imag = ng.proc_base.ps(data, p0=180).imag
+            data = data_real + 1j*data_imag
+            # ax.plot(np.linspace(0,1,len(data[0])), data[0].imag)
+            # data = hilbert(data_real, data.shape[0])
+
         data = ng.proc_base.ifft(data)
 
         # data = data[..., start:start + data.shape[-1]]

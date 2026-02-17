@@ -118,35 +118,52 @@ class PulseSequenceParser:
             PulseSequenceError: If no valid sequence name found
             NoConfigurationError: If config_registry provided and no config exists
         """
-        pulseprogram_path = self.folder / 'pulseprogram'
+
+        # Try to see if lists/pp exists
+        try:
+            import os
+            pulseprogram_path = './lists/pp/'
+            files = os.listdir(pulseprogram_path)
+            sequence = ''
+            for file in files:
+                if('.incl' not in file):
+                    sequence=file
+                    return sequence
+            
+            
+        except:
+
+            pulseprogram_path = self.folder / 'pulseprogram'
+            
+            if not pulseprogram_path.exists():
+                pulseprogram_path = self.folder / 'pulseprogram.precomp'
+                if not pulseprogram_path.exists():
+                    raise PulseProgramNotFoundError(
+                        f"'pulseprogram' file not found in {self.folder}"
+                    )
         
-        if not pulseprogram_path.exists():
-            raise PulseProgramNotFoundError(
-                f"'pulseprogram' file not found in {self.folder}"
+            # Read file and find first line starting with semicolon
+            with open(pulseprogram_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith(';'):
+                        # Extract everything after the semicolon
+                        sequence_name = stripped[1:].strip()
+                        if sequence_name:  # Make sure it's not empty
+                            self._sequence_name = sequence_name
+                            
+                            # Validate against config registry if provided
+                            if self.config_registry is not None:
+                                if not self.config_registry.has_config(sequence_name):
+                                    raise NoConfigurationError(
+                                        f"No configuration found for pulse sequence '{sequence_name}'"
+                                    )
+                            
+                            return sequence_name
+            
+            raise PulseSequenceError(
+                f"No valid pulse sequence name found in {pulseprogram_path}"
             )
-        
-        # Read file and find first line starting with semicolon
-        with open(pulseprogram_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                stripped = line.strip()
-                if stripped.startswith(';'):
-                    # Extract everything after the semicolon
-                    sequence_name = stripped[1:].strip()
-                    if sequence_name:  # Make sure it's not empty
-                        self._sequence_name = sequence_name
-                        
-                        # Validate against config registry if provided
-                        if self.config_registry is not None:
-                            if not self.config_registry.has_config(sequence_name):
-                                raise NoConfigurationError(
-                                    f"No configuration found for pulse sequence '{sequence_name}'"
-                                )
-                        
-                        return sequence_name
-        
-        raise PulseSequenceError(
-            f"No valid pulse sequence name found in {pulseprogram_path}"
-        )
     
     @property
     def sequence_name(self) -> str:
