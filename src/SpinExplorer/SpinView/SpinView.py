@@ -317,6 +317,7 @@ class GetData:
             self.axislabels = []
 
 
+
             if self.dim == 1:
                 # If 1D take FDF1LABEL
                 self.axislabels.append(self.dic["FDF1LABEL"])
@@ -330,14 +331,18 @@ class GetData:
                     self.axislabels.append(self.dic["FDF1LABEL"])
             else:
                 # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
-                if(self.pseudo_flag == False):
-                    self.axislabels.append(self.dic["FDF1LABEL"])
-                    self.axislabels.append(self.dic["FDF2LABEL"])
+                if(self.pseudo_flag==True and self.nmrglue_flag==True):
                     self.axislabels.append(self.dic["FDF3LABEL"])
+                    self.axislabels.append(self.dic["FDF2LABEL"])
+                    self.axislabels.append(self.dic["FDF1LABEL"])
                 else:
-                    self.axislabels.append(self.dic["FDF3LABEL"])
-                    self.axislabels.append(self.dic["FDF2LABEL"])
                     self.axislabels.append(self.dic["FDF1LABEL"])
+                    self.axislabels.append(self.dic["FDF2LABEL"])
+                    self.axislabels.append(self.dic["FDF3LABEL"])
+                # else:
+                #     self.axislabels.append(self.dic["FDF3LABEL"])
+                #     self.axislabels.append(self.dic["FDF2LABEL"])
+                #     self.axislabels.append(self.dic["FDF1LABEL"])
 
     def generic_labels_bruker(self):
         """
@@ -11058,7 +11063,10 @@ class SpinBore(wx.Frame):
         self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
         self.ax_bore_3.set_xlim(max(self.ppms_0), min(self.ppms_0))
         self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+        if(self.swap_labels==False):
+            self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+        else:
+            self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
         if self.Xstrip.shape != self.bore_data_strip1.shape:
             self.alternative_orientation = True
             self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
@@ -11166,12 +11174,18 @@ class SpinBore(wx.Frame):
                 self.ax_bore_3.clear()
 
                 self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+                if(self.swap_labels==False):
+                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+                else:
+                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
                 if self.Xstrip.shape != self.bore_data_strip1.shape:
                     self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
                     self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
                     self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
+                    if(self.swap_labels==False):
+                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
+                    else:
+                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
                 self.ax_bore_3.contour(
                     self.Xstrip,
                     self.Ystrip,
@@ -11279,12 +11293,19 @@ class SpinBore(wx.Frame):
                 self.ppms_2 = self.main_frame.ppms_2
 
                 self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
+                if(self.swap_labels==False):
+                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
+                else:
+                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
                 self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
                 if self.Xstrip.shape != self.bore_data_strip1.shape:
                     self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
                     self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
                     self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
+                    if(self.swap_labels==False):
+                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
+                    else:
+                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
 
                 title = self.ax_bore_3.get_title()
                 xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
@@ -11538,8 +11559,12 @@ class SpinBore(wx.Frame):
 
         self.ax_bore.set_xlim(xlim)
         self.ax_bore.set_ylim(ylim)
-        self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
-        self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
+        if(self.swap_labels==False):
+            self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
+            self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
+        else:
+            self.ax_bore.set_xlabel(self.nmrdata.axislabels[0])
+            self.ax_bore.set_ylabel(self.nmrdata.axislabels[1])
 
         self.add_peaklist()
 

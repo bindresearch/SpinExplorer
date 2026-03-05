@@ -78,6 +78,7 @@ import os
 import json
 import copy
 import traceback
+import shutil
 
 
 class ProcessNMRGlue:
@@ -387,6 +388,21 @@ class ProcessNMRGlue:
         This function will form skyline projections over the data along a given
         axis. e.g. a HNCO will have H-N, H-CO, N-CO planes.
         """
+        # Move all existing .dat files to a folder called OldProjections
+
+        current_dir = os.getcwd()
+        old_dir = os.path.join(current_dir, "OldProjections")
+        
+        # Create 'Old' directory if it doesn't exist
+        os.makedirs(old_dir, exist_ok=True)
+        
+        # Loop through files in the current directory
+        for filename in os.listdir(current_dir):
+            if filename.endswith(".dat") and os.path.isfile(filename):
+                source = os.path.join(current_dir, filename)
+                destination = os.path.join(old_dir, filename)
+                shutil.move(source, destination)
+
         data0 = np.max(data, axis=0)
         dic0 = copy.deepcopy(dic)
 

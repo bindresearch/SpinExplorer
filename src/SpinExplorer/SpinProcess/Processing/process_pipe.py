@@ -27,6 +27,7 @@ import wx
 import os
 import subprocess
 import nmrglue as ng
+import shutil
 
 # Import relevant SpinExplorer modules
 from SpinExplorer.SpinProcess.Processing.PipeProcessing.write_nmrpipe_processing import (
@@ -513,6 +514,23 @@ class ProcessNMRPipe:
         For 3D data, projections are also created using the
         proj3D.tcl command.
         """
+
+        # Move all existing .dat files to a folder called OldProjections
+
+        current_dir = os.getcwd()
+        old_dir = os.path.join(current_dir, "OldProjections")
+        
+        # Create 'Old' directory if it doesn't exist
+        os.makedirs(old_dir, exist_ok=True)
+        
+        # Loop through files in the current directory
+        for filename in os.listdir(current_dir):
+            if filename.endswith(".dat") and os.path.isfile(filename):
+                source = os.path.join(current_dir, filename)
+                destination = os.path.join(old_dir, filename)
+                shutil.move(source, destination)
+
+
         # Finding the correct name output for the processed data
         nmrfile = self.find_nmrfile_output_name(
             self.nmr_data.dim, self.nmr_data.pseudo_axis
