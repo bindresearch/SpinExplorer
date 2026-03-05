@@ -2587,6 +2587,17 @@ class TwoDViewer(wx.Panel):
 
     def on_key_2d(self, event):
         # key press event for 2D plot (Plot horizontal and vertical slices)
+        if event.key == "z":
+            self.toolbar.zoom()
+        if event.key == "p":
+            self.toolbar.pan()
+        if event.key == "q":
+            self.toolbar.home()
+        if event.key == "b":
+            self.toolbar.back()
+        if event.key == "f":
+            self.toolbar.forward()
+
         if self.multiplot_mode == False:
             if event.key == "h":
                 self.axes1D.set_ylim(
