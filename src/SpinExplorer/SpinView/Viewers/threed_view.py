@@ -1220,6 +1220,18 @@ class ThreeDViewer(wx.Panel):
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY_3D)
 
     def on_key_3d(self, event):
+        # navigator options
+        if event.key == "z":
+            self.toolbar.zoom()
+        if event.key == "p":
+            self.toolbar.pan()
+        if event.key == "q":
+            self.toolbar.home()
+        if event.key == "b":
+            self.toolbar.back()
+        if event.key == "f":
+            self.toolbar.forward()
+
         # Plot horizontal/vertical slices of the data
         if event.key == "h":
             z_index = int(self.z_slider.GetValue())

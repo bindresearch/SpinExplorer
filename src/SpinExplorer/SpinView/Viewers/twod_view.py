@@ -1391,7 +1391,7 @@ class TwoDViewer(wx.Panel):
         self.ax = self.fig.add_subplot(111)
         self.axes1D = self.ax.twinx()
         self.axes1D_2 = self.ax.twiny()
-
+        
         self.pivot_line = self.axes1D_2.axvline(
             self.pivot_x_default, color="black", linestyle="--"
         )
@@ -1408,6 +1408,7 @@ class TwoDViewer(wx.Panel):
         self.click_press_connect = self.fig.canvas.mpl_connect(
             "button_press_event", self.on_click_2d
         )
+        self.mouse_wheel_connect = self.fig.canvas.Bind(wx.EVT_MOUSEWHEEL, self.on_mouse_wheel)
 
         contour_start = np.max(self.nmrdata.data) / 10  # contour level start value
         self.contour_num = 20  # number of contour levels
@@ -2585,8 +2586,46 @@ class TwoDViewer(wx.Panel):
         self.move_y_slider.SetRes(self.reference_rangeY / 1000)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY)
 
+    def on_mouse_wheel(self, event):
+
+        toolbar = self.fig.canvas.toolbar
+        if toolbar:
+            toolbar.push_current() # logs position in toolbar so commands back, forward, home work
+
+        mx, my = event.GetPosition()
+
+        scale = self.fig.canvas.GetDPIScaleFactor()
+        mx *= scale
+        my *= scale
+
+        h = self.fig.canvas.GetSize().height * scale
+        my = h - my
+
+        zoom = 1.1 if event.GetWheelRotation() < 0 else 1/1.1
+
+        renderer = self.fig.canvas.get_renderer()
+
+        for ax in self.fig.axes:
+            bbox = ax.get_window_extent(renderer=renderer)
+
+            if not bbox.contains(mx, my):
+                continue
+
+            inv = ax.transData.inverted()
+            x, y = inv.transform((mx, my))
+
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+
+            ax.set_xlim([x + (v - x) * zoom for v in xlim])
+            ax.set_ylim([y + (v - y) * zoom for v in ylim])
+
+        self.fig.canvas.draw_idle()
+
+
     def on_key_2d(self, event):
-        # key press event for 2D plot (Plot horizontal and vertical slices)
+        
+        # navigator options
         if event.key == "z":
             self.toolbar.zoom()
         if event.key == "p":
@@ -2598,6 +2637,7 @@ class TwoDViewer(wx.Panel):
         if event.key == "f":
             self.toolbar.forward()
 
+        # key press event for 2D plot (Plot horizontal and vertical slices)
         if self.multiplot_mode == False:
             if event.key == "h":
                 self.axes1D.set_ylim(
