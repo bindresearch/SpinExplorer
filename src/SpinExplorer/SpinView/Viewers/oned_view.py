@@ -228,8 +228,13 @@ class OneDViewer(wx.Panel):
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
         self.P0_total = wx.StaticText(self, label="P0 (Total):", size=(70, height))
         self.P1_total = wx.StaticText(self, label="P1 (Total):", size=(70, height))
-        self.P0_total_value = wx.StaticText(self, label="0.00", size=(70, height))
-        self.P1_total_value = wx.StaticText(self, label="0.00", size=(70, height))
+        self.P0_total_value = wx.TextCtrl(self, value = "0", 
+                                    size = (70, height), style = wx.TE_PROCESS_ENTER)
+        self.P0_total_value.Bind(wx.EVT_TEXT_ENTER, self.P0_text_change)
+
+        self.P1_total_value = wx.TextCtrl(self, value = "0", 
+                                    size = (70,height), style = wx.TE_PROCESS_ENTER)
+        self.P1_total_value.Bind(wx.EVT_TEXT_ENTER, self.P1_text_change)
 
         # Adding a button to change the range of the coarse and fine sliders (default to +/-180 and +/-10 degrees)
         self.update_phasing_range = wx.Button(self, label="Change slider range")
@@ -2716,6 +2721,20 @@ class OneDViewer(wx.Panel):
         self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
         self.P0_total_value.SetLabel("{:.2f}".format(self.total_P0))
         self.P1_total_value.SetLabel("{:.2f}".format(self.total_P1))
+        self.phase1D()
+
+    def P0_text_change(self, event):
+        self.total_P0 = float(self.P0_total_value.GetValue())
+        self.P0_slider.SetValue(self.total_P0)
+        self.P0_slider_fine.SetValue(0.0)
+        self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
+        self.phase1D()
+
+    def P1_text_change(self, event):
+        self.total_P1 = float(self.P1_total_value.GetValue())
+        self.P1_slider.SetValue(self.total_P1)
+        self.P1_slider_fine.SetValue(0.0)
+        self.total_P0 = self.P0_slider.GetValue() + self.P0_slider_fine.GetValue()
         self.phase1D()
 
     def phase1D(self):

@@ -359,9 +359,18 @@ class TwoDViewer(wx.Panel):
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
         self.P0_total = wx.StaticText(self, label="P0 (Total):")
+
+
+        
         self.P1_total = wx.StaticText(self, label="P1 (Total):")
         self.P0_total_value = wx.StaticText(self, label="0")
-        self.P1_total_value = wx.StaticText(self, label="0")
+        self.P0_total_value = wx.TextCtrl(self, value = "0", 
+                                    size = (50,20), style = wx.TE_PROCESS_ENTER)
+        self.P0_total_value.Bind(wx.EVT_TEXT_ENTER, self.P0_text_change)
+
+        self.P1_total_value = wx.TextCtrl(self, value = "0", 
+                                    size = (50,20), style = wx.TE_PROCESS_ENTER)
+        self.P1_total_value.Bind(wx.EVT_TEXT_ENTER, self.P1_text_change)
 
         self.P0_label_sizer = wx.BoxSizer(wx.VERTICAL)
         self.P0_label_sizer.Add(self.P0_label)
@@ -2937,6 +2946,20 @@ class TwoDViewer(wx.Panel):
         self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
         self.P0_total_value.SetLabel("{:.2f}".format(self.total_P0))
         self.P1_total_value.SetLabel("{:.2f}".format(self.total_P1))
+        self.phase2D()
+    
+    def P0_text_change(self, event):
+        self.total_P0 = float(self.P0_total_value.GetValue())
+        self.P0_slider.SetValue(self.total_P0)
+        self.P0_slider_fine.SetValue(0.0)
+        self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
+        self.phase2D()
+
+    def P1_text_change(self, event):
+        self.total_P1 = float(self.P1_total_value.GetValue())
+        self.P1_slider.SetValue(self.total_P1)
+        self.P1_slider_fine.SetValue(0.0)
+        self.total_P0 = self.P0_slider.GetValue() + self.P0_slider_fine.GetValue()
         self.phase2D()
 
     def phase2D(self):
