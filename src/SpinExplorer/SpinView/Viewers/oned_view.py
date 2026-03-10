@@ -526,6 +526,7 @@ class OneDViewer(wx.Panel):
         self.hide_button.Bind(wx.EVT_BUTTON, self.OnHideButton)
 
         self.load_session_button =  wx.Button(self, label="Load Session", size=(130, 30))
+        self.load_session_button.Bind(wx.EVT_BUTTON, self.OnLoadSession)
 
         self.button_sizers = wx.BoxSizer(wx.VERTICAL)
         self.button_sizers.Add(self.max_button)
@@ -691,6 +692,16 @@ class OneDViewer(wx.Panel):
                 pass
 
             self.phase1D()
+
+    
+    def OnLoadSession(self, event):
+        self.parent.find_sessions()
+        session=self.parent.session_file
+        self.parent.Destroy()
+        from SpinExplorer.SpinView.SpinView import SpinView
+        frame = SpinView(session_file=session)
+        
+       
 
     def OnLoadPeakList(self, event):
         # Opening up a file window asking the user to select the 1D peak list - must be in the format of 1st column = peak_name, 2nd column = peak_position

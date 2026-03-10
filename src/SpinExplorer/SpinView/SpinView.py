@@ -122,7 +122,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 # This class creates the GUI main frame
 class SpinView(wx.Frame):
-    def __init__(self, explorer=False):
+    def __init__(self, explorer=False, session_file=''):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -149,7 +149,13 @@ class SpinView(wx.Frame):
             wx.DefaultPosition,
             size=(int(self.width), int(self.height)),
         )
+
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.build_app(session_file)
+
+    def build_app(self, session_file=''):
+
         self.main_sizer.AddSpacer(10)
         self.display_index_current = wx.Display.GetFromWindow(self)
 
@@ -159,7 +165,10 @@ class SpinView(wx.Frame):
         self.file_parser = False
 
         # Find if there are any sessions saved in the current directory
-        self.find_sessions()
+        if(session_file==''):
+            self.find_sessions()
+        else:
+            self.session_file=session_file
         if self.session_file != "":
             ReadSession(self, self.session_file)
         else:
