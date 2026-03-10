@@ -184,7 +184,7 @@ class SpinView(wx.Frame):
                 self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
 
         if(self.session_file!=''):
-            self.title += ' Session: ' + self.session_file
+            self.title += ' Session: ' + pathlib.Path(self.session_file).name
             self.SetTitle(self.title)
 
         self.SetSizer(self.main_sizer)
