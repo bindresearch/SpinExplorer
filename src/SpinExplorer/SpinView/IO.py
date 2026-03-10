@@ -2,6 +2,7 @@ import wx # type: ignore
 import os 
 import nmrglue as ng # type: ignore
 import numpy as np
+from natsort import natsorted
 
 from SpinExplorer.SpinExplorer_CL_tools.processSpec import FindingParameters
 from SpinExplorer.SpinExplorer_CL_tools.pulse_sequence_parsing import PulseSequenceParser
@@ -283,7 +284,7 @@ class ChooseFile(wx.Dialog):
             )
         self.main_sizer.Add(self.message, 0, wx.ALL, 5)
         self.file_combobox = wx.ComboBox(
-            self, choices=spectrum_file, style=wx.CB_READONLY
+            self, choices=natsorted(spectrum_file), style=wx.CB_READONLY
         )
         self.main_sizer.Add(
             self.file_combobox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
