@@ -8,7 +8,8 @@ from SpinExplorer.SpinExplorer_CL_tools.config_register import registry
 from SpinExplorer.SpinExplorer_CL_tools.processSpec import FindingParameters
 from pathlib import Path
 import pandas as pd # type: ignore
-from typing import List
+import argparse
+import yaml
 
 
 def filter_experiments(df: pd.DataFrame, experiment_prefix: str, protein: str) -> pd.DataFrame:
@@ -46,6 +47,20 @@ def group_by_base_title(df: pd.DataFrame, protein: str) -> list[pd.DataFrame]:
     
     return groups
 
+def process_from_config(config_path: str) -> None:
+    with open(config_path, "r") as f:
+        config_data = yaml.safe_load(f)
+    
+    df = pd.read_csv(config_data["csv_path"])
+    
+    for exp in config_data["experiments"]:
+        config = registry._registry[exp]
+        for prot in config_data["proteins"]:
+            filtered_exps = filter_experiments(df, exp, prot)
+            groups = group_by_base_title(filtered_exps, prot)
+            for group in groups:
+                write_1d_multi_session(group, exp, prot, config)
+
 def write_1d_multi_session(df, exp, protein_name, config, outy_name = None, outy_folder = Path('./')):
     if outy_name is None:
         titles = df["Title"]
@@ -76,6 +91,15 @@ def write_1d_multi_session(df, exp, protein_name, config, outy_name = None, outy
 
 
 def main():
+    parser = argparse.ArgumentParser(description="SpinExplorer")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to a YAML config file for sorting batch analyses"
+    )
+
+    args = parser.parse_args()
 
     parent_folder = Path.cwd()
     print('hello')
@@ -114,16 +138,10 @@ def main():
             print(f"are in the registry for this pulse sequence")
         finally:
             os.chdir(parent_folder)
+        
+    if args.config:
+        process_from_config(args.config)
     
-    exp = "PO_waterlogsy_icon_260304.bind"
-    prot = "aSyn"
-    config = registry._registry[exp]
-    df = pd.read_csv("/Users/gogs/Library/CloudStorage/OneDrive-BindResearch/NMR_data/20260304_BRL1_Plate17_aSyn_NUPR1_screen/Screen_Leeds_Bind_20260304_BS1.csv")
-    filtered_exps = filter_experiments(df,exp,prot)
-    groups = group_by_base_title(filtered_exps, prot)
-    for group in groups:
-        write_1d_multi_session(group, exp, prot,config)
-
 
 if __name__ == "__main__":
     main()

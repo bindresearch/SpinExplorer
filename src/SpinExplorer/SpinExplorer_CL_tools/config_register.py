@@ -25,6 +25,8 @@ registry.register("t1rho.rf", standard_1H_1D)
 registry.register("wlogsy.rf", standard_1H_1D)
 registry.register("PO-WaterLOGSY.bind", waterlogsy_icon)
 registry.register("PO_waterlogsy_icon_260304.bind",waterlogsy_icon)
+registry.register("zgesgp_icon_bind_260304.apk",standard_1H_1D)
+registry.register("t1rho_icon_bind_260304.apk",standard_1H_1D)
 
 # Diffusion experiments
 registry.register("stebpesgp1s", standard_1H_1D)
