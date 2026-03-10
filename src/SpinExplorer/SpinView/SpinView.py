@@ -183,6 +183,10 @@ class SpinView(wx.Frame):
                 self.viewer = ThreeDViewer(parent=self, nmrdata=self.nmrdata)
                 self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
 
+        if(self.session_file!=''):
+            self.title += ' Session: ' + self.session_file
+            self.SetTitle(self.title)
+
         self.SetSizer(self.main_sizer)
 
         # Make negative contour lines solid
