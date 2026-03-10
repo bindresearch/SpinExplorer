@@ -28,6 +28,8 @@ import wx
 import numpy as np
 import nmrglue as ng
 from matplotlib.figure import Figure
+from SpinExplorer.SpinView.config import reference_range_values, multiply_range_values, vertical_range_values
+from SpinExplorer.SpinView.UI_objects.UI_tools import FloatSlider, PhasingSliderRange
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
 from matplotlib.backends.backend_wxagg import (
     NavigationToolbar2WxAgg as NavigationToolbar,
@@ -117,7 +119,6 @@ class InteractivePhasingFrame(wx.Frame):
         self.Show()
 
     def create_sliders(self):
-        from SpinExplorer.SpinView.SpinView import FloatSlider
 
         # Create the phasing 1D sizer
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
