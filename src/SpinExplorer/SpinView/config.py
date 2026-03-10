@@ -5,7 +5,7 @@ if sys.platform == "linux":
     height = 30
 elif sys.platform == "darwin":
     platform = "mac"
-    height = 16
+    height = 20
 else:
     platform = "windows"
     height = 30

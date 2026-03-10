@@ -365,11 +365,11 @@ class TwoDViewer(wx.Panel):
         self.P1_total = wx.StaticText(self, label="P1 (Total):")
         self.P0_total_value = wx.StaticText(self, label="0")
         self.P0_total_value = wx.TextCtrl(self, value = "0", 
-                                    size = (50,20), style = wx.TE_PROCESS_ENTER)
+                                    size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.P0_total_value.Bind(wx.EVT_TEXT_ENTER, self.P0_text_change)
 
         self.P1_total_value = wx.TextCtrl(self, value = "0", 
-                                    size = (50,20), style = wx.TE_PROCESS_ENTER)
+                                    size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.P1_total_value.Bind(wx.EVT_TEXT_ENTER, self.P1_text_change)
 
         self.P0_label_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -491,7 +491,9 @@ class TwoDViewer(wx.Panel):
         self.multiply_sizer.AddSpacer(5)
         self.multiply_value_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.multiply_value_n_label = wx.StaticText(self, label="n: ")
-        self.multiply_value_label = wx.StaticText(self, label="1.00")
+        self.multiply_value_label = wx.TextCtrl(self, value = "1.0", 
+                                    size = (50,height), style = wx.TE_PROCESS_ENTER)
+        self.multiply_value_label.Bind(wx.EVT_TEXT_ENTER, self.multiply_text_change)
         self.multiply_value_sizer.Add(self.multiply_value_n_label)
         self.multiply_value_sizer.AddSpacer(5)
         self.multiply_value_sizer.Add(self.multiply_value_label)
@@ -591,12 +593,16 @@ class TwoDViewer(wx.Panel):
 
         self.move_values.Add(wx.StaticText(self, label="X Movement (ppm):"))
         self.move_values.AddSpacer(10)
-        self.move_x_value_label = wx.StaticText(self, label="0.0")
+        self.move_x_value_label = wx.TextCtrl(self, value = "0.0", 
+                                    size = (50,height), style = wx.TE_PROCESS_ENTER)
+        self.move_x_value_label.Bind(wx.EVT_TEXT_ENTER, self.move_xtext_change)
         self.move_values.Add(self.move_x_value_label)
         self.move_values.AddSpacer(50)
         self.move_values.Add(wx.StaticText(self, label="Y Movement (ppm):"))
         self.move_values.AddSpacer(10)
-        self.move_y_value_label = wx.StaticText(self, label="0.0")
+        self.move_y_value_label = wx.TextCtrl(self, value = "0.0", 
+                                    size = (50,height), style = wx.TE_PROCESS_ENTER)
+        self.move_y_value_label.Bind(wx.EVT_TEXT_ENTER, self.move_ytext_change)
         self.move_values.Add(self.move_y_value_label)
         self.move_sizer.Add(self.move_values, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.move_sizer_total.Add(self.move_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -2346,11 +2352,19 @@ class TwoDViewer(wx.Panel):
                     self.values_dictionary[i]["contour levels"] = self.contour_num
         self.OnMinContour2D(event, textcontrol=True)
 
+    def multiply_text_change(self, event):
+        self.multiply_factor = float(self.multiply_value_label.GetValue())
+        self.multiply_slider.SetValue(self.multiply_factor)
+        self.ApplyMultiplication(event)
+
     def OnMultiplyScroll2D(self, event):
         self.multiply_factor = float(self.multiply_slider.GetValue())
         self.multiply_value_label.SetLabel(
             "{:.2f}".format(float(self.multiply_slider.GetValue()))
         )
+        self.ApplyMultiplication(event)
+
+    def ApplyMultiplication(self, event):
         if self.multiplot_mode == True:
             if self.select_all_checkbox.IsChecked() == False:
                 self.values_dictionary[self.active_plot_index][
@@ -2415,10 +2429,18 @@ class TwoDViewer(wx.Panel):
             self.line3.set_linewidth(self.linewidth1D)
         self.UpdateFrame()
 
+    def move_xtext_change(self, event):
+        self.x_movement = float(self.move_x_value_label.GetValue())
+        self.move_x_slider.SetValue(self.x_movement)
+        self.MoveX()
+
     def OnMoveX(self, event):
         # update x-axis
         self.x_movement = float(self.move_x_slider.GetValue())
         self.move_x_value_label.SetLabel("{:.4f}".format(self.x_movement))
+        self.MoveX()
+    
+    def MoveX(self):
         if self.multiplot_mode == False:
             if self.transposed2D == False:
                 self.new_x_ppms = (
@@ -2488,10 +2510,19 @@ class TwoDViewer(wx.Panel):
             self.OnMinContour2D(wx.EVT_SCROLL, textcontrol=True)
             self.UpdateFrame()
 
+
+    def move_ytext_change(self, event):
+        self.y_movement = float(self.move_y_value_label.GetValue())
+        self.move_y_slider.SetValue(self.y_movement)
+        self.MoveY()
+
     def OnMoveY(self, event):
         # update y-axis
         self.y_movement = float(self.move_y_slider.GetValue())
         self.move_y_value_label.SetLabel("{:.4f}".format(self.y_movement))
+        self.MoveY()
+
+    def MoveY(self):
         if self.multiplot_mode == False:
             if self.transposed2D == False:
                 self.new_y_ppms = (

@@ -343,7 +343,9 @@ class OneDViewer(wx.Panel):
         self.reference_sizer2.Add(
             self.reference_range_chooser, wx.ALIGN_CENTER_HORIZONTAL, 5
         )
-        self.reference_value_label = wx.StaticText(self, label="0.0")
+        self.reference_value_label = wx.TextCtrl(self, value = "0.0", 
+                                    size = (70, height), style = wx.TE_PROCESS_ENTER)
+        self.reference_value_label.Bind(wx.EVT_TEXT_ENTER, self.OnReferenceText)
         self.reference_sizer.AddSpacer(5)
         self.reference_sizer.Add(
             self.reference_value_label, wx.ALIGN_CENTER_HORIZONTAL, 5
@@ -474,7 +476,10 @@ class OneDViewer(wx.Panel):
         self.multiply_range_chooser.Bind(wx.EVT_COMBOBOX, self.OnMultiplyCombo)
         self.multiply_range_chooser.SetSelection(0)
         self.multiply_sizer_column2.Add(self.multiply_range_chooser, border=5)
-        self.multiply_label_value = wx.StaticText(self, label="1.000")
+        self.multiply_label_value = wx.TextCtrl(self, value = "1.000", 
+                                    size = (70, height), style = wx.TE_PROCESS_ENTER)
+        self.multiply_label_value.Bind(wx.EVT_TEXT_ENTER, self.OnMultiplyText)
+
         self.multiply_combobox_label = wx.StaticText(self, label="Range")
         self.multiply_sizer_column1.AddSpacer(5)
         self.multiply_sizer_column1.Add(
@@ -1974,10 +1979,19 @@ class OneDViewer(wx.Panel):
             self.line1.set_linewidth(linewidth_value)
         self.UpdateFrame()
 
+    def OnMultiplyText(self, event):
+        # Function to multiply the 1D spectrum by a constant value
+        self.multiply_value = float(self.multiply_label_value.GetValue())
+        self.multiply_slider.SetValue(self.multiply_value)
+        self.ApplyMultiplication()
+
     def OnMultiplyScroll1D(self, event):
         # Function to multiply the 1D spectrum by a constant value
         self.multiply_value = float(self.multiply_slider.GetValue())
         self.multiply_label_value.SetLabel("{:.3f}".format(self.multiply_value))
+        self.ApplyMultiplication()
+
+    def ApplyMultiplication(self):
         if self.multiplot_mode == True:
             if self.select_all_checkbox.GetValue() == False:
                 self.values_dictionary[self.active_plot_index][
@@ -2053,11 +2067,20 @@ class OneDViewer(wx.Panel):
         self.multiply_slider.SetRes(self.multiply_range / 1000)
         self.multiply_slider.Bind(wx.EVT_SLIDER, self.OnMultiplyScroll1D)
 
+
+    def OnReferenceText(self, event):
+        reference_value = float(self.reference_value_label.GetValue())
+        self.reference_slider.SetValue(reference_value)
+        self.ApplyReference(reference_value)
+
+
     def OnReferenceScroll1D(self, event):
         # Function to move the spectrum left/right in the ppm scale when the slider position is changed
         reference_value = float(self.reference_slider.GetValue())
         self.reference_value_label.SetLabel("{:.4f}".format(reference_value))
+        self.ApplyReference(reference_value)
 
+    def ApplyReference(self, reference_value):
         if self.multiplot_mode == False:
             self.ppms = (
                 self.ppm_original + np.ones(len(self.ppm_original)) * reference_value
