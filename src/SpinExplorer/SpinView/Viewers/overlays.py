@@ -199,6 +199,7 @@ class FileDrop(wx.FileDropTarget):
                                 dlg.ShowModal()
                                 dlg.Destroy()
                                 return False
+                            self.color_list = colours
                             if self.first_drop:
                                 msg = "Entering multiple plot mode: Please enter title of the first dataset"
                                 dlg = wx.TextEntryDialog(None, msg)
