@@ -106,7 +106,7 @@ class PulseSequenceParser:
         self.config_registry = config_registry
         self._sequence_name: Optional[str] = None
     
-    def parse(self) -> str:
+    def parse(self):
         """
         Parse the pulseprogram file and extract the sequence name.
         

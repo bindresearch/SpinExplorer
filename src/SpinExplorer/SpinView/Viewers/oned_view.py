@@ -525,6 +525,8 @@ class OneDViewer(wx.Panel):
         self.hide_button = wx.Button(self, label="Hide Options", size=(130, 30))
         self.hide_button.Bind(wx.EVT_BUTTON, self.OnHideButton)
 
+        self.load_session_button =  wx.Button(self, label="Load Session", size=(130, 30))
+
         self.button_sizers = wx.BoxSizer(wx.VERTICAL)
         self.button_sizers.Add(self.max_button)
         self.button_sizers.AddSpacer(5)
@@ -535,6 +537,8 @@ class OneDViewer(wx.Panel):
         self.button_sizers.Add(self.subtract_button)
         self.button_sizers.AddSpacer(5)
         self.button_sizers.Add(self.reprocess_button)
+        self.button_sizers.AddSpacer(5)
+        self.button_sizers.Add(self.load_session_button)
         self.button_sizers.AddSpacer(5)
         self.button_sizers.Add(self.save_button)
         self.button_sizers.AddSpacer(5)
