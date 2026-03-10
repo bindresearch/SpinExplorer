@@ -311,7 +311,7 @@ class SpinView(wx.Frame):
         self.viewer.UpdateFrame()
         event.Skip()
 
-    def find_sessions(self):
+    def find_sessions(self, ask_user=True):
         self.sessions = []
         if self.path != "":
             os.chdir(self.path)
@@ -329,42 +329,51 @@ class SpinView(wx.Frame):
             self.session_file = ""
         elif len(self.sessions) == 1:
             # Ask the user if they want to load the session file
-            dlg = wx.MessageDialog(
-                None,
-                "Session file found ({}). Do you want to load the session file?".format(
-                    self.sessions[0]
-                ),
-                "Session File Found",
-                wx.YES_NO | wx.ICON_INFORMATION,
-            )
-            self.Raise()
-            self.SetFocus()
-            result = dlg.ShowModal()
-            if result == wx.ID_YES:
-                self.session_file = self.sessions[0]
+            if(ask_user==True):
+                dlg = wx.MessageDialog(
+                    None,
+                    "Session file found ({}). Do you want to load the session file?".format(
+                        self.sessions[0]
+                    ),
+                    "Session File Found",
+                    wx.YES_NO | wx.ICON_INFORMATION,
+                )
+                self.Raise()
+                self.SetFocus()
+                result = dlg.ShowModal()
+                if result == wx.ID_YES:
+                    self.session_file = self.sessions[0]
+                else:
+                    self.session_file = ""
+                dlg.Destroy()
             else:
-                self.session_file = ""
-            dlg.Destroy()
+                self.session_file = self.sessions[0]
         else:
             # Asking the user if they wish to load a session file
-            dlg = wx.MessageDialog(
-                None,
-                "Multiple session files found. Do you want to load a session file?",
-                "Session Files Found",
-                wx.YES_NO | wx.ICON_INFORMATION,
-            )
-            self.Raise()
-            self.SetFocus()
-            result = dlg.ShowModal()
-            if result == wx.ID_YES:
-                dlg.Destroy()
+            if(ask_user==True):
+                dlg = wx.MessageDialog(
+                    None,
+                    "Multiple session files found. Do you want to load a session file?",
+                    "Session Files Found",
+                    wx.YES_NO | wx.ICON_INFORMATION,
+                )
+                self.Raise()
+                self.SetFocus()
+                result = dlg.ShowModal()
+                if result == wx.ID_YES:
+                    dlg.Destroy()
+                    # Asking the user to select the session file they want to load
+                    res = ChooseFile(self.sessions, self, session_choice=True)
+                    res.ShowModal()
+                    res.Destroy()
+                else:
+                    self.session_file = ""
+                    dlg.Destroy()
+            else:
                 # Asking the user to select the session file they want to load
                 res = ChooseFile(self.sessions, self, session_choice=True)
                 res.ShowModal()
                 res.Destroy()
-            else:
-                self.session_file = ""
-                dlg.Destroy()
 
     # Initialising global app variables variables variables
     def set_variables(self):

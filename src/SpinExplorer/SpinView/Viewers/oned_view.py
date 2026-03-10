@@ -695,7 +695,7 @@ class OneDViewer(wx.Panel):
 
     
     def OnLoadSession(self, event):
-        self.parent.find_sessions()
+        self.parent.find_sessions(ask_user=False)
         session=self.parent.session_file
         self.parent.Destroy()
         from SpinExplorer.SpinView.SpinView import SpinView
