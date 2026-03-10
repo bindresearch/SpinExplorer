@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd # type: ignore
 import argparse
 import yaml
+from typing import List
 
 
 def filter_experiments(df: pd.DataFrame, experiment_prefix: str, protein: str) -> pd.DataFrame:
