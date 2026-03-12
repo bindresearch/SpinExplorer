@@ -9,8 +9,7 @@ from SpinExplorer.SpinExplorer_CL_tools.processSpec import FindingParameters
 from pathlib import Path
 import pandas as pd # type: ignore
 import argparse
-import yaml
-from typing import List
+import yaml # type: ignore
 
 
 def filter_experiments(df: pd.DataFrame, experiment_prefix: str, protein: str) -> pd.DataFrame:
