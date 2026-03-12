@@ -47,29 +47,41 @@ def group_by_base_title(df: pd.DataFrame, protein: str) -> list[pd.DataFrame]:
     
     return groups
 
-def process_from_config(config_path: str) -> None:
+def process_from_config(config_path: str, organise_by: str | None = None) -> None:
     with open(config_path, "r") as f:
         config_data = yaml.safe_load(f)
-    
+
+    base_dir = Path(config_data.get("output_dir", Path.cwd()))
     df = pd.read_csv(config_data["csv_path"])
-    
+
     for exp in config_data["experiments"]:
         config = registry._registry[exp]
         for prot in config_data["proteins"]:
             filtered_exps = filter_experiments(df, exp, prot)
             groups = group_by_base_title(filtered_exps, prot)
             for group in groups:
-                write_1d_multi_session(group, exp, prot, config)
+                output_dir = _resolve_output_dir(base_dir, organise_by, prot, exp)
+                write_1d_multi_session(group, exp, prot, config, output_dir=output_dir)
 
-def write_1d_multi_session(df, exp, protein_name, config, outy_name = None, outy_folder = Path('./')):
+
+def write_1d_multi_session(df, exp, protein_name, config, outy_name=None, outy_folder=None, output_dir=None):
+    # output_dir (from --organise-by) takes precedence over legacy outy_folder
+    if output_dir is not None:
+        resolved_folder = output_dir
+    elif outy_folder is not None:
+        resolved_folder = outy_folder
+    else:
+        resolved_folder = Path('./')
+
     if outy_name is None:
         titles = df["Title"]
         base = [t for t in titles if " " not in t][0]
-        outy_name = base+'_'+protein_name+'_'+exp+'.session'
-    
-    with open(outy_folder / Path(outy_name), 'w') as outy:
+        outy_name = base + '_' + protein_name + '_' + exp + '.session'
+
+    with open(resolved_folder / Path(outy_name), 'w') as outy:
         outy.write('1D\n')
         outy.write('MultiplotMode:True\n')
+
         for i, (_, row) in enumerate(df.iterrows()):
             outy.write(f'file_path:{str(Path.cwd())+'/'+str(row['Expno'])+'/test.ft'}\n')
             outy.write(f'title:{str(row['Expno'])}\n')
@@ -90,6 +102,7 @@ def write_1d_multi_session(df, exp, protein_name, config, outy_name = None, outy
             outy.write(f'pivot_visible:False\n')
 
 
+
 def main():
     parser = argparse.ArgumentParser(description="SpinExplorer")
     parser.add_argument(
@@ -98,25 +111,35 @@ def main():
         default=None,
         help="Path to a YAML config file for sorting batch analyses"
     )
+    parser.add_argument(
+        "--organise-by",
+        dest="organise_by",
+        choices=["protein", "experiment", "both"],
+        default=None,
+        help=(
+            "Create organised output folders for sessions. "
+            "'protein' groups by protein name, "
+            "'experiment' groups by pulse sequence, "
+            "'both' nests experiment folders inside protein folders."
+        )
+    )
 
     args = parser.parse_args()
 
     parent_folder = Path.cwd()
-    print('hello')
-    print(parent_folder)
     child_folders = [f for f in parent_folder.iterdir() if f.is_dir()]
-    
+
     if not child_folders:
-        print("No child folders found")
+        print("No child folders found to process data")
         return
-    
+
     print(f"Found {len(child_folders)} folders to process")
-    
+
     for folder in child_folders:
         print(f"\nProcessing: {folder.name}")
         try:
             os.chdir(folder)
-            
+
             input_dat = FindingParameters()
             pp_parser = PulseSequenceParser()
             sequence = pp_parser.parse()
@@ -129,19 +152,53 @@ def main():
             params.write_out_dict(params.dictionary)
 
             config.process_data()
-            
+
             print(f"Successfully processed: {folder.name}")
-            
+
         except Exception as e:
             print(f"Processing not possible for: {folder.name} ({e})")
             print(f"Make sure the folder contains NMR data and processing instructions")
             print(f"are in the registry for this pulse sequence")
         finally:
             os.chdir(parent_folder)
-        
+
     if args.config:
-        process_from_config(args.config)
-    
+        process_from_config(args.config, organise_by=args.organise_by)
+
+
+def _resolve_output_dir(
+    base_dir: Path,
+    organise_by: str | None,
+    protein: str,
+    experiment: str,
+) -> Path:
+    """
+    Build and create the output directory for a session based on
+    the --organise-by mode.
+
+      protein    → base_dir/sessions/<protein>/
+      experiment → base_dir/sessions/<experiment>/
+      both       → base_dir/sessions/<protein>/<experiment>/
+      None       → base_dir/  (no subfolder created)
+    """
+    if organise_by is None:
+        return base_dir
+
+    sessions_root = base_dir / "sessions"
+
+    if organise_by == "protein":
+        output_dir = sessions_root / protein
+    elif organise_by == "experiment":
+        output_dir = sessions_root / experiment
+    elif organise_by == "both":
+        output_dir = sessions_root / protein / experiment
+    else:
+        raise ValueError(f"Unknown organise_by value: {organise_by!r}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
 
 if __name__ == "__main__":
     main()
