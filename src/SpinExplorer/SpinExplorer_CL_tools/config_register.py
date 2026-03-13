@@ -11,7 +11,7 @@ registry = ConfigurationRegistry()
 nhsqc_config = ExperimentConfigStore(['Dimension 0 (1H)', 'Dimension 1 (15N)'], [proton_nhsqcconfig, nitrogen_nhsqcconfig], 'test.fid', 'test.ft2')
 nhsqc_config2 = ExperimentConfigStore(['Dimension 0 (1H)', 'Dimension 1 (15N)'], [proton_nhsqcconfig, nitrogen_nhsqcconfig2], 'test.fid', 'test.ft2')
 standard_1H_1D = ExperimentConfigStore(['Dimension 0 (1H)'], [DimensionConfig.standard_proton(ph_p0 = 0.0)], 'test.fid', 'test.ft')
-
+waterlogsy_icon = ExperimentConfigStore(['Dimension 0 (1H)'], [DimensionConfig.standard_proton(ph_p0 = 90.0)], 'test.fid', 'test.ft')
 
 # Pulse program names in the auto-process registry (more to be added soon)
 
@@ -23,6 +23,10 @@ registry.register("zgesgp", standard_1H_1D)
 
 registry.register("t1rho.rf", standard_1H_1D)
 registry.register("wlogsy.rf", standard_1H_1D)
+registry.register("PO-WaterLOGSY.bind", waterlogsy_icon)
+registry.register("PO_waterlogsy_icon_260304.bind",waterlogsy_icon)
+registry.register("zgesgp_icon_bind_260304.apk",standard_1H_1D)
+registry.register("t1rho_icon_bind_260304.apk",standard_1H_1D)
 
 # Diffusion experiments
 registry.register("stebpesgp1s", standard_1H_1D)

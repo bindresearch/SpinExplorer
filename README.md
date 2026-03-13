@@ -50,7 +50,7 @@ If users prefer to view/edit the source code directly or add extra functionality
 - Activate the virtual environment
 - From the main package directory (containing README.md) run the command "pip install ."
 
-Once installed from GitHub, the command SpinExplorer can be run in a terminal to open the application in the same manner as the releases. In addition, the commands SpinConverter, SpinProcess and SpinView can be ran from a terminal in a directory containing raw NMR data to perform NMR data conversion, processing, and viewing/analysis, respectively. This is useful if a user prefers to use the command line for NMR processing/analysis.
+Once installed from GitHub, the command SpinExplorer can be run in a terminal to open the application in the same manner as the releases. In addition, the commands SpinConverter, SpinProcess and SpinView can be run from a terminal in a directory containing raw NMR data to perform NMR data conversion, processing, and viewing/analysis, respectively. This is useful if a user prefers to use the command line for NMR processing/analysis.
 
 
 

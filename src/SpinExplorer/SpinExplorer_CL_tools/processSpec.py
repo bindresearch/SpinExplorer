@@ -165,8 +165,7 @@ class FindingParameters:
 
 
 
-
-if __name__ == "__main__":
+def main():
     input_dat = FindingParameters()
     pp_parser = PulseSequenceParser()
     sequence = pp_parser.parse()
@@ -192,3 +191,6 @@ if __name__ == "__main__":
     stderr=subprocess.DEVNULL,
     start_new_session=True)
     print('opened Spinview...')
+
+if __name__ == "__main__":
+    main()
