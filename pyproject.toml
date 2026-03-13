@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SpinExplorer"
-version = "1.1"
-authors = [{name="James Eaton"}]
+version = "1.4"
+authors = [{name="James Eaton, Gogulan Karunanithy (Bind Research)"}]
 description = "A package for NMR processing and analysis"
 readme = "README.md"
 requires-python = ">3.11"
