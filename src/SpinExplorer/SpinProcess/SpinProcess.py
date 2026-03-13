@@ -3,7 +3,7 @@
 """MIT License
 
 Copyright (c) 2025 James Eaton, Andrew Baldwin
-              2025, Bind Research
+              2025-2026, Bind Research
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                         SpinProcess                         ")
 print("-------------------------------------------------------------")
-print("               (version 1.3) 17th February 2026              ")
+print("               (version 1.4) 13th March 2026                 ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
