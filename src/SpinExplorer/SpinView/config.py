@@ -1,4 +1,5 @@
 import sys
+from enum import Enum, auto
 
 if sys.platform == "linux":
     platform = "linux"
@@ -98,3 +99,17 @@ vertical_range_values = [
             "1000.0",
             "10000",
         ]
+
+
+class ScrollMode(Enum):
+    ZOOM = auto()
+    CONTOUR = auto()
+    PLANE = auto()
+
+def cycle_scroll_mode(current_mode,available_modes):
+    current_index = available_modes.index(current_mode)
+    return available_modes[(current_index+1)%len(available_modes)]
+
+ONED_SCROLL_MODES = [ScrollMode.ZOOM]
+TWOD_SCROLL_MODES = [ScrollMode.ZOOM, ScrollMode.CONTOUR]
+THREED_SCROLL_MODES = [ScrollMode.ZOOM, ScrollMode.CONTOUR, ScrollMode.PLANE]

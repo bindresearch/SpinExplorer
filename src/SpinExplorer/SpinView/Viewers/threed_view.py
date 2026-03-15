@@ -16,8 +16,7 @@ from SpinExplorer.SpinView.Viewers.overlays import ReadProjection
 from SpinExplorer.SpinView.Viewers.twod_view import TwoDViewer
 
 from SpinExplorer.SpinView.Peaks.peaks import PeakListWindow3D
-from SpinExplorer.SpinView.config import height, platform, colours, twoD_colours
-from SpinExplorer.SpinView.config import reference_range_values, multiply_range_values, vertical_range_values
+from SpinExplorer.SpinView.config import *
 
 
 class ThreeDViewer(wx.Panel):
@@ -31,6 +30,7 @@ class ThreeDViewer(wx.Panel):
         self.parent = parent
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
         self.nmrdata = nmrdata
+        self.mouse_wheel_mode = ScrollMode.ZOOM
 
         self.set_initial_variables_3D()
         self.create_button_panel_3D()
@@ -342,6 +342,7 @@ class ThreeDViewer(wx.Panel):
         self.contour_label = wx.StaticBox(self, -1, "Contour Start = max(data)/x")
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.csizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.x_val = 10.00
         self.contour2_label = wx.StaticText(self, label="x:")
         self.contour_slider = FloatSlider(
             self, id=-1, value=1, minval=0, maxval=3, res=0.01, size=(250, height)
@@ -351,12 +352,23 @@ class ThreeDViewer(wx.Panel):
         self.csizer.AddSpacer(5)
         self.csizer.Add(self.contour_slider)
         self.contour_sizer.Add(self.csizer)
+        
         self.contour_sizer.AddSpacer(5)
         self.contour_val_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.contour_val_box.AddSpacer(125)
-        self.contour_val = wx.StaticText(self, label="10")
+        self.contour_val_box.AddSpacer(75)
+        self.contour_val = wx.TextCtrl(
+            self, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
+        )
+        self.contour_val.Bind(wx.EVT_TEXT_ENTER, self.OnTextContour3D)
         self.contour_val_box.Add(self.contour_val)
         self.contour_sizer.Add(self.contour_val_box)
+
+        # self.contour_sizer.AddSpacer(5)
+        # self.contour_val_box = wx.BoxSizer(wx.HORIZONTAL)
+        # self.contour_val_box.AddSpacer(125)
+        # self.contour_val = wx.StaticText(self, label="10")
+        # self.contour_val_box.Add(self.contour_val)
+        # self.contour_sizer.Add(self.contour_val_box)
 
         # Create a sizer for changing the y axis limits of a selected 1D slice in the 2D plot
         self.intensity_label = wx.StaticBox(self, -1, "Intensity Scaling 1D (%):")
@@ -936,6 +948,7 @@ class ThreeDViewer(wx.Panel):
 
         self.fig.canvas.mpl_connect("key_press_event", self.on_key_3d)
         self.fig.canvas.mpl_connect("button_press_event", self.on_click_3d)
+        self.mouse_wheel_connect = self.fig.canvas.Bind(wx.EVT_MOUSEWHEEL, self.on_mouse_wheel)
 
         # plot parameters
         contour_start = (
@@ -1093,9 +1106,49 @@ class ThreeDViewer(wx.Panel):
             self.waterfall_warning.Destroy()
             return
 
+    def OnTextContour3D(self,event):
+
+        try:
+            self.contour_slider.SetValue(np.log10(float(self.contour_val.GetValue())))
+            self.x_val = self.contour_val.GetValue()
+            self.OnMinContour3D(event)
+        except:
+            self.OnMinContour3D(event)
+
     def OnLinewidthScroll3D(self, event):
         self.contour_linewidth = float(self.linewidth_slider.GetValue())
         self.OnMinContour3D(event)
+
+    def mouse_wheel_zoom(self, event):
+        mx, my = event.GetPosition()
+
+        scale = self.fig.canvas.GetDPIScaleFactor()
+        mx *= scale
+        my *= scale
+
+        h = self.fig.canvas.GetSize().height * scale
+        my = h - my
+
+        zoom = 1.1 if event.GetWheelRotation() < 0 else 1/1.1
+
+        renderer = self.fig.canvas.get_renderer()
+
+        for ax in self.fig.axes:
+            bbox = ax.get_window_extent(renderer=renderer)
+
+            if not bbox.contains(mx, my):
+                continue
+
+            inv = ax.transData.inverted()
+            x, y = inv.transform((mx, my))
+
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+
+            ax.set_xlim([x + (v - x) * zoom for v in xlim])
+            ax.set_ylim([y + (v - y) * zoom for v in ylim])
+
+        self.fig.canvas.draw_idle()
 
     def OnMoveX_3D(self, event):
         # update x-axis
@@ -1219,6 +1272,31 @@ class ThreeDViewer(wx.Panel):
         self.move_y_slider.SetRes(self.reference_rangeY / 1000)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY_3D)
 
+    def on_mouse_wheel(self, event):
+
+        toolbar = self.fig.canvas.toolbar
+        if toolbar:
+            toolbar.push_current() # logs position in toolbar so commands back, forward, home work
+
+        if self.mouse_wheel_mode == ScrollMode.ZOOM:
+            self.mouse_wheel_zoom(event)
+        
+        if self.mouse_wheel_mode == ScrollMode.CONTOUR:
+            delta = 0.1 if event.GetWheelRotation() > 0 else -0.1
+            current = float(self.contour_slider.GetValue())
+            self.contour_slider.SetValue(current + delta)
+            self.x_val = 10 ** float(self.contour_slider.GetValue())
+            self.contour_val.SetValue(
+                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+            )
+            self.OnMinContour3D(event)
+        
+        if self.mouse_wheel_mode == ScrollMode.PLANE:
+            delta = 0.1 if event.GetWheelRotation() > 0 else -0.1 
+            current = float(self.z_slider.GetValue())
+            self.z_slider.SetValue(current+delta)
+            self.OnZScroll3D(event)
+
     def on_key_3d(self, event):
         # navigator options
         if event.key == "z":
@@ -1231,6 +1309,9 @@ class ThreeDViewer(wx.Panel):
             self.toolbar.back()
         if event.key == "f":
             self.toolbar.forward()
+        
+        if event.key == "c":
+            self.mouse_wheel_mode = cycle_scroll_mode(self.mouse_wheel_mode, THREED_SCROLL_MODES)
 
         # Plot horizontal/vertical slices of the data
         if event.key == "h":
@@ -1940,54 +2021,118 @@ class Plot3DFrame(wx.Frame):
         # Remove grid lines
         self.ax.grid(False)
 
-    def OnContourSlider(self, event):
-        contour_val = 10 ** float(self.contour_slider.GetValue())
-        contour_start = (
-            np.max(self.main_frame.nmrdata.data) / contour_val
-        )  # contour level start value
-        self.contour_num = 20  # number of contour levels
-        self.contour_factor = 1.2  # scaling factor between contour levels
-        # calculate contour levels
-        self.cl = contour_start * self.contour_factor ** np.arange(self.contour_num)
-        self.cl_neg = -contour_start * self.contour_factor ** np.flip(
-            np.arange(self.contour_num)
-        )
+    # def OnContourSlider(self, event):
+    #     contour_val = 10 ** float(self.contour_slider.GetValue())
+    #     contour_start = (
+    #         np.max(self.main_frame.nmrdata.data) / contour_val
+    #     )  # contour level start value
+    #     self.contour_num = 20  # number of contour levels
+    #     self.contour_factor = 1.2  # scaling factor between contour levels
+    #     # calculate contour levels
+    #     self.cl = contour_start * self.contour_factor ** np.arange(self.contour_num)
+    #     self.cl_neg = -contour_start * self.contour_factor ** np.flip(
+    #         np.arange(self.contour_num)
+    #     )
 
-        xlim = self.ax.get_xlim3d()
-        ylim = self.ax.get_ylim3d()
-        zlim = self.ax.get_zlim3d()
-        xlabel = self.ax.get_xlabel()
-        ylabel = self.ax.get_ylabel()
-        zlabel = self.ax.get_zlabel()
-        view = self.ax.azim
+    #     xlim = self.ax.get_xlim3d()
+    #     ylim = self.ax.get_ylim3d()
+    #     zlim = self.ax.get_zlim3d()
+    #     xlabel = self.ax.get_xlabel()
+    #     ylabel = self.ax.get_ylabel()
+    #     zlabel = self.ax.get_zlabel()
+    #     view = self.ax.azim
 
-        self.ax.clear()
+    #     self.ax.clear()
 
-        for i in range(self.main_frame.nmrdata.data.shape[0]):
-            x = self.main_frame.ppms_1
-            y = self.main_frame.ppms_0
-            z = self.main_frame.nmrdata.data[i]
-            x, y = np.meshgrid(x, y)
-            self.ax.contour(
-                x,
-                y,
-                z,
-                zdir="z",
-                offset=self.main_frame.ppms_2[i],
-                levels=self.cl,
-                colors="red",
-                linewidths=0.5,
-            )
+    #     for i in range(self.main_frame.nmrdata.data.shape[0]):
+    #         x = self.main_frame.ppms_1
+    #         y = self.main_frame.ppms_0
+    #         z = self.main_frame.nmrdata.data[i]
+    #         x, y = np.meshgrid(x, y)
+    #         self.ax.contour(
+    #             x,
+    #             y,
+    #             z,
+    #             zdir="z",
+    #             offset=self.main_frame.ppms_2[i],
+    #             levels=self.cl,
+    #             colors="red",
+    #             linewidths=0.5,
+    #         )
 
-        self.ax.set_zlim3d(zlim[0], zlim[1])
-        self.ax.set_xlim3d(xlim[0], xlim[1])
-        self.ax.set_ylim3d(ylim[0], ylim[1])
-        self.ax.set_xlabel(xlabel)
-        self.ax.set_ylabel(ylabel)
-        self.ax.set_zlabel(zlabel)
-        self.ax.view_init(azim=view)
+    #     self.ax.set_zlim3d(zlim[0], zlim[1])
+    #     self.ax.set_xlim3d(xlim[0], xlim[1])
+    #     self.ax.set_ylim3d(ylim[0], ylim[1])
+    #     self.ax.set_xlabel(xlabel)
+    #     self.ax.set_ylabel(ylabel)
+    #     self.ax.set_zlabel(zlabel)
+    #     self.ax.view_init(azim=view)
 
-        self.Update3DFrame()
+    #     self.Update3DFrame()
+
+    # def DrawContours3D(self):
+    #     """Core drawing function — call this from any trigger."""
+    #     contour_start = np.max(self.main_frame.nmrdata.data) / self.x_val
+    #     self.contour_num = 20
+    #     self.contour_factor = 1.2
+    #     self.cl = contour_start * self.contour_factor ** np.arange(self.contour_num)
+    #     self.cl_neg = -contour_start * self.contour_factor ** np.flip(np.arange(self.contour_num))
+
+    #     xlim, ylim, zlim = self.ax.get_xlim3d(), self.ax.get_ylim3d(), self.ax.get_zlim3d()
+    #     xlabel, ylabel, zlabel = self.ax.get_xlabel(), self.ax.get_ylabel(), self.ax.get_zlabel()
+    #     view = self.ax.azim
+
+    #     self.ax.clear()
+
+    #     for i in range(self.main_frame.nmrdata.data.shape[0]):
+    #         x, y = np.meshgrid(self.main_frame.ppms_1, self.main_frame.ppms_0)
+    #         self.ax.contour(
+    #             x, y,
+    #             self.main_frame.nmrdata.data[i],
+    #             zdir="z",
+    #             offset=self.main_frame.ppms_2[i],
+    #             levels=self.cl,
+    #             colors="red",
+    #             linewidths=0.5,
+    #         )
+
+    #     self.ax.set_xlim3d(xlim[0], xlim[1])
+    #     self.ax.set_ylim3d(ylim[0], ylim[1])
+    #     self.ax.set_zlim3d(zlim[0], zlim[1])
+    #     self.ax.set_xlabel(xlabel)
+    #     self.ax.set_ylabel(ylabel)
+    #     self.ax.set_zlabel(zlabel)
+    #     self.ax.view_init(azim=view)
+
+    #     self.Update3DFrame()
+
+
+    # def OnContourSlider(self, event):
+    #     """Triggered by slider."""
+    #     self.x_val = 10 ** float(self.contour_slider.GetValue())
+    #     self.contour_value_label.SetValue("{:.2f}".format(self.x_val))
+    #     self.DrawContours3D()
+
+
+    # def OnContourText(self, event):
+    #     """Triggered by text control."""
+    #     self.x_val = float(self.contour_value_label.GetValue())
+    #     self.DrawContours3D()
+
+
+    # def OnMouseWheel(self, event):
+    #     match self.mouse_wheel_mode:
+    #         case ScrollMode.ZOOM:
+    #             self.OnZoom(event)
+    #         case ScrollMode.CONTOUR:
+    #             delta = 0.1 if event.GetWheelRotation() > 0 else -0.1
+    #             current = float(self.contour_slider.GetValue())
+    #             self.contour_slider.SetValue(current + delta)
+    #             self.x_val = 10 ** float(self.contour_slider.GetValue())
+    #             self.contour_value_label.SetValue("{:.2f}".format(self.x_val))
+    #             self.DrawContours3D()
+    #         case ScrollMode.PLANE:
+    #             self.OnChangePlane(event)
 
 
 class SpinBore(wx.Frame):
