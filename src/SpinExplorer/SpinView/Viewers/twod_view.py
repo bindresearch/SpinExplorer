@@ -570,6 +570,9 @@ class TwoDViewer(wx.Panel):
         )
         self.reference_range_chooserY.Bind(wx.EVT_COMBOBOX, self.OnReferenceComboY)
 
+        self.reference_range_chooserX.SetSelection(0)
+        self.reference_range_chooserY.SetSelection(0)
+
         self.move_x.Add(self.move_x_slider)
         self.move_x.AddSpacer(5)
         self.move_ranges.Add(
@@ -1764,18 +1767,24 @@ class TwoDViewer(wx.Panel):
             for window in wx.GetTopLevelWindows():
                 if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
                     # Need to swap the order of the peaklist dimensions
-                    for (
-                        peaklist_name,
-                        dictionary,
-                    ) in self.peaklist_frame.peak_list_dictionary.items():
-                        shift1 = dictionary["shift1"]
-                        shift2 = dictionary["shift2"]
-                        self.peaklist_frame.peak_list_dictionary[peaklist_name][
-                            "shift1"
-                        ] = shift2
-                        self.peaklist_frame.peak_list_dictionary[peaklist_name][
-                            "shift2"
-                        ] = shift1
+                    try:
+                        for (
+                            peaklist_name,
+                            dictionary,
+                        ) in self.peaklist_frame.peak_list_dictionary.items():
+                            shift1 = dictionary["shift1"]
+                            shift2 = dictionary["shift2"]
+                            self.peaklist_frame.peak_list_dictionary[peaklist_name][
+                                "shift1"
+                            ] = shift2
+                            self.peaklist_frame.peak_list_dictionary[peaklist_name][
+                                "shift2"
+                            ] = shift1
+                            axis_names_old = self.peaklist_frame.names[peaklist_name]
+                            self.peaklist_frame.names[peaklist_name] = [axis_names_old[1], axis_names_old[0]]
+
+                    except:
+                        pass
                 else:
                     pass
 

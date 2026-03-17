@@ -1524,7 +1524,7 @@ class ExperimentConfigStore:
         """
 
     
-    def process_data(self, filter_removal=False):
+    def process_data(self, filter_removal=False, pseudo_flag=False):
         """
         Process NMR data directly using the configuration.
         
@@ -1543,7 +1543,7 @@ class ExperimentConfigStore:
         dic['FDCOMMENT'] = 'nmrglue'
         
         try:
-            if(self.pseudo_flag==True):
+            if(pseudo_flag==True):
                 # Adding the fact that there is a pseudo axis to the FDCOMMENT
                 dic['FDCOMMENT'] += '_pseudo'
         except:

@@ -86,7 +86,7 @@ class GetData:
                 params = parameter_write_cl(nmr_glue_conv, config)
                 params.write_out_dict(params.dictionary)
         
-                config.process_data()
+                config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag)
                 self.file = config.ft_name
             except:
                 dlg = wx.MessageDialog(
@@ -115,6 +115,7 @@ class GetData:
         try:
             if self.file != ".":
                 self.dic, self.data = ng.pipe.read(self.file)
+                print(self.dic)
                 if('nmrglue' in self.dic['FDCOMMENT']):
                     self.nmrglue_flag = True
                 else:
