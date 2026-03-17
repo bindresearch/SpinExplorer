@@ -115,7 +115,6 @@ class GetData:
         try:
             if self.file != ".":
                 self.dic, self.data = ng.pipe.read(self.file)
-                print(self.dic)
                 if('nmrglue' in self.dic['FDCOMMENT']):
                     self.nmrglue_flag = True
                 else:
