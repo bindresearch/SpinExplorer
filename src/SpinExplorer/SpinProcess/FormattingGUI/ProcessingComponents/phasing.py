@@ -37,6 +37,10 @@ from SpinExplorer.SpinProcess.Processing.process_nmrglue import (
     ProcessNMRGlue,
 )
 
+from SpinExplorer.SpinProcess.StoringParameters.read_parameters import (FindDigitalFilterFlag
+    ,
+)
+
 
 class PhasingDirect:
     def __init__(self, app, nmr_data, parent, info_buttons, apodization_class):
@@ -216,7 +220,6 @@ class PhasingDirect:
             interactive_phasing=True,
         )
 
-        # Perform at fourier transform in the direct dimension
         dic, data = ng.pipe_proc.em(
                     dic,
                     data,
@@ -230,9 +233,15 @@ class PhasingDirect:
                     auto=True,
                 )
         
+        find_digital_filter_method = FindDigitalFilterFlag()
+        
         dic, data = ng.pipe_proc.ft(dic, data)
         dic_bruker, dat_bruker = ng.bruker.read("./")
-        data = proc_glue.remove_digital_filter(dic_bruker, data, truncate=False)
+
+
+        # Read the parameters.json file to see whether the digital filter has already been removed
+        if(find_digital_filter_method.remove_before_after=='after'):
+            data = proc_glue.remove_digital_filter(dic_bruker, data, truncate=False)
         dic, data = ng.pipe_proc.ps(
                 dic,
                 data,
