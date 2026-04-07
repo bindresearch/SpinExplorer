@@ -404,6 +404,7 @@ class ProcessNMRGlue:
                 shutil.move(source, destination)
 
         data0 = np.max(data, axis=0)
+        data0_1 = np.min(data, axis=0)
         dic0 = copy.deepcopy(dic)
 
         dim_0 = dic["FDDIMORDER"][2]
@@ -420,10 +421,11 @@ class ProcessNMRGlue:
 
         name = dic0["FDF1LABEL"] + "." + dic0["FDF2LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic0, data0, overwrite=True)
+        ng.pipe.write(name, dic0, data0+data0_1, overwrite=True)
 
         dic1, data1 = self.zero_transpose_3d(dic, data)
         data1_1 = np.max(data1, axis=0)
+        data1_2 = np.min(data1, axis=0)
         dic1 = copy.deepcopy(dic1)
 
         dim_1 = dic1["FDDIMORDER"][2]
@@ -440,12 +442,13 @@ class ProcessNMRGlue:
 
         name = dic1["FDF3LABEL"] + "." + dic1["FDF2LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic1, data1_1, overwrite=True)
+        ng.pipe.write(name, dic1, data1_1+data1_2, overwrite=True)
 
         dic2, data2 = self.transpose_3d(dic, data)
         dic2, data2 = self.zero_transpose_3d(dic2, data2)
 
         data2_1 = np.max(data2, axis=0)
+        data2_2 = np.min(data2,axis=0)
         dic2 = copy.deepcopy(dic2)
 
         dim_2 = dic2["FDDIMORDER"][2]
@@ -462,7 +465,7 @@ class ProcessNMRGlue:
 
         name = dic2["FDF1LABEL"] + "." + dic2["FDF3LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic2, data2_1, overwrite=True)
+        ng.pipe.write(name, dic2, data2_1+data2_2, overwrite=True)
 
         # front = np.max(data, axis=1)
         # side = np.max(data, axis=2)

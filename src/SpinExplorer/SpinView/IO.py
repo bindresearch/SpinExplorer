@@ -230,6 +230,10 @@ class GetData:
                     self.axislabels.append(self.dic["FDF3LABEL"])
                     self.axislabels.append(self.dic["FDF2LABEL"])
                     self.axislabels.append(self.dic["FDF1LABEL"])
+                elif(self.nmrglue_flag == True):
+                    self.axislabels.append(self.dic["FDF3LABEL"])
+                    self.axislabels.append(self.dic["FDF2LABEL"])
+                    self.axislabels.append(self.dic["FDF1LABEL"])
                 else:
                     self.axislabels.append(self.dic["FDF1LABEL"])
                     self.axislabels.append(self.dic["FDF2LABEL"])
