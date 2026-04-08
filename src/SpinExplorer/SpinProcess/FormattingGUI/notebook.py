@@ -44,6 +44,8 @@ from SpinExplorer.SpinProcess.Processing.checking_parameters import CheckingPara
 from SpinExplorer.SpinProcess.StoringParameters.save_parameters import Save_json
 from SpinExplorer.SpinProcess.StoringParameters.read_parameters import Read_json
 
+from SpinExplorer.SpinView.SpinView import SpinView
+
 
 class NotebookProcess(wx.Notebook):
     def __init__(self, parent, nmr_data):
@@ -144,6 +146,13 @@ class NotebookProcess(wx.Notebook):
         """
         # Have a button for make nmrproc.com file, show nmrproc.com file and run processing
         self.button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.show_fid = wx.Button(parent, -1, "Show FID")
+        self.show_fid.Bind(wx.EVT_BUTTON, self.on_show_fid)
+        self.button_sizer.Add(self.show_fid, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.button_sizer.AddSpacer(10)
+
+
         self.saveprocessing = wx.Button(parent, -1, "Save Processing Parameters")
         self.saveprocessing.Bind(wx.EVT_BUTTON, self.on_save_processing)
         self.button_sizer.Add(self.saveprocessing, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -202,6 +211,13 @@ class NotebookProcess(wx.Notebook):
             if self.parent.file_parser == True:
                 # Change the path to the path of the original file
                 os.chdir(self.parent.cwd)
+
+    def on_show_fid(self, event):
+        """
+        Create a SpinView window containing the FID
+        """
+        fid_frame = SpinView(fid_data=[self.nmr_data])
+    
 
     def on_process_pipe(self, event):
         """

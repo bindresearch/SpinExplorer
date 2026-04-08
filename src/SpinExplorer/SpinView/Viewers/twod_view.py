@@ -30,7 +30,7 @@ from SpinExplorer.SpinView.config import reference_range_values, multiply_range_
 
 # A class to create a panel for viewing 2D NMR spectra
 class TwoDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata, threeDprojection=False):
+    def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -39,6 +39,7 @@ class TwoDViewer(wx.Panel):
         self.height = int(0.875 * sizes[self.display_index][1])
         self.parent = parent
         self.threeDprojection = threeDprojection
+        self.fid_viewer=fid_viewer
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
         self.nmrdata = nmrdata
         self.set_initial_variables_2D()
@@ -1437,6 +1438,11 @@ class TwoDViewer(wx.Panel):
             np.arange(self.contour_num)
         )
 
+        if(self.fid_viewer==True):
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.tp(self.nmrdata.dic,self.nmrdata.data, auto=True)
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.di(self.nmrdata.dic,self.nmrdata.data)
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.tp(self.nmrdata.dic,self.nmrdata.data, auto=True)
+
         # Get ppm values for x and y axis
         if self.nmrdata.file != ".":
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
@@ -1445,11 +1451,16 @@ class TwoDViewer(wx.Panel):
             udic = ng.bruker.guess_udic(self.nmrdata.dic, self.nmrdata.data)
             self.uc0 = ng.fileiobase.uc_from_udic(udic, dim=0)
             self.uc1 = ng.fileiobase.uc_from_udic(udic, dim=1)
-        self.ppms_0 = self.uc0.ppm_scale()
-        self.ppms_1 = self.uc1.ppm_scale()
+        if(self.fid_viewer==False):
+            self.ppms_0 = self.uc0.ppm_scale()
+            self.ppms_1 = self.uc1.ppm_scale()
+        else:
+            self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
         self.new_x_ppms = self.ppms_0
         self.new_y_ppms = self.ppms_1
         self.X, self.Y = np.meshgrid(self.ppms_1, self.ppms_0)
+
         self.contour1 = self.ax.contour(
             self.Y,
             self.X,
@@ -1468,8 +1479,9 @@ class TwoDViewer(wx.Panel):
         )
         self.ax.set_xlabel(self.nmrdata.axislabels[1])
         self.ax.set_ylabel(self.nmrdata.axislabels[0])
-        self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-        self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+        if(self.fid_viewer==False):
+            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
+            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
             self.nmrdata.data[:, 1] * self.multiply_factor,
@@ -1735,8 +1747,12 @@ class TwoDViewer(wx.Panel):
                 colors=self.cmap_neg,
                 linewidths=self.linewidth,
             )
-            self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
-            self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+            if(self.fid_viewer==False):
+                self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
+                self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+            else:
+                self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
+                self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
             self.axislabels_old = self.nmrdata.axislabels[0], self.nmrdata.axislabels[1]
             self.nmrdata.axislabels[1] = self.axislabels_old[0]
             self.nmrdata.axislabels[0] = self.axislabels_old[1]
@@ -1881,18 +1897,19 @@ class TwoDViewer(wx.Panel):
                 self.twoD_slices_horizontal[i][0].set_visible(False)
                 self.twoD_slices_vertical[i][0].set_visible(False)
 
-            self.ax.set_xlim(
-                [
-                    max(self.values_dictionary[0]["new_x_ppms"]),
-                    min(self.values_dictionary[0]["new_x_ppms"]),
-                ]
-            )
-            self.ax.set_ylim(
-                [
-                    max(self.values_dictionary[0]["new_y_ppms"]),
-                    min(self.values_dictionary[0]["new_y_ppms"]),
-                ]
-            )
+            if(self.fid_viewer==False):
+                self.ax.set_xlim(
+                    [
+                        max(self.values_dictionary[0]["new_x_ppms"]),
+                        min(self.values_dictionary[0]["new_x_ppms"]),
+                    ]
+                )
+                self.ax.set_ylim(
+                    [
+                        max(self.values_dictionary[0]["new_y_ppms"]),
+                        min(self.values_dictionary[0]["new_y_ppms"]),
+                    ]
+                )
             self.axislabels_old = self.nmrdata.axislabels[0], self.nmrdata.axislabels[1]
             self.nmrdata.axislabels[1] = self.axislabels_old[0]
             self.nmrdata.axislabels[0] = self.axislabels_old[1]
@@ -2708,11 +2725,17 @@ class TwoDViewer(wx.Panel):
 
                     else:
                         self.slice_mode = "x"
+                        if(self.fid_viewer==False):
+                            data = self.nmrdata.data[
+                                    :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
+                                ]
+                        else:
+                            data = self.nmrdata.data[
+                                    :, int(self.new_y_ppms[1])
+                                ]
                         (self.line1,) = self.axes1D.plot(
                             self.new_x_ppms,
-                            self.nmrdata.data[
-                                :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
-                            ]
+                            data
                             * self.multiply_factor,
                             color=self.slice_colour,
                         )
@@ -2737,10 +2760,16 @@ class TwoDViewer(wx.Panel):
                     else:
                         self.line3.set_visible = True
                         self.line4.set_visible = True
-                        (self.line3,) = self.axes1D_2.plot(
-                            self.nmrdata.data[
+                        if(self.fid_viewer==False):
+                            data = self.nmrdata.data[
                                 self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
                             ]
+                        else:
+                            data = self.nmrdata.data[
+                                int(self.new_x_ppms[1]), :
+                            ]
+                        (self.line3,) = self.axes1D_2.plot(
+                            data
                             * self.multiply_factor,
                             self.new_y_ppms,
                             color=self.slice_colour,
@@ -2860,21 +2889,30 @@ class TwoDViewer(wx.Panel):
             if self.multiplot_mode == False:
 
                 if self.line1.get_visible() == True:
-                    self.line1.set_ydata(
-                        self.nmrdata.data[
+                    if(self.fid_viewer==False):
+                        data = self.nmrdata.data[
                             :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
                         ]
-                        * self.multiply_factor
-                    )
+                    else:
+                        data = self.nmrdata.data[
+                            :, int(self.y1 - self.y_movement)
+                        ]
+                    self.line1.set_ydata(data*self.multiply_factor)
                     self.line2.set_ydata([self.y1])
                     self.line1.set_xdata(self.ppms_0 + self.x_movement)
                     self.OnSliderScroll2D(wx.EVT_SCROLL)
                     self.UpdateFrame()
                 if self.line3.get_visible() == True:
-                    self.line3.set_xdata(
-                        self.nmrdata.data[
+                    if(self.fid_viewer == False):
+                        data = self.nmrdata.data[
                             self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
                         ]
+                    else:
+                        data = self.nmrdata.data[
+                            int(self.x1 - self.x_movement), :
+                        ]
+                    self.line3.set_xdata(
+                        data
                         * self.multiply_factor
                     )
                     self.line4.set_xdata([self.x1])
@@ -3007,12 +3045,20 @@ class TwoDViewer(wx.Panel):
         if self.multiplot_mode == False:
             try:
                 if self.line1.get_visible() == True:
-                    data = (
-                        self.nmrdata.data[
-                            :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                        ]
-                        * self.multiply_factor
-                    )
+                    if(self.fid_viewer==False):
+                        data = (
+                            self.nmrdata.data[
+                                :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                            ]
+                            * self.multiply_factor
+                        )
+                    else:
+                        data = (
+                            self.nmrdata.data[
+                                :, int(self.y1 - self.y_movement)
+                            ]
+                            * self.multiply_factor
+                        )
                     complex_data = ng.process.proc_base.ht(
                         data, self.nmrdata.data.shape[0]
                     )
@@ -3038,12 +3084,20 @@ class TwoDViewer(wx.Panel):
                     # self.line2 = self.ax.axhline(self.y1, color='k')
                     self.UpdateFrame()
                 if self.line3.get_visible() == True:
-                    data = (
-                        self.nmrdata.data[
-                            self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                        ]
-                        * self.multiply_factor
-                    )
+                    if(self.fid_viewer==False):
+                        data = (
+                            self.nmrdata.data[
+                                self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                            ]
+                            * self.multiply_factor
+                        )
+                    else:
+                        data = (
+                            self.nmrdata.data[
+                                int(self.x1 - self.x_movement), :
+                            ]
+                            * self.multiply_factor
+                        )
                     complex_data = ng.process.proc_base.ht(
                         data, self.nmrdata.data.shape[1]
                     )

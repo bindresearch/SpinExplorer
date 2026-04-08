@@ -79,6 +79,7 @@ class ReadFID:
             return True
         else:
             self.fid_file = fid_files[0]
+            self.file = fid_files[0]
             return True
 
     def read_fid(self) -> None:
@@ -229,4 +230,5 @@ class ChooseFile(wx.Dialog):
     def OnOK(self, event):
         file_selection = self.file_combobox.GetSelection()
         self.parent.fid_file = self.spectrum_file[file_selection]
+        self.parent.file = self.spectrum_file[file_selection]
         self.Close()

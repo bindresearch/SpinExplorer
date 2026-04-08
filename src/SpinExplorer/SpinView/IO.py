@@ -43,6 +43,8 @@ class GetData:
         for file in files:
             if file.endswith(".ft"):
                 spectrum_file.append(file)
+            if file.endswith(".ft1"):
+                spectrum_file.append(file)
             if file.endswith(".ft2"):
                 spectrum_file.append(file)
             if file.endswith(".ft3"):
@@ -227,6 +229,10 @@ class GetData:
             else:
                 # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
                 if(self.pseudo_flag==True and self.nmrglue_flag==True):
+                    self.axislabels.append(self.dic["FDF3LABEL"])
+                    self.axislabels.append(self.dic["FDF2LABEL"])
+                    self.axislabels.append(self.dic["FDF1LABEL"])
+                elif(self.nmrglue_flag == True):
                     self.axislabels.append(self.dic["FDF3LABEL"])
                     self.axislabels.append(self.dic["FDF2LABEL"])
                     self.axislabels.append(self.dic["FDF1LABEL"])

@@ -19,7 +19,7 @@ from SpinExplorer.SpinView.config import reference_range_values, multiply_range_
 
 # Frame for One-Dimensional NMR Spectra
 class OneDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata, uc0=None):
+    def __init__(self, parent, nmrdata, uc0=None, fid_viewer=False):
         # Getting the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -31,6 +31,7 @@ class OneDViewer(wx.Panel):
         self.uc0_initial = uc0
         self.stack = False
         self.uc0 = uc0
+        self.fid_viewer=fid_viewer
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
         self.nmrdata = nmrdata
         self.set_initial_variables_1D()
@@ -2717,13 +2718,18 @@ class OneDViewer(wx.Panel):
                 udic = ng.bruker.guess_udic(self.nmrdata.dic, self.nmrdata.data)
                 self.uc0 = ng.fileiobase.uc_from_udic(udic)
 
-        self.ppm_original = self.uc0.ppm_scale()
+        if(self.fid_viewer==False):
+            self.ppm_original = self.uc0.ppm_scale()
+        else:
+            # showing the fid axis as points
+            self.ppm_original = np.arange(0, len(self.nmrdata.data),1)
         self.ppms = self.ppm_original
         self.data = self.nmrdata.data
         (self.line1,) = self.ax.plot(self.ppms, self.data, linewidth=0.5)
         self.ax.set_xlabel(self.nmrdata.axislabels[0])
         self.ax.set_ylabel("Intensity")
-        self.ax.set_xlim(max(self.ppms), min(self.ppms))
+        if(self.fid_viewer==False):
+            self.ax.set_xlim(max(self.ppms), min(self.ppms))
         self.line1.set_color(self.colour_value)
 
         # Create a pivot line and set to invisible
