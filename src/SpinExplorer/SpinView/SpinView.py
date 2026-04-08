@@ -122,7 +122,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 # This class creates the GUI main frame
 class SpinView(wx.Frame):
-    def __init__(self, explorer=False, session_file=''):
+    def __init__(self, explorer=False, session_file='', fid_data=[]):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -152,7 +152,49 @@ class SpinView(wx.Frame):
 
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.build_app(session_file)
+        if(len(fid_data)==0):
+            self.build_app(session_file)
+        else:
+            self.build_fid_app(fid_data)
+
+
+    def build_fid_app(self, fid_data):
+
+        self.main_sizer.AddSpacer(10)
+        self.display_index_current = wx.Display.GetFromWindow(self)
+
+        # Variables needed to set the correct path so code can be used with unidecFile parser
+        self.path = ""
+        self.cwd = ""
+        self.file_parser = False
+
+        nmrdata = fid_data[0]
+        if nmrdata.dim == 1:
+            self.viewer = OneDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True)
+            self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
+        elif nmrdata.dim == 2:
+            self.viewer = TwoDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True)
+            self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
+        elif nmrdata.dim == 3:
+            self.viewer = ThreeDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True)
+            self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
+
+
+        self.SetSizer(self.main_sizer)
+
+        # Make negative contour lines solid
+        matplotlib.rc("contour", negative_linestyle="solid")
+
+        self.Show()
+        self.Centre()
+
+        # Bind method to check/resize the window when the frame is moved
+        self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
+
+        # Bind method to resize the window when the frame is resized
+        self.Bind(wx.EVT_SIZE, self.OnSizeFrame)
+
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def build_app(self, session_file=''):
 

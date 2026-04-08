@@ -173,10 +173,12 @@ class ProcessNMRGlue:
             # Adding the fact that there is a pseudo axis to the FDCOMMENT
             dic['FDCOMMENT'] += '_pseudo'
 
+
         # For the direct dimension, apply the processing functions
         dic, data = self.apply_dimension_processing(
             dic, data, 0, self.dimension_tabs[0]
         )
+
 
         # Adding processing lines for the first complex indirect dimension
         if include_dim2:
@@ -187,10 +189,10 @@ class ProcessNMRGlue:
                 return
             else:
                 if self.nmr_data.pseudo_axis == False and include_dim3 == False:
-                    dic, data = ng.pipe_proc.tp(dic, data)
+                    dic, data = ng.pipe_proc.tp(dic, data, auto=True)
                 elif self.nmr_data.pseudo_axis == True:
                     if self.nmr_data.index == 2:
-                        dic, data = ng.pipe_proc.tp(dic, data)
+                        dic, data = ng.pipe_proc.tp(dic, data, auto=True)
                     elif self.nmr_data.index == 1:
                         # If the pseudo axis is the central axis then need to move the third axis
                         dic, data = self.transpose_3d(dic, data, auto=True)

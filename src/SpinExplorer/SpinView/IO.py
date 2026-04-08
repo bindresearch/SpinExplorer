@@ -43,6 +43,8 @@ class GetData:
         for file in files:
             if file.endswith(".ft"):
                 spectrum_file.append(file)
+            if file.endswith(".ft1"):
+                spectrum_file.append(file)
             if file.endswith(".ft2"):
                 spectrum_file.append(file)
             if file.endswith(".ft3"):
