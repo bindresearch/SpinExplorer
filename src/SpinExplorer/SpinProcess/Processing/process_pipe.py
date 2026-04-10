@@ -372,9 +372,9 @@ class ProcessNMRPipe:
         """
         nmrproc_com.write("#!/bin/csh\n\n")
         if "/" not in self.nmr_data.fid_file:
-            nmrproc_com.write("nmrPipe -in " + self.nmr_data.fid_file + "\\\n")
+            nmrproc_com.write("nmrPipe -in " + self.nmr_data.fid_file + " -verb \\\n")
         else:
-            nmrproc_com.write("xyz2pipe -in ./fids/test%03d.fid \\\n")
+            nmrproc_com.write("xyz2pipe -in ./fids/test%03d.fid -verb \\\n")
 
         return nmrproc_com
 
