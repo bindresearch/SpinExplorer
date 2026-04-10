@@ -476,14 +476,40 @@ class SharedFormatting:
         self.nuslist_found = False
         for file in os.listdir():
             if file == "nuslist":
-                self.nuslist_found = True
-                self.nusfile = file
-                self.include_NUS = True
+                # Find FnType in acqus
+                nus_fntype = self.find_fn_type()
+                if(nus_fntype==True):
+                    self.nuslist_found = True
+                    self.nusfile = file
+                    self.include_NUS = True
+                else:
+                    self.nuslist_found = False
+                    self.nusfile = ""
+                    self.include_NUS = False
+
                 break
 
         if self.nuslist_found == False:
             self.include_NUS = False
             self.nusfile = ""
+
+    def find_fn_type(self):
+        try:
+            with open('./acqus', 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    if('##$FnTYPE=' in line):
+                        if('2' in line):
+                            # non-uniform sampling used
+                            return True
+                        else:
+                            return False
+                
+                return False
+
+        except:
+            # Unable to find FnType, assuming the data is traditional (planes)
+            return False
 
     def input_NUS_list_box(self):
         self.NUS_label = wx.StaticBox(self.app, -1, label="NUS Information")
