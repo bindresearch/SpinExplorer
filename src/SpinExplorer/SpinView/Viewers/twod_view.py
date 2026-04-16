@@ -24,8 +24,9 @@ from SpinExplorer.SpinView.Modules.relax import RelaxFit
 from SpinExplorer.SpinView.Peaks.peaks import PeakListWindow2D
 from SpinExplorer.SpinView.Viewers.overlays import FileDrop, ReadProjection
 from SpinExplorer.SpinView.IO import GetData
-from SpinExplorer.SpinView.config import height, platform, colours, twoD_colours
-from SpinExplorer.SpinView.config import reference_range_values, multiply_range_values
+from SpinExplorer.SpinView.config import *
+
+
 
 
 # A class to create a panel for viewing 2D NMR spectra
@@ -48,6 +49,7 @@ class TwoDViewer(wx.Panel):
         self.create_canvas_2D()
         self.add_to_main_sizer_2D()
         self.draw_figure_2D()
+        self.mouse_wheel_mode = ScrollMode.ZOOM
 
     def add_to_main_sizer_2D(self):
         # Create the main sizer
@@ -2151,26 +2153,19 @@ class TwoDViewer(wx.Panel):
             self.error_window.ShowModal()
             self.error_window.Destroy()
 
-    def OnMinContour2D(self, event, textcontrol=False):
-        # Function to update the contour levels when the user changes the number of contour levels
-        if textcontrol == False:
-            self.x_val = 10 ** float(self.contour_slider.GetValue())
+
+    def DrawContours2D(self):
+        """Core drawing function — call this from any trigger."""
         intensity_percent = 10 ** (float(self.intensity_slider.GetValue()))
+        self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
 
         if self.multiplot_mode == False:
-            # update contour levels
-            self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
-            self.cl = self.contour_start * self.contour_factor ** np.arange(
-                self.contour_num
-            )
-            self.cl_neg = -self.contour_start * self.contour_factor ** np.flip(
-                np.arange(self.contour_num)
-            )
+            self.cl = self.contour_start * self.contour_factor ** np.arange(self.contour_num)
+            self.cl_neg = -self.contour_start * self.contour_factor ** np.flip(np.arange(self.contour_num))
             xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             self.ax.clear()
             self.contour1 = self.ax.contour(
-                self.Y,
-                self.X,
+                self.Y, self.X,
                 self.nmrdata.data * self.multiply_factor,
                 self.cl,
                 colors=self.cmap,
@@ -2178,27 +2173,23 @@ class TwoDViewer(wx.Panel):
                 zorder=1,
             )
             self.contour1_neg = self.ax.contour(
-                self.Y,
-                self.X,
+                self.Y, self.X,
                 self.nmrdata.data * self.multiply_factor,
                 self.cl_neg,
                 colors=self.cmap_neg,
                 linewidths=self.linewidth,
                 zorder=1,
             )
-
-            if self.line1.get_visible() == True:
+            if self.line1.get_visible():
                 self.line2 = self.ax.axhline(self.y1, color="k")
-
-            if self.line3.get_visible() == True:
+            if self.line3.get_visible():
                 self.line4 = self.ax.axvline(self.x1, color="k")
-
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
             self.ax.set_xlabel(self.nmrdata.axislabels[1])
             self.ax.set_ylabel(self.nmrdata.axislabels[0])
+
         else:
-            self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
             xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             xlabel, ylabel = self.ax.get_xlabel(), self.ax.get_ylabel()
             self.ax.clear()
@@ -2212,8 +2203,7 @@ class TwoDViewer(wx.Panel):
                     self.values_dictionary[i]["new_x_ppms"],
                 )
                 self.ax.contour(
-                    y,
-                    x,
+                    y, x,
                     self.values_dictionary[i]["z_data"] * multiply_factor,
                     self.cl,
                     colors=self.twoD_colours[i],
@@ -2221,59 +2211,34 @@ class TwoDViewer(wx.Panel):
                     zorder=1,
                 )
                 self.ax.legend(self.files.custom_lines, self.files.custom_labels)
-                
 
-            if self.twoD_slices_horizontal[0][0].get_visible() == True:
-                # for i in range(len(self.twoD_slices_horizontal)):
+            if self.twoD_slices_horizontal[0][0].get_visible():
                 self.line_h = self.ax.axhline(self.y1, color="k")
                 self.axes1D.set_ylim(
                     -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
                     np.max(self.nmrdata.data) / (intensity_percent / 100),
                 )
-
-            if self.twoD_slices_vertical[0][0].get_visible() == True:
-                # for i in range(len(self.twoD_slices_horizontal)):
+            if self.twoD_slices_vertical[0][0].get_visible():
                 self.line_v = self.ax.axhline(self.x1, color="k")
                 self.axes1D_2.set_ylim(
                     -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
                     np.max(self.nmrdata.data) / (intensity_percent / 100),
                 )
-
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
 
-        if textcontrol == False:
-            self.contour_value_label.SetValue(
-                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
-            )
-
+        # Peak list plotting
         for window in wx.GetTopLevelWindows():
-            self.peaklist_colours = [
-                "black",
-                "gray",
-                "saddlebrown",
-                "purple",
-                "purple",
-                "blue",
-                "red",
-                "orange",
-            ]
+            self.peaklist_colours = ["black", "gray", "saddlebrown", "purple", "purple", "blue", "red", "orange"]
             if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
-                # Plot Peaklists
                 count = 0
                 self.points = []
                 self.annotations = []
-                for (
-                    peaklist_name,
-                    dictionary,
-                ) in self.peaklist_frame.peak_list_dictionary.items():
-
-                    if (
-                        self.peaklist_frame.select_peak_button.GetValue() == True
-                        or self.peaklist_frame.select_peaks_button.GetValue() == True
-                    ):
+                for peaklist_name, dictionary in self.peaklist_frame.peak_list_dictionary.items():
+                    if (self.peaklist_frame.select_peak_button.GetValue() == True
+                            or self.peaklist_frame.select_peaks_button.GetValue() == True):
                         if peaklist_name == self.peaklist_frame.selected_peaklist:
                             if "N/A" in self.peaklist_frame.selected_peak_indexes:
                                 cs = self.peaklist_colours[count]
@@ -2292,44 +2257,75 @@ class TwoDViewer(wx.Panel):
                     shift1 = dictionary["shift1"]
                     shift2 = dictionary["shift2"]
                     self.points.append(
-                        self.ax.scatter(
-                            shift1,
-                            shift2,
-                            s=5,
-                            marker="o",
-                            c=cs,
-                            picker=5,
-                            zorder=2,
-                        )
+                        self.ax.scatter(shift1, shift2, s=5, marker="o", c=cs, picker=5, zorder=2)
                     )
                     count += 1
-
-                    # Annotation for hover
                     self.annotations.append(
                         self.ax.annotate(
-                            "",
-                            xy=(0, 0),
-                            xytext=(15, 15),
+                            "", xy=(0, 0), xytext=(15, 15),
                             textcoords="offset points",
                             bbox=dict(boxstyle="round", fc="w"),
                             arrowprops=dict(arrowstyle="->"),
                         )
                     )
                     self.annotations[-1].set_visible(False)
-                    # adjust_text(self.annotations, ax=self.ax)
-
-                    # Connect event
-                    self.hover_connect = self.canvas.mpl_connect(
-                        "motion_notify_event", self.on_hover
-                    )
-
-            else:
-                pass
+                    self.hover_connect = self.canvas.mpl_connect("motion_notify_event", self.on_hover)
 
         self.OnSliderScroll2D(wx.EVT_SCROLL)
         self.OnIntensityScroll2D(wx.EVT_SCROLL)
-
         self.UpdateFrame()
+
+
+    def OnMinContour2D(self, event, textcontrol=False):
+        """Triggered by slider."""
+        if not textcontrol:
+            self.x_val = 10 ** float(self.contour_slider.GetValue())
+            self.contour_value_label.SetValue(
+                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+            )
+        self.DrawContours2D()
+
+
+    def OnMinContour2DText(self, event):
+        """Triggered by text control."""
+        self.x_val = float(self.contour_value_label.GetValue())
+        self.DrawContours2D()
+
+    def on_mouse_wheel(self, event):
+
+        toolbar = self.fig.canvas.toolbar
+        if toolbar:
+            toolbar.push_current() # logs position in toolbar so commands back, forward, home work
+
+        if self.mouse_wheel_mode == ScrollMode.ZOOM:
+            self.mouse_wheel_zoom(event)
+        
+        if self.mouse_wheel_mode == ScrollMode.CONTOUR:
+            delta = 0.1 if event.GetWheelRotation() > 0 else -0.1
+            current = float(self.contour_slider.GetValue())
+            self.contour_slider.SetValue(current + delta)
+            self.x_val = 10 ** float(self.contour_slider.GetValue())
+            self.contour_value_label.SetValue(
+                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+            )
+            self.DrawContours2D()
+
+    # def OnMouseWheel(self, event):
+    #     """Triggered by mouse wheel."""
+    #     match self.MOUSE_WHEEL_MODE:
+    #         case ScrollMode.ZOOM:
+    #             self.OnZoom(event)
+    #         case ScrollMode.CONTOUR:
+    #             delta = 1 if event.GetWheelRotation() > 0 else -1
+    #             current = float(self.contour_slider.GetValue())
+    #             self.contour_slider.SetValue(current + delta)
+    #             self.x_val = 10 ** float(self.contour_slider.GetValue())
+    #             self.contour_value_label.SetValue(
+    #                 "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+    #             )
+    #             self.DrawContours2D()
+    #         case ScrollMode.PLANE:
+    #             self.OnChangePlane(event)
 
     def on_hover(self, event):
 
@@ -2652,12 +2648,8 @@ class TwoDViewer(wx.Panel):
         self.move_y_slider.SetRes(self.reference_rangeY / 1000)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY)
 
-    def on_mouse_wheel(self, event):
 
-        toolbar = self.fig.canvas.toolbar
-        if toolbar:
-            toolbar.push_current() # logs position in toolbar so commands back, forward, home work
-
+    def mouse_wheel_zoom(self, event):
         mx, my = event.GetPosition()
 
         scale = self.fig.canvas.GetDPIScaleFactor()
@@ -2702,6 +2694,9 @@ class TwoDViewer(wx.Panel):
             self.toolbar.back()
         if event.key == "f":
             self.toolbar.forward()
+        
+        if event.key == "c":
+            self.mouse_wheel_mode = cycle_scroll_mode(self.mouse_wheel_mode, TWOD_SCROLL_MODES)
 
         # key press event for 2D plot (Plot horizontal and vertical slices)
         if self.multiplot_mode == False:

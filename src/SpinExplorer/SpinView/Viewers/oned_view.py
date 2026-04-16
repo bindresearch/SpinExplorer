@@ -14,8 +14,7 @@ from scipy.interpolate import make_interp_spline # type: ignore
 
 from SpinExplorer.SpinView.UI_objects.UI_tools import FloatSlider, PhasingSliderRange
 from SpinExplorer.SpinView.Viewers.overlays import FileDrop
-from SpinExplorer.SpinView.config import height, platform, colours, colour_options
-from SpinExplorer.SpinView.config import reference_range_values, multiply_range_values, vertical_range_values
+from SpinExplorer.SpinView.config import *
 
 # Frame for One-Dimensional NMR Spectra
 class OneDViewer(wx.Panel):
@@ -2702,6 +2701,8 @@ class OneDViewer(wx.Panel):
             self.toolbar.back()
         if event.key == "f":
             self.toolbar.forward()
+        
+
 
     def draw_figure_1D(self):
         # Function to plot the 1D spectrum
