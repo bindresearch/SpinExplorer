@@ -30,7 +30,7 @@ from SpinExplorer.SpinView.config import reference_range_values, multiply_range_
 
 # A class to create a panel for viewing 2D NMR spectra
 class TwoDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False):
+    def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False, title=''):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -40,6 +40,7 @@ class TwoDViewer(wx.Panel):
         self.parent = parent
         self.threeDprojection = threeDprojection
         self.fid_viewer=fid_viewer
+        self.title=title
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
         self.nmrdata = nmrdata
         self.set_initial_variables_2D()
@@ -902,7 +903,7 @@ class TwoDViewer(wx.Panel):
         """
 
         for window in wx.GetTopLevelWindows():
-            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
                 self.peaklist_frame.turn_off_togglebuttons()
 
         dlg = wx.MessageDialog(
@@ -1396,15 +1397,15 @@ class TwoDViewer(wx.Panel):
 
         Supported file formats are:
         (test).ft2.list files (Sparky/tabular format)
-        CCPN peak table output 
+        CCPN peak table output (not currently implemented)
         """
 
         for window in wx.GetTopLevelWindows():
-            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
                 # The window already exists (return)
                 return
 
-        self.peaklist_frame = PeakListWindow2D(title="Peak Lists", parent=self)
+        self.peaklist_frame = PeakListWindow2D(title="Peak Lists - "+self.title, parent=self)
 
     def draw_figure_2D(self):
         self.ax = self.fig.add_subplot(111)
@@ -1781,7 +1782,7 @@ class TwoDViewer(wx.Panel):
             self.move_y_slider.SetValue(move_x_value)
 
             for window in wx.GetTopLevelWindows():
-                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
                     # Need to swap the order of the peaklist dimensions
                     try:
                         for (
@@ -2260,7 +2261,7 @@ class TwoDViewer(wx.Panel):
                 "red",
                 "orange",
             ]
-            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - " + self.title:
                 # Plot Peaklists
                 count = 0
                 self.points = []
