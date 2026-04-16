@@ -699,3 +699,44 @@ def load_variables_from_nmrproc_com_1D(self):
                 self.baseline_correction_node_list = line.split(": ")[1]
             elif line.split(":")[0] == "Baseline Correction Polynomial Order":
                 self.baseline_correction_polynomial_order = int(line.split(": ")[1])
+
+
+class FindDigitalFilterFlag():
+    """
+    This class will try to find out if the digital filter before processing flag is true
+    or false in the parameters.json file if the NMR data is of Bruker format.
+    """
+    def __init__(self):
+        self.remove_before_after = 'after'
+        parameter_dictionary = self.find_json()
+
+        if(parameter_dictionary['general']['spectrometer']=='Bruker'):
+            if(parameter_dictionary['digital filter parameters']['Remove Before/After Fourier Transform']=='Before'):
+                self.remove_before_after = 'before'
+
+
+    def find_json(self) -> Union[bool, None]:
+        """
+        Code to determine if there is a parameters.json file in the current
+        directory
+        """
+        if pathlib.Path("parameters.json").exists() == True:
+            parameter_dictionary = self.read(warning=False)
+            if parameter_dictionary == False or parameter_dictionary == None:
+                return None
+            return parameter_dictionary
+            
+        else:
+            return None
+        
+    def read(self, warning=True):
+        """
+        Reading the parameters.json file and giving an error to the user if this
+        could not be read correctly.
+        """
+        try:
+            with open("parameters.json", "r") as file:
+                parameter_dictionary = json.load(file)["conversion"]
+            return parameter_dictionary
+        except:
+            return None

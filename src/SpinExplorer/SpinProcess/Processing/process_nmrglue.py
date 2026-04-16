@@ -173,10 +173,12 @@ class ProcessNMRGlue:
             # Adding the fact that there is a pseudo axis to the FDCOMMENT
             dic['FDCOMMENT'] += '_pseudo'
 
+
         # For the direct dimension, apply the processing functions
         dic, data = self.apply_dimension_processing(
             dic, data, 0, self.dimension_tabs[0]
         )
+
 
         # Adding processing lines for the first complex indirect dimension
         if include_dim2:
@@ -187,10 +189,10 @@ class ProcessNMRGlue:
                 return
             else:
                 if self.nmr_data.pseudo_axis == False and include_dim3 == False:
-                    dic, data = ng.pipe_proc.tp(dic, data)
+                    dic, data = ng.pipe_proc.tp(dic, data, auto=True)
                 elif self.nmr_data.pseudo_axis == True:
                     if self.nmr_data.index == 2:
-                        dic, data = ng.pipe_proc.tp(dic, data)
+                        dic, data = ng.pipe_proc.tp(dic, data, auto=True)
                     elif self.nmr_data.index == 1:
                         # If the pseudo axis is the central axis then need to move the third axis
                         dic, data = self.transpose_3d(dic, data, auto=True)
@@ -404,6 +406,7 @@ class ProcessNMRGlue:
                 shutil.move(source, destination)
 
         data0 = np.max(data, axis=0)
+        data0_1 = np.min(data, axis=0)
         dic0 = copy.deepcopy(dic)
 
         dim_0 = dic["FDDIMORDER"][2]
@@ -420,10 +423,11 @@ class ProcessNMRGlue:
 
         name = dic0["FDF1LABEL"] + "." + dic0["FDF2LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic0, data0, overwrite=True)
+        ng.pipe.write(name, dic0, data0+data0_1, overwrite=True)
 
         dic1, data1 = self.zero_transpose_3d(dic, data)
         data1_1 = np.max(data1, axis=0)
+        data1_2 = np.min(data1, axis=0)
         dic1 = copy.deepcopy(dic1)
 
         dim_1 = dic1["FDDIMORDER"][2]
@@ -440,12 +444,13 @@ class ProcessNMRGlue:
 
         name = dic1["FDF3LABEL"] + "." + dic1["FDF2LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic1, data1_1, overwrite=True)
+        ng.pipe.write(name, dic1, data1_1+data1_2, overwrite=True)
 
         dic2, data2 = self.transpose_3d(dic, data)
         dic2, data2 = self.zero_transpose_3d(dic2, data2)
 
         data2_1 = np.max(data2, axis=0)
+        data2_2 = np.min(data2,axis=0)
         dic2 = copy.deepcopy(dic2)
 
         dim_2 = dic2["FDDIMORDER"][2]
@@ -462,7 +467,7 @@ class ProcessNMRGlue:
 
         name = dic2["FDF1LABEL"] + "." + dic2["FDF3LABEL"] + ".dat"
 
-        ng.pipe.write(name, dic2, data2_1, overwrite=True)
+        ng.pipe.write(name, dic2, data2_1+data2_2, overwrite=True)
 
         # front = np.max(data, axis=1)
         # side = np.max(data, axis=2)

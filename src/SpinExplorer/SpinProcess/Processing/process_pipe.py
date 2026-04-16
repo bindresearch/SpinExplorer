@@ -89,6 +89,7 @@ class ProcessNMRPipe:
             if check_nus != [0]:
                 write_nmrpipe.apply_NUS_SMILE(nmrproc_com, check_nus)
                 nmrproc_com = write_nmrpipe.transpose_line(nmrproc_com)
+
             else:
                 if self.nmr_data.pseudo_axis == False:
                     nmrproc_com = write_nmrpipe.transpose_line(nmrproc_com)
@@ -99,6 +100,9 @@ class ProcessNMRPipe:
                         # If the pseudo axis is the central axis then need to move the third axis
                         nmrproc_com = write_nmrpipe.transpose_line(nmrproc_com)
                         nmrproc_com = write_nmrpipe.zero_transpose_line(nmrproc_com)
+            
+            if(self.check_lp(1)==1):
+                write_nmrpipe.linear_prediction(1, nmrproc_com, indirect=True)
             self.add_indirect_dimension(nmrproc_com, 1, write_nmrpipe)
 
         # Adding processing lines for the second complex indirect dimension
@@ -106,6 +110,8 @@ class ProcessNMRPipe:
             nmrproc_com = write_nmrpipe.zero_transpose_line(nmrproc_com)
             if check_nus == [2]:
                 write_nmrpipe.apply_NUS_SMILE(nmrproc_com, check_nus)
+            if(self.check_lp(2)==1):
+                write_nmrpipe.linear_prediction(2, nmrproc_com, indirect=True)
             self.add_indirect_dimension(nmrproc_com, 2, write_nmrpipe)
 
         # Adding the output line to the nmrproc.com script
@@ -366,9 +372,9 @@ class ProcessNMRPipe:
         """
         nmrproc_com.write("#!/bin/csh\n\n")
         if "/" not in self.nmr_data.fid_file:
-            nmrproc_com.write("nmrPipe -in " + self.nmr_data.fid_file + "\\\n")
+            nmrproc_com.write("nmrPipe -in " + self.nmr_data.fid_file + " -verb \\\n")
         else:
-            nmrproc_com.write("xyz2pipe -in ./fids/test%03d.fid \\\n")
+            nmrproc_com.write("xyz2pipe -in ./fids/test%03d.fid -verb \\\n")
 
         return nmrproc_com
 
@@ -507,6 +513,28 @@ class ProcessNMRPipe:
             nus = [0]
 
         return nus
+    
+
+
+
+    def check_lp(self, dimension) -> list[int]:
+        """
+        Checking if linear prediction has been selected.
+        Output:
+        0 - linear prediction has not been selected
+        1 - linear prediction has been selected
+        """
+        if (
+            self.dimension_tabs[
+                dimension
+            ].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
+            == 1
+        ):
+            return 1
+        else:
+            return 0
+
+
 
     def write_output_line(self, nmrproc_com):
         """

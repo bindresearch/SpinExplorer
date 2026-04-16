@@ -57,6 +57,8 @@ class PeakListWindow2D(wx.Frame):
         self.old_key = None
         self.old_num = None
 
+        self.names = {}
+
     def make_peaklist_window(self):
         """
         This window will have the following:
@@ -73,6 +75,7 @@ class PeakListWindow2D(wx.Frame):
         self.current_peaklist_box = wx.ComboBox(
             self, choices=self.peak_list_choices, size=(250, 20)
         )
+        
         self.current_peaklist_box.Bind(wx.EVT_COMBOBOX, self.OnPeakListSelection)
 
         self.add_peaks_button = wx.ToggleButton(self, label="Add Peaks (a)")
@@ -98,6 +101,9 @@ class PeakListWindow2D(wx.Frame):
         self.move_peaks_button = wx.ToggleButton(self, label="Move Peaks (m)")
         self.move_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnMovePeaks)
         ID_BUTTON_m = wx.NewIdRef()
+
+        self.include_helper_box = wx.CheckBox(self, -1, 'Show helper dialogs')
+        self.include_helper_box.SetValue(True)
 
         ID_BUTTON_k = wx.NewIdRef()
 
@@ -185,11 +191,7 @@ class PeakListWindow2D(wx.Frame):
         self.row_pickpeaks.AddSpacer(10)
         self.row_pickpeaks.Add(self.row_pickpeaks2, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
-        self.row2_label = wx.StaticBox(
-            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key, command+k moves selected peak to local maximum)"
-        )
-        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
-
+        
         self.row1.AddSpacer(5)
         self.row1.Add(self.add_peaklist_button)
         self.row1.AddSpacer(10)
@@ -197,20 +199,30 @@ class PeakListWindow2D(wx.Frame):
         self.row1.AddSpacer(5)
         self.row1.Add(self.current_peaklist_box)
 
+        self.row2_label = wx.StaticBox(
+            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key, command+k moves selected peak to local maximum)"
+        )
+        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.VERTICAL)
+        self.row2_1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.add_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.select_peak_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.select_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.move_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.remove_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.find_peak_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.save_peaks_button)
+
+        self.row2.Add(self.row2_1, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
         self.row2.AddSpacer(5)
-        self.row2.Add(self.add_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.select_peak_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.select_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.move_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.remove_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.find_peak_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.save_peaks_button)
+        self.row2.Add(self.include_helper_box, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
 
         self.main_peaklist_sizer.AddSpacer(10)
         self.main_peaklist_sizer.Add(
@@ -280,7 +292,7 @@ class PeakListWindow2D(wx.Frame):
             # peaklist = self.ReadCCPNList(peaklist_file)
             pass
         else:
-            peaklist = self.ReadPeakList(peaklist_file, new_peaklist)
+            peaklist = self.ReadPeakList(peaklist_file, new_peaklist, last_directories_path=last_directories_path)
         if type(peaklist) != dict:
             return
         self.peak_list_dictionary[last_directories_path] = peaklist
@@ -419,7 +431,7 @@ class PeakListWindow2D(wx.Frame):
 
         self.AddToTable()
 
-    def ReadPeakList(self, peaklist_file, new_peaklist):
+    def ReadPeakList(self, peaklist_file, new_peaklist, last_directories_path=''):
         """
         Read the selected peaklist to obtain the chemical shifts in each dimension
         Add a list of peak names, chemical shifts (dim1) and chemical shifts (dim2)
@@ -429,20 +441,36 @@ class PeakListWindow2D(wx.Frame):
         dictionary["peak_name"] = []
         dictionary["shift1"] = []
         dictionary["shift2"] = []
+        
+        # Placeholder names for each axis
+        name1 = ''
+        name2 = ''
+
         # Try to read the peaklist, otherwise give an error saying it could not be read correctly
         try:
             with open(peaklist_file) as file:
                 lines = file.readlines()
                 if len(lines) != 0:
-                    for line in lines:
+                    for i, line in enumerate(lines):
                         line = line.split("\n")[0].split()
                         if len(line) >= 3:
-                            try:
-                                dictionary["peak_name"].append(line[0])
-                                dictionary["shift1"].append(float(line[1]))
-                                dictionary["shift2"].append(float(line[2]))
-                            except:
-                                pass
+                            if(i==0):
+                                try:
+                                    float(line[1])
+                                    dictionary["peak_name"].append(line[0])
+                                    dictionary["shift1"].append(float(line[1]))
+                                    dictionary["shift2"].append(float(line[2]))
+                                except:
+                                    name1 = line[1]
+                                    name2 = line[2]
+                            else:
+                                try:
+                                    float(line[1])
+                                    dictionary["peak_name"].append(line[0])
+                                    dictionary["shift1"].append(float(line[1]))
+                                    dictionary["shift2"].append(float(line[2]))
+                                except:
+                                    pass
 
         except:
             self.peaklist_error_message()
@@ -451,9 +479,14 @@ class PeakListWindow2D(wx.Frame):
         if len(dictionary["peak_name"]) == 0 and new_peaklist == False:
             self.peaklist_error_message()
             return None
+        
+        
+        self.names[last_directories_path] = [name1, name2]
+    
 
         # Try to see if the chemical shifts of the peaks are within the 2D spectral range
-        dictionary = self.check_peaklist(dictionary)
+        dictionary = self.check_peaklist(dictionary, last_directories_path)
+        
 
         return dictionary
 
@@ -485,12 +518,25 @@ class PeakListWindow2D(wx.Frame):
 
     #     return dictionary
 
-    def check_peaklist(self, dictionary: dict):
+    def check_peaklist(self, dictionary: dict, last_directories_path = ''):
         """
         Try to see if the chemical shifts of the peaks are within the 2D spectral range
         """
         ppms_0 = dictionary["shift1"]
         ppms_1 = dictionary["shift2"]
+
+        axis_labels = self.main_frame.ax.get_xlabel(), self.main_frame.ax.get_ylabel()
+
+        if(self.names[last_directories_path][0]!='' and self.names[last_directories_path][1]!=''):
+            if(self.names[last_directories_path][0]==axis_labels[0] and self.names[last_directories_path][1]==axis_labels[1]):
+                return dictionary
+            elif(self.names[last_directories_path][0]==axis_labels[1] and self.names[last_directories_path][1]==axis_labels[0]):
+                dictionary["shift1"] = ppms_1
+                dictionary["shift2"] = ppms_0
+                self.names[last_directories_path] = [axis_labels[1], axis_labels[0]]
+                return dictionary
+
+
 
         match_0 = []
         for ppm in ppms_0:
@@ -542,9 +588,13 @@ class PeakListWindow2D(wx.Frame):
                 # More than 50 percent of the peaks are within the spectrum
                 dictionary["shift1"] = ppms_1
                 dictionary["shift2"] = ppms_0
+                old_names = self.names[last_directories_path]
+                self.names[last_directories_path] = [old_names[1], old_names[0]]
                 if self.main_frame.transposed2D == True:
                     dictionary["shift1"] = ppms_0
                     dictionary["shift2"] = ppms_1
+                    old_names = self.names[last_directories_path]
+                    self.names[last_directories_path] = [old_names[1], old_names[0]]
                 return dictionary
 
             else:
@@ -554,6 +604,8 @@ class PeakListWindow2D(wx.Frame):
             if self.main_frame.transposed2D == True:
                 dictionary["shift1"] = ppms_1
                 dictionary["shift2"] = ppms_0
+                old_names = self.names[last_directories_path]
+                self.names[last_directories_path] = [old_names[1], old_names[0]]
             return dictionary
 
     def peaklist_error_message(self):
@@ -680,16 +732,17 @@ class PeakListWindow2D(wx.Frame):
 
         self.selected_peaklist = self.current_peaklist_box.GetValue()
 
-        dlg = wx.MessageDialog(
-            None,
-            "Peaks can now be added to the peaklist {} by clicking the cursor. Please de-select the add button when complete.".format(
-                self.current_peaklist_box.GetValue()
-            ),
-            "Adding Peaks",
-            wx.OK,
-        )
-        dlg.ShowModal()
-        dlg.Destroy()
+        if(self.include_helper_box.GetValue()==True):
+            dlg = wx.MessageDialog(
+                None,
+                "Peaks can now be added to the peaklist {} by clicking the cursor. Please de-select the add button when complete.".format(
+                    self.current_peaklist_box.GetValue()
+                ),
+                "Adding Peaks",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
 
     def on_click_addpeak(self, event):
 
@@ -877,15 +930,15 @@ class PeakListWindow2D(wx.Frame):
         self.select_peaks_button.SetValue(True)
 
         # self.selected_peaklist = self.current_peaklist_box.GetValue()
-
-        dlg = wx.MessageDialog(
-            None,
-            "Drag over multiple peaks to select a group. Multiple groups can be selected sequentially by repeating and holding down the shift key.",
-            "Select Peaks",
-            wx.OK,
-        )
-        dlg.ShowModal()
-        dlg.Destroy()
+        if(self.include_helper_box.GetValue()==True):
+            dlg = wx.MessageDialog(
+                None,
+                "Drag over multiple peaks to select a group. Multiple groups can be selected sequentially by repeating and holding down the shift key.",
+                "Select Peaks",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
 
         # If drag, finds new peaks
         self.select_press = self.main_frame.fig.canvas.mpl_connect(
@@ -1091,26 +1144,28 @@ class PeakListWindow2D(wx.Frame):
             self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
             self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
             if self.eventDict[evt_id] != wx.EVT_TOOL_RANGE.typeId:
-                dlg = wx.MessageDialog(
-                    self,
-                    "Please drag to move the selected peaks to a new location. This can be repeated. Un-toggle the move peaks button when completed. (Note: ensure that zoom/pan in the matplotlib toolbar is not selected. Zoom/pan before entering move peaks mode)",
-                    "Move Peaks",
-                    wx.OK,
-                )
-                dlg.ShowModal()
-                dlg.Destroy()
+                if(self.include_helper_box.GetValue()==True):
+                    dlg = wx.MessageDialog(
+                        self,
+                        "Please drag to move the selected peaks to a new location. This can be repeated. Un-toggle the move peaks button when completed. (Note: ensure that zoom/pan in the matplotlib toolbar is not selected. Zoom/pan before entering move peaks mode)",
+                        "Move Peaks",
+                        wx.OK,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
         if self.active_select_peak == True:
             self.main_frame.fig.canvas.mpl_disconnect(self.select_peak_connect)
             evt_id = event.GetEventType()
             if evt_id != wx.EVT_TOOL_RANGE.typeId:
-                dlg = wx.MessageDialog(
-                    self,
-                    "Please click a new location to move the selected peak. This can be repeated. Un-toggle the move peaks button when completed. (Note: ensure zoom/pan in the matplotlib toolbar is not selected. Zoom/pan before entering move peaks mode)",
-                    "Move Peaks",
-                    wx.OK,
-                )
-                dlg.ShowModal()
-                dlg.Destroy()
+                if(self.include_helper_box.GetValue()==True):
+                    dlg = wx.MessageDialog(
+                        self,
+                        "Please click a new location to move the selected peak. This can be repeated. Un-toggle the move peaks button when completed. (Note: ensure zoom/pan in the matplotlib toolbar is not selected. Zoom/pan before entering move peaks mode)",
+                        "Move Peaks",
+                        wx.OK,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
 
         self.active_move = True
         self.move_peaks_button.SetValue(True)
@@ -1276,23 +1331,31 @@ class PeakListWindow2D(wx.Frame):
 
         row = self.grid.GetGridCursorRow()
         peak_name = self.grid.GetCellValue(row, 0)
-        shift1 = self.grid.GetCellValue(row, 1)
-        shift2 = self.grid.GetCellValue(row, 2)
+        shift1 = float(self.grid.GetCellValue(row, 1))
+        shift2 = float(self.grid.GetCellValue(row, 2))
 
         # Zoom in on grid selected peak and then select it in the plot.
-        width = 0.05  # ppm
-        height = 0.05  # ppm
+        width = 0.1  # ppm
+        height = 0.1  # ppm
 
-        xmin = float(shift1) - width
-        xmax = float(shift1) + width
+        xvalues = self.main_frame.new_x_ppms
 
-        ymin = float(shift2) - height
-        ymax = float(shift2) + height
+
+        if(shift1 > np.min(xvalues) and shift1 < np.max(xvalues)):
+            xmin = shift1 - width
+            xmax = shift1 + width
+            ymin = shift2 - height
+            ymax = shift2 + height
+        else:
+            xmin = shift2 - width
+            xmax = shift2 + width
+            ymin = shift1 - height
+            ymax = shift1 + height
 
         self.main_frame.toolbar.push_current()
 
-        self.main_frame.ax.set_xlim([xmin, xmax])
-        self.main_frame.ax.set_ylim([ymin, ymax])
+        self.main_frame.ax.set_xlim([xmax, xmin])
+        self.main_frame.ax.set_ylim([ymax, ymin])
         self.main_frame.UpdateFrame()
 
         self.main_frame.toolbar.push_current()
@@ -1313,12 +1376,18 @@ class PeakListWindow2D(wx.Frame):
             return
 
         with open(peaklist_file, "w") as file:
+            current_peaklist = self.current_peaklist_box.GetValue()
+            if(self.names[current_peaklist] != ['', '']):
+                file.write("Peak \t {} \t {}\n".format(self.names[current_peaklist][0], self.names[current_peaklist][1]))
+
+            shifts1 = self.peak_list_dictionary[current_peaklist]["shift1"]
+            shifts2 = self.peak_list_dictionary[current_peaklist]["shift2"]
             # Save all elements in the grid
             num_rows = self.grid.GetNumberRows()
             for i in range(num_rows):
                 peak = self.grid.GetCellValue(i, 0)
-                shift1 = self.grid.GetCellValue(i, 1)
-                shift2 = self.grid.GetCellValue(i, 2)
+                shift1 = shifts1[i]
+                shift2 = shifts2[i]
                 file.write("{} \t {} \t {}\n".format(peak, shift1, shift2))
 
     def OnPickPeaks(self, event):
@@ -1356,6 +1425,10 @@ class PeakListWindow2D(wx.Frame):
             message = 'The value in the threshold box ({}) is not a number, please correct this and try again.'.format(threshold_box_value)
             dlg = wx.MessageBox(message, "Pick Peaks", wx.OK)
             return
+        
+
+        self.xlabel = self.main_frame.ax.get_xlabel()
+        self.ylabel = self.main_frame.ax.get_ylabel()
         
         data = self.main_frame.nmrdata.data
         x = self.main_frame.ppms_0
@@ -1398,6 +1471,7 @@ class PeakListWindow2D(wx.Frame):
             dictionary["shift2"].append(peak[1])
         
         with open(peaklist_name, 'w') as file:
+            # empty the current peaklist file with this name or create an empty peaklist file
             file.write('')
         
         p = pathlib.Path(peaklist_name)
@@ -1413,6 +1487,8 @@ class PeakListWindow2D(wx.Frame):
 
         self.current_peaklist_box.SetItems(self.peak_list_choices)
         self.current_peaklist_box.SetSelection(len(self.peak_list_choices) - 1)
+
+        self.names[last_directories_path] = [self.xlabel, self.ylabel]
 
         self.turn_off_togglebuttons()
 
@@ -1440,47 +1516,48 @@ class PeakListWindow2D(wx.Frame):
             x_values = self.main_frame.ppms_1
             y_values = self.main_frame.ppms_0
 
+        for k, peak_index in enumerate(self.selected_peak_indexes):
 
-        x = self.peak_list_dictionary[self.selected_peaklist]["shift1"][
-            self.selected_peak_indexes[0]
-        ]
-        y = self.peak_list_dictionary[self.selected_peaklist]["shift2"][
-            self.selected_peak_indexes[0]
-        ]
-        rows, cols = data.shape
-        x_index = np.argmin(np.abs(x_values - x))
-        y_index = np.argmin(np.abs(y_values - y))
-        c, r = y_index, x_index
-
-        while True:
-            # Get all 8 neighbors (including diagonals)
-            neighbors = [
-                (nr, nc)
-                for nr in range(r - 1, r + 2)
-                for nc in range(c - 1, c + 2)
-                if (0 <= nr < rows and 0 <= nc < cols and (nr, nc) != (r, c))
+            x = self.peak_list_dictionary[self.selected_peaklist]["shift1"][
+                self.selected_peak_indexes[k]
             ]
+            y = self.peak_list_dictionary[self.selected_peaklist]["shift2"][
+                self.selected_peak_indexes[k]
+            ]
+            rows, cols = data.shape
+            x_index = np.argmin(np.abs(x_values - x))
+            y_index = np.argmin(np.abs(y_values - y))
+            c, r = y_index, x_index
 
-            # Find the neighbor with the highest value
-            best_neighbor = max(neighbors, key=lambda pos: data[pos[0], pos[1]])
+            while True:
+                # Get all 8 neighbors (including diagonals)
+                neighbors = [
+                    (nr, nc)
+                    for nr in range(r - 1, r + 2)
+                    for nc in range(c - 1, c + 2)
+                    if (0 <= nr < rows and 0 <= nc < cols and (nr, nc) != (r, c))
+                ]
 
-            # If the best neighbor is higher, move there
-            if data[best_neighbor[0], best_neighbor[1]] > data[r, c]:
-                r, c = best_neighbor
-            else:
-                # No neighbor is higher → local maximum reached
-                break
+                # Find the neighbor with the highest value
+                best_neighbor = max(neighbors, key=lambda pos: data[pos[0], pos[1]])
 
-        # New shifts
-        xvalue = x_values[r]
-        yvalue = y_values[c]
+                # If the best neighbor is higher, move there
+                if data[best_neighbor[0], best_neighbor[1]] > data[r, c]:
+                    r, c = best_neighbor
+                else:
+                    # No neighbor is higher → local maximum reached
+                    break
 
-        self.peak_list_dictionary[self.selected_peaklist]["shift1"][
-            self.selected_peak_indexes[0]
-        ] = xvalue
-        self.peak_list_dictionary[self.selected_peaklist]["shift2"][
-            self.selected_peak_indexes[0]
-        ] = yvalue
+            # New shifts
+            xvalue = x_values[r]
+            yvalue = y_values[c]
+
+            self.peak_list_dictionary[self.selected_peaklist]["shift1"][
+                self.selected_peak_indexes[k]
+            ] = xvalue
+            self.peak_list_dictionary[self.selected_peaklist]["shift2"][
+                self.selected_peak_indexes[k]
+            ] = yvalue
 
         self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
         self.AddToTable()
@@ -2210,6 +2287,9 @@ class PeakListWindow3D(wx.Frame):
             dictionary["shift2"] = []
             dictionary["shift3"] = []
             dictionary["intensity"] = []
+            name1 = ''
+            name2 = ''
+            name3 = ''
             # Try to read the peaklist, otherwise give an error saying it could not be read correctly
             try:
                 with open(peaklist_file) as file:
@@ -2218,17 +2298,33 @@ class PeakListWindow3D(wx.Frame):
                         for i, line in enumerate(lines):
                             line = line.split("\n")[0].split()
                             if len(line) >= 3:
-                                try:
-                                    dictionary["peak_name"].append(line[0])
-                                    dictionary['shift1'].append(float(line[1]))
-                                    dictionary['shift2'].append(float(line[2]))
-                                    dictionary['shift3'].append(float(line[3]))
+                                if(i==0):
                                     try:
-                                        dictionary["intensity"].append(float(line[4]))
+                                        float(line[1])
+                                        dictionary["peak_name"].append(line[0])
+                                        dictionary["shift1"].append(float(line[1]))
+                                        dictionary["shift2"].append(float(line[2]))
+                                        dictionary['shift3'].append(float(line[3]))
+                                        try:
+                                            dictionary["intensity"].append(float(line[4]))
+                                        except:
+                                            dictionary["intensity"].append(float(0.0))
                                     except:
-                                        dictionary["intensity"].append(float(0.0))
-                                except:
-                                    pass
+                                        name1 = line[1]
+                                        name2 = line[2]
+                                        name3 = line[3]
+                                else:
+                                    try:
+                                        dictionary["peak_name"].append(line[0])
+                                        dictionary['shift1'].append(float(line[1]))
+                                        dictionary['shift2'].append(float(line[2]))
+                                        dictionary['shift3'].append(float(line[3]))
+                                        try:
+                                            dictionary["intensity"].append(float(line[4]))
+                                        except:
+                                            dictionary["intensity"].append(float(0.0))
+                                    except:
+                                        pass
 
             except:
                 self.peaklist_error_message()
@@ -2247,20 +2343,35 @@ class PeakListWindow3D(wx.Frame):
             dictionary["peak_name"] = []
             dictionary["shift1"] = []
             dictionary["shift2"] = []
+
+            name1 = ''
+            name2 = ''
+
             # Try to read the peaklist, otherwise give an error saying it could not be read correctly
             try:
                 with open(peaklist_file) as file:
                     lines = file.readlines()
                     if len(lines) != 0:
-                        for line in lines:
+                        for i, line in enumerate(lines):
                             line = line.split("\n")[0].split()
                             if len(line) >= 3:
-                                try:
-                                    dictionary["peak_name"].append(line[0])
-                                    dictionary["shift1"].append(float(line[1]))
-                                    dictionary["shift2"].append(float(line[2]))
-                                except:
-                                    pass
+                                if(i==0):
+                                    try:
+                                        float(line[1])
+                                        dictionary["peak_name"].append(line[0])
+                                        dictionary["shift1"].append(float(line[1]))
+                                        dictionary["shift2"].append(float(line[2]))
+                                    except:
+                                        name1 = line[1]
+                                        name2 = line[2]
+
+                                else:
+                                    try:
+                                        dictionary["peak_name"].append(line[0])
+                                        dictionary["shift1"].append(float(line[1]))
+                                        dictionary["shift2"].append(float(line[2]))
+                                    except:
+                                        pass
 
             except:
                 self.peaklist_error_message()
@@ -3448,6 +3559,7 @@ class PeakListWindow3D(wx.Frame):
 
 
         with open(peaklist_file, "w") as file:
+
             # Save all elements in the grid
             num_rows = self.grid.GetNumberRows()
             for i in range(num_rows):

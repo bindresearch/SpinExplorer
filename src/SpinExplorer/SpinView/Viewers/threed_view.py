@@ -20,7 +20,7 @@ from SpinExplorer.SpinView.config import *
 
 
 class ThreeDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata):
+    def __init__(self, parent, nmrdata, fid_viewer=False):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -32,11 +32,21 @@ class ThreeDViewer(wx.Panel):
         self.nmrdata = nmrdata
         self.mouse_wheel_mode = ScrollMode.ZOOM
 
+        self.fid_viewer = fid_viewer
         self.set_initial_variables_3D()
         self.create_button_panel_3D()
         self.create_hidden_button_panel_3D()
         self.create_canvas_3D()
         self.add_to_main_sizer_3D()
+
+
+        if(self.fid_viewer==True):
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.tp(self.nmrdata.dic, self.nmrdata.data, auto=True)
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.di(self.nmrdata.dic,self.nmrdata.data)
+            self.nmrdata.dic, self.nmrdata.data = self.transpose_3d(self.nmrdata.dic, self.nmrdata.data)
+            self.nmrdata.dic, self.nmrdata.data = self.zero_transpose_3d(self.nmrdata.dic, self.nmrdata.data, unpack_complex=True)
+            self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.di(self.nmrdata.dic,self.nmrdata.data)
+            self.nmrdata.dic, self.nmrdata.data = self.zero_transpose_3d(self.nmrdata.dic, self.nmrdata.data)
         self.draw_figure_3D()
 
     def add_to_main_sizer_3D(self):
@@ -396,6 +406,8 @@ class ThreeDViewer(wx.Panel):
         # Create a combobox with the different possible data orientations (e.g. X: H, Y: C13, Z: N15)) which the user can select from
         self.orientation_label = wx.StaticBox(self, -1, "Data Orientation:")
         self.orientation_sizer = wx.StaticBoxSizer(self.orientation_label, wx.VERTICAL)
+
+
         labels = self.nmrdata.axislabels
         # Set the initial label to 1,2,0
         options = ["(" + labels[1] + "," + labels[2] + ")," + labels[0]]
@@ -563,9 +575,15 @@ class ThreeDViewer(wx.Panel):
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            if(self.fid_viewer==False):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppms_2 = self.uc2.ppm_scale()
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (0, 2, 1))
@@ -594,9 +612,14 @@ class ThreeDViewer(wx.Panel):
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            if(self.fid_viewer==False):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppms_2 = self.uc2.ppm_scale()
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (2, 1, 0))
@@ -622,9 +645,14 @@ class ThreeDViewer(wx.Panel):
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            if(self.fid_viewer==False):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppms_2 = self.uc2.ppm_scale()
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (2, 0, 1))
@@ -650,9 +678,14 @@ class ThreeDViewer(wx.Panel):
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            if(self.fid_viewer==False):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppms_2 = self.uc2.ppm_scale()
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (1, 2, 0))
@@ -677,9 +710,14 @@ class ThreeDViewer(wx.Panel):
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            if(self.fid_viewer==False):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppms_2 = self.uc2.ppm_scale()
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (1, 0, 2))
@@ -718,8 +756,13 @@ class ThreeDViewer(wx.Panel):
             colors=self.cmap_neg,
             linewidths=self.contour_linewidth,
         )
-        self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-        self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+
+        if(self.fid_viewer==False):
+            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
+            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+        else:
+            self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
+            self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
             self.nmrdata.data[self.max_intensity_index][:, 1],
@@ -941,6 +984,168 @@ class ThreeDViewer(wx.Panel):
         self.orientation_chooser.SetSelection(orientation_chooser_selection)
         self.OnOrientationCombo(None)
 
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
+    def transpose_3d(
+        self, dic, data, hyper=False, nohyper=False, auto=False, nohdr=False
+    ):
+        """
+        Transpose data (2D).
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        hyper : bool
+            True to perform hypercomplex transpose.
+        nohyper : bool
+            True to suppress hypercomplex transpose.
+        auto : bool
+            True to choose transpose mode automatically.
+        nohdr : bool
+            True to not update the transpose parameters in ndic.
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Array of NMR data which has been transposed.
+
+        """
+        # XXX test if works with TPPI
+        if nohyper:
+            hyper = False
+
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+        fn2 = "FDF" + str(int(dic["FDDIMORDER"][1]))  # F1, F2, etc
+
+        if auto:
+            if (dic[fn + "QUADFLAG"] != 1) and (dic[fn2 + "QUADFLAG"] != 1):
+                hyper = True
+            else:
+                hyper = False
+
+        if hyper:  # Hypercomplex transpose need type recast
+            data = np.array(ng.proc_base.tp_hyper(data), dtype="complex64")
+        else:
+            data = np.transpose(data, axes=(0, 2, 1))
+            if dic[fn2 + "QUADFLAG"] != 1 and nohyper is False:
+                # unpack complex as needed
+                data = np.array(ng.proc_base.c2ri(data), dtype="complex64")
+
+        # update the dimensionality and order
+        dic["FDSLICECOUNT"] = data.shape[-2]
+        if (data.dtype == "float32") and (nohyper is True):
+            # when nohyper is True and the new last dimension was complex
+            # prior to transposing then FDSIZE is set as if the dimension was
+            # converted to complex data, that is half the actual size.
+            dic["FDSIZE"] = data.shape[-1] / 2
+        else:
+            dic["FDSIZE"] = data.shape[-1]
+
+        dic["FDSPECNUM"] = dic["FDSLICECOUNT"]
+        dic["FDDIMORDER1"], dic["FDDIMORDER2"] = (
+            dic["FDDIMORDER2"],
+            dic["FDDIMORDER1"],
+        )
+        dic["FDDIMORDER"] = [
+            dic["FDDIMORDER1"],
+            dic["FDDIMORDER2"],
+            dic["FDDIMORDER3"],
+            dic["FDDIMORDER4"],
+        ]
+
+        if dic["FD2DPHASE"] == 0:
+            dic["FDF1QUADFLAG"], dic["FDF2QUADFLAG"] = (
+                dic["FDF2QUADFLAG"],
+                dic["FDF1QUADFLAG"],
+            )
+
+        if nohdr is not True:
+            dic["FDTRANSPOSED"] = (dic["FDTRANSPOSED"] + 1) % 2
+
+        dic = ng.pipe_proc.clean_minmax(dic)
+        return dic, data
+    
+
+    """
+    Obtained from nmrglue followed by customisation
+    
+    Copyright Notice and Statement for the nmrglue Project
+    Copyright (c) 2010-2015 Jonathan J. Helmus
+    All rights reserved.
+    """
+
+
+    def zero_transpose_3d(self, dic, data, unpack_complex=False):
+        """
+        Transpose NMRPipe-style data from (X, Y, Z) to (Z, Y, X),
+        including correct updates to the NMRPipe dictionary.
+
+        Parameters:
+            dic (dict): NMRPipe dictionary
+            data (ndarray): NMRPipe data, assumed shape (X, Y, Z)
+
+        Returns:
+            new_dic (dict): Transposed dictionary
+            new_data (ndarray): Transposed data, shape (Z, Y, X)
+        """
+        # Transpose data from (X, Y, Z) to (Z, Y, X)
+        new_data = np.transpose(data, axes=(2, 1, 0))
+
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+        fn3 = "FDF" + str(int(dic["FDDIMORDER"][2]))  # F1, F2, etc
+
+        # Create new dictionary
+        new_dic = dic.copy()
+
+        # for i, new_i in enumerate(
+        #     new_axis_order
+        # ):  # i = new dim index, new_i = old dim index
+        #     for key in dic:
+        #         if key.startswith(axis_keys[new_i]):
+        #             # e.g., FDF1SW -> FDF1SW, becomes FDF3SW when i == 0 (Z)
+        #             suffix = key[len(axis_keys[new_i]) :]  # e.g. SW, ORIG
+        #             new_key = axis_keys[i] + suffix  # FDF1SW, FDF2SW, etc.
+        #             new_dic[new_key] = dic[key]
+
+        # swapping the FDDIMORDER1 and FDDIMORDER3 values
+        order1 = dic["FDDIMORDER1"]
+        order3 = dic["FDDIMORDER3"]
+        new_dic["FDDIMORDER1"] = order3
+        new_dic["FDDIMORDER3"] = order1
+        new_dic["FDDIMORDER"][0] = order3
+        new_dic["FDDIMORDER"][2] = order1
+
+        new_dic["FDDIMORDER"] = [
+            new_dic["FDDIMORDER1"],
+            new_dic["FDDIMORDER2"],
+            new_dic["FDDIMORDER3"],
+            new_dic["FDDIMORDER4"],
+        ]
+
+        new_dic["FDSLICECOUNT"] = new_data.shape[-2]
+        new_dic["FDSPECNUM"] = new_dic["FDSLICECOUNT"]
+        new_dic["FDSIZE"] = new_data.shape[-1]
+
+        if(unpack_complex==True):
+            if dic[fn3 + "QUADFLAG"] != 1:
+                # unpack complex as needed
+                new_data = np.array(ng.proc_base.c2ri(new_data), dtype="complex64")
+                new_dic[fn3 + "SIZE"] = int(new_dic[fn3 + "SIZE"] / 2)
+
+        return new_dic, new_data
+
     def draw_figure_3D(self):
         self.ax = self.fig.add_subplot(111)
         self.axes1D = self.ax.twinx()
@@ -974,6 +1179,7 @@ class ThreeDViewer(wx.Panel):
         # Get ppm values for x and y axis
         self.data_original = self.nmrdata.data
 
+
         if self.nmrdata.file != ".":
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
@@ -984,9 +1190,15 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.fileiobase.uc_from_udic(udic, dim=2)
             self.uc2 = ng.fileiobase.uc_from_udic(udic, dim=0)
 
-        self.ppms_0 = self.uc0.ppm_scale()
-        self.ppms_1 = self.uc1.ppm_scale()
-        self.ppms_2 = self.uc2.ppm_scale()
+        if(self.fid_viewer==False):
+            self.ppms_0 = self.uc0.ppm_scale()
+            self.ppms_1 = self.uc1.ppm_scale()
+            self.ppms_2 = self.uc2.ppm_scale()
+        else:
+            self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+            self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+
         self.new_x_ppms = self.ppms_0
         self.new_y_ppms = self.ppms_1
         self.X, self.Y = np.meshgrid(self.ppms_1, self.ppms_0)
@@ -1008,8 +1220,13 @@ class ThreeDViewer(wx.Panel):
         )
         self.ax.set_xlabel(self.nmrdata.axislabels[1])
         self.ax.set_ylabel(self.nmrdata.axislabels[2])
-        self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-        self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+
+        if(self.fid_viewer==False):
+            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
+            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+        else:
+            self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
+            self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
 
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
@@ -1331,11 +1548,17 @@ class ThreeDViewer(wx.Panel):
                     self.line4.set_visible(False)
                     self.UpdateFrame()
                 else:
+                    if(self.fid_viewer==False):
+                        data = self.nmrdata.data[z_index][
+                            :, self.uc1(str(self.ppms_1[1]) + "ppm")
+                        ]
+                    else:
+                        data = self.nmrdata.data[z_index][
+                            :, int(self.ppms_1[1])
+                        ]
                     (self.line1,) = self.axes1D.plot(
                         self.ppms_0,
-                        self.nmrdata.data[z_index][
-                            :, self.uc1(str(self.ppms_1[1]) + "ppm")
-                        ],
+                        data,
                         color=self.slice_colour,
                     )
                     self.line2 = self.ax.axhline(self.ppms_1[1], color="k")
@@ -1359,10 +1582,16 @@ class ThreeDViewer(wx.Panel):
                 else:
                     self.line3.set_visible = True
                     self.line4.set_visible = True
-                    (self.line3,) = self.axes1D_2.plot(
-                        self.nmrdata.data[z_index][
+                    if(self.fid_viewer==False):
+                        data = self.nmrdata.data[z_index][
                             self.uc0(str(self.ppms_0[1]) + "ppm"), :
-                        ],
+                        ]
+                    else:
+                        data = self.nmrdata.data[z_index][
+                            int(self.ppms_0[1]), :
+                        ]
+                    (self.line3,) = self.axes1D_2.plot(
+                        data,
                         self.ppms_1,
                         color=self.slice_colour,
                     )
@@ -1375,19 +1604,31 @@ class ThreeDViewer(wx.Panel):
         self.x1, self.y1 = self.ax.transData.inverted().transform((event.x, event.y))
         if self.x1 != None and self.y1 != None:
             if self.line1.get_visible() == True:
-                self.line1.set_ydata(
-                    self.nmrdata.data[z_index][
+                if(self.fid_viewer==False):
+                    data = self.nmrdata.data[z_index][
                         :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
                     ]
+                else:
+                    data = self.nmrdata.data[z_index][
+                        :, int(self.y1 - self.y_movement)
+                    ]
+                self.line1.set_ydata(
+                    data
                 )
                 self.line2.set_ydata([self.y1])
                 self.line1.set_xdata(self.new_x_ppms)
                 self.OnSliderScroll3D(None)
             if self.line3.get_visible() == True:
-                self.line3.set_xdata(
-                    self.nmrdata.data[z_index][
+                if(self.fid_viewer==False):
+                    data = self.nmrdata.data[z_index][
                         self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
                     ]
+                else:
+                    data = self.nmrdata.data[z_index][
+                        int(self.x1 - self.x_movement), :
+                    ]
+                self.line3.set_xdata(
+                    data
                 )
                 self.line4.set_xdata([self.x1])
                 self.line3.set_ydata(self.new_y_ppms)
@@ -1404,14 +1645,20 @@ class ThreeDViewer(wx.Panel):
     def phase3D(self):
         z_index = int(self.z_slider.GetValue())
         if self.line1.get_visible() == True:
-            data = self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
+            if(self.fid_viewer==False):
+                data = self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
+            else:
+                data = self.nmrdata.data[z_index][:, int(self.y1)]
             complex_data = ng.process.proc_base.ht(data, self.nmrdata.data.shape[1])
             self.phased_data = ng.process.proc_base.ps(
                 complex_data, p0=self.total_P0, p1=self.total_P1
             )
             self.line1.set_ydata(self.phased_data)
         if self.line3.get_visible() == True:
-            data = self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
+            if(self.fid_viewer==False):
+                data = self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
+            else:
+                data = self.nmrdata.data[z_index][int(self.x1), :]
             complex_data = ng.process.proc_base.ht(data, self.nmrdata.data.shape[2])
             self.phased_data2 = ng.process.proc_base.ps(
                 complex_data, p0=self.total_P0, p1=self.total_P1
