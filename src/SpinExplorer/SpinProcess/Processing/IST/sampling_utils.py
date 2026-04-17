@@ -227,18 +227,11 @@ def apply_sampling_schedule_to_3d_signal_and_collapse(spectrum: NDArray, sample_
     sampled_data = np.zeros((n_sampled * n_combos, n_direct), dtype=spectrum.dtype)
     idx = 0
 
-    grouped = defaultdict(list)
-
     for sr0, sr1 in sampling_schedule:
-        grouped[sr1].append(sr0)
-
-    for sr1 in sorted(grouped):
-        
-        for offset1 in [0, 1]: 
-            for sr0 in grouped[sr1]:
-                for offset0 in [0, 1]:  
-                    sampled_data[idx] = spectrum[2*sr0 + offset0, 2*sr1 + offset1, :]
-                    idx += 1
+        sampled_data[idx] = spectrum[2*sr0,   2*sr1,   :]; idx += 1
+        sampled_data[idx] = spectrum[2*sr0+1, 2*sr1,   :]; idx += 1
+        sampled_data[idx] = spectrum[2*sr0,   2*sr1+1, :]; idx += 1
+        sampled_data[idx] = spectrum[2*sr0+1, 2*sr1+1, :]; idx += 1
 
 
     dim_map = {0: 'FDF1', 1: 'FDF3', 2: 'FDF4'}
@@ -282,33 +275,15 @@ def inflate_spectra_3D_signal(spectrum: NDArray, sample_dict: dict,
                             f"sampling_schedule has {n_indirect_dims} indirect dims")
 
     inflated = np.zeros(shape = (max_points[0]*2, max_points[1]*2, spectrum.shape[-1]), dtype = spectrum.dtype)
-    # --- group by sr[1] exactly like forward ---
-    grouped = defaultdict(list)
-    for sr0, sr1 in sampling_schedule:
-        grouped[sr1].append(sr0)
-
+    
     idx = 0
 
-    for sr1 in sorted(grouped):
-        # --- first sr[1] plane (rr, ri) ---
-        for sr0 in grouped[sr1]:
-            # rr
-            inflated[2*sr0, 2*sr1, :] = spectrum[idx]
-            idx += 1
+    for sr0, sr1 in sampling_schedule:
+        inflated[2*sr0,   2*sr1,   :] = spectrum[idx]; idx += 1
+        inflated[2*sr0+1, 2*sr1,   :] = spectrum[idx]; idx += 1
+        inflated[2*sr0,   2*sr1+1, :] = spectrum[idx]; idx += 1
+        inflated[2*sr0+1, 2*sr1+1, :] = spectrum[idx]; idx += 1
 
-            # ri
-            inflated[2*sr0 + 1, 2*sr1, :] = spectrum[idx]
-            idx += 1
-
-        # --- then sr[1]+1 plane (ir, ii) ---
-        for sr0 in grouped[sr1]:
-            # ir
-            inflated[2*sr0, 2*sr1 + 1, :] = spectrum[idx]
-            idx += 1
-
-            # ii
-            inflated[2*sr0 + 1, 2*sr1 + 1, :] = spectrum[idx]
-            idx += 1
 
     # Update header
     dim_map = {0: 'FDF3', 1: 'FDF1', 2: 'FDF4'}
