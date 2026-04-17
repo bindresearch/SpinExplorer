@@ -178,8 +178,9 @@ def main():
     
     params = parameter_write_cl(nmr_glue_conv, config)
     params.write_out_dict(params.dictionary)
+
     
-    config.process_data()
+    config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag)
     
     import subprocess
 

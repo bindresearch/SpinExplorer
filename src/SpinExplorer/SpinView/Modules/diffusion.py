@@ -122,7 +122,7 @@ class DiffusionFit(wx.Frame):
         self.bipolar_gradients = False
         self.little_delta = 1000
         self.big_delta = 0.1
-        self.integral_factor = 1.0
+        self.gradient_integral_factor = 1.0
         self.max_gradient = 53.0
         self.DAC_conversion = 0.002
         self.gamma_dictionary = {}
@@ -157,6 +157,60 @@ class DiffusionFit(wx.Frame):
         self.deleted_slices = (
             []
         )  # Array to hold the indexes of the slices which have been deleted
+
+        self.read_parameters()
+
+
+    def read_parameters(self):
+        """
+        Checking to see if pulseprogram is in the current directory. If it is,
+        check to see if the gradients are bipolar gradients, what the gradient shape
+        is (for the gradient integral factor) and what the little_delta and big_delta
+        values are. Then reading difflist and difframp and use the gradient integral
+        factor to work out Gmax in G/cm
+        """
+        try:
+            from pathlib import Path
+            self.folder = Path.cwd()
+    
+            pulseprogram_path = self.folder / 'pulseprogram'
+            
+            if not pulseprogram_path.exists():
+                pulseprogram_path = self.folder / 'pulseprogram.precomp'
+
+            with open(pulseprogram_path, 'r') as file:
+                sequence_line = file.readlines()[0]
+                if('stebpesgp1s' in sequence_line or 'stebpgp1s' in sequence_line):
+                    self.bipolar_gradients = True
+
+            # Update little and big delta values based on if bipolar gradients or not
+            self.find_parameters(wx.EVT_BUTTON, initial_find=True)
+
+            # Find out GP6 gradient shape
+            with open(self.folder / 'acqus', 'r') as acqus_file:
+                lines = acqus_file.readlines()
+                found_GPNAM = False
+                for line in lines:
+                    if(found_GPNAM==True):
+                        gradient = line.split()[5]
+                        if(gradient == '<SMSQ10.100>'):
+                            self.gradient_integral_factor = 0.9
+                        break
+
+                    if('GPNAM' in line):
+                        found_GPNAM = True
+
+
+
+            self.find_max_gradient_estimate()
+
+
+        except:
+            pass
+
+            
+
+
 
     def make_diffusion_sizer(self):
         self.diffusion_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -195,7 +249,7 @@ class DiffusionFit(wx.Frame):
         # If that fails the user can enter them manually
         # Checkbox for whether bipolar gradients were used in the experiment or not (default to no)
         self.bipolar_gradients_checkbox = wx.CheckBox(self, label="Bipolar Gradients")
-        self.bipolar_gradients_checkbox.SetValue(False)
+        self.bipolar_gradients_checkbox.SetValue(self.bipolar_gradients)
         self.bipolar_gradients_checkbox.Bind(wx.EVT_CHECKBOX, self.OnBipolarGradients)
         self.experimental_parameters_sizer.Add(self.bipolar_gradients_checkbox)
         self.little_delta_label = wx.StaticText(self, -1, "δ (μs):")
@@ -233,7 +287,7 @@ class DiffusionFit(wx.Frame):
             self.gradient_parameters_sizer.Add(self.integral_factor_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.integral_factor_box = wx.TextCtrl(
-                self, -1, str(self.integral_factor), size=(30, -1)
+                self, -1, str(self.gradient_integral_factor), size=(30, -1)
             )
             self.gradient_parameters_sizer.Add(self.integral_factor_box)
             self.gradient_parameters_sizer.AddSpacer(5)
@@ -266,7 +320,7 @@ class DiffusionFit(wx.Frame):
             self.gradient_parameters_sizer.Add(self.integral_factor_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.integral_factor_box = wx.TextCtrl(
-                self, -1, str(self.integral_factor), size=(30, -1)
+                self, -1, str(self.gradient_integral_factor), size=(30, -1)
             )
             self.gradient_parameters_sizer.Add(self.integral_factor_box)
             self.gradient_parameters_sizer.AddSpacer(5)
@@ -488,7 +542,7 @@ class DiffusionFit(wx.Frame):
         else:
             self.bipolar_gradients = False
 
-    def find_parameters(self, event):
+    def find_parameters(self, event, initial_find=False):
         if self.spectrometer == "Bruker":
             # Search through acqus file to get the little delta (p30) and big delta (d20) values used
             try:
@@ -535,8 +589,10 @@ class DiffusionFit(wx.Frame):
                 self.big_delta = delays_total[20]
                 if self.bipolar_gradients == True:
                     self.small_delta = durations_total[30] * 2
+                    self.little_delta = durations_total[30] * 2
                 else:
                     self.small_delta = durations_total[30]
+                    self.little_delta = durations_total[30]
             except:
                 # Give an error message saying unable to find delays in the acqus file (./acqus)
                 msg = wx.MessageDialog(
@@ -586,8 +642,9 @@ class DiffusionFit(wx.Frame):
                 return
 
         # Set the little delta and big delta values in the GUI to the found values
-        self.little_delta_box.SetValue(str(self.small_delta))
-        self.big_delta_box.SetValue(str(self.big_delta))
+        if(initial_find==False):
+            self.little_delta_box.SetValue(str(self.small_delta))
+            self.big_delta_box.SetValue(str(self.big_delta))
 
 
     def error_message(self, parameter, value):
@@ -600,6 +657,69 @@ class DiffusionFit(wx.Frame):
         msg.ShowModal()
         msg.Destroy()
         return
+    
+
+    def find_max_gradient_estimate(self):
+        """
+        Reading difflist to get gradient values and difframp to get gradient percentages
+        and working backwards to get the max spectrometer gradient strength (using the
+        gradient integral factor)
+        """
+
+        try:
+            with open("./lists/gp/Difframp", "r") as file:
+                gradients_percent = []
+                skip_line = True
+                for line in file:
+                    if skip_line == True:
+                        if "##XYDATA= (X++(Y..Y))" not in line:
+                            pass
+                        else:
+                            skip_line = False
+                    else:
+                        if "##END=" not in line:
+                            gradients_percent.append(
+                                float(line.split()[0]) * 100
+                            )
+        except:
+            try:
+                with open("./Difframp", "r") as file:
+                    gradients_percent = []
+                    skip_line = True
+                    for line in file:
+                        if skip_line == True:
+                            if "##XYDATA= (X++(Y..Y))" not in line:
+                                pass
+                            else:
+                                skip_line = False
+                        else:
+                            if "##END=" not in line:
+                                gradients_percent.append(
+                                    float(line.split()[0]) * 100
+                                )
+            except:
+                return False
+            
+        
+        try:
+            with open("./lists/gp/difflist", "r") as file:
+                gradients = []
+                for line in file:
+                    line=line.split('\n')[0]
+                    gradients.append(float(line))
+        except:
+            try:
+                with open("./difflist", "r") as file:
+                    gradients = []
+                    for line in file:
+                        line=line.split('\n')[0]
+                        gradients.append(float(line))
+            except:
+                return False
+            
+
+        self.max_gradient = ((gradients[-1]/gradients_percent[-1])/self.gradient_integral_factor)*100
+
 
 
     def find_gradient_percentages(self, event):
@@ -2336,7 +2456,4 @@ class DiffusionFit(wx.Frame):
             self.OnRegionFitting(event=None)
 
     def input_gradients_text_button(self, event):
-        self.input_gradients_text_dialog = DiffusionGradientManualInput(
-            "Input Gradients", self, self.spectrometer
-        )
-
+        self.input_gradients_text_dialog = DiffusionGradientManualInput("Input Gradients", self, self.spectrometer)

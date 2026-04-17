@@ -79,7 +79,7 @@ class WriteNMRPipeProcessing:
         nmrproc_com.write(solvent_suppression_line + " \\\n")
         return nmrproc_com
 
-    def linear_prediction(self, dimension, nmrproc_com):
+    def linear_prediction(self, dimension, nmrproc_com, indirect=False):
         """
         This function will write the processing line for
         nmrPipe linear prediction.
@@ -87,25 +87,49 @@ class WriteNMRPipeProcessing:
 
         dimension_tab = self.dimension_tabs[dimension]
         linear_prediction_line = "| nmrPipe -fn LP"
-        if dimension_tab.linear_prediction.linear_prediction_options_selection == 0:
-            linear_prediction_line += " -after"
-        elif dimension_tab.linear_prediction.linear_prediction_options_selection == 1:
-            linear_prediction_line += " -before"
-        if (
-            dimension_tab.linear_prediction.linear_prediction_coefficients_selection
-            == 0
-        ):
-            linear_prediction_line += " -f"
-        elif (
-            dimension_tab.linear_prediction.linear_prediction_coefficients_selection
-            == 1
-        ):
-            linear_prediction_line += " -b"
-        elif (
-            dimension_tab.linear_prediction.linear_prediction_coefficients_selection
-            == 2
-        ):
-            linear_prediction_line += " -fb"
+
+        if(indirect==False):
+            
+            if dimension_tab.linear_prediction.linear_prediction_options_selection == 0:
+                linear_prediction_line += " -after"
+            elif dimension_tab.linear_prediction.linear_prediction_options_selection == 1:
+                linear_prediction_line += " -before"
+            if (
+                dimension_tab.linear_prediction.linear_prediction_coefficients_selection
+                == 0
+            ):
+                linear_prediction_line += " -f"
+            elif (
+                dimension_tab.linear_prediction.linear_prediction_coefficients_selection
+                == 1
+            ):
+                linear_prediction_line += " -b"
+            elif (
+                dimension_tab.linear_prediction.linear_prediction_coefficients_selection
+                == 2
+            ):
+                linear_prediction_line += " -fb"
+        else:
+            if dimension_tab.linear_prediction.linear_prediction_indirect_options_selection == 0:
+                linear_prediction_line += " -after"
+            elif dimension_tab.linear_prediction.linear_prediction_indirect_options_selection == 1:
+                linear_prediction_line += " -before"
+            if (
+                dimension_tab.linear_prediction.linear_prediction_indirect_coefficients_selection
+                == 0
+            ):
+                linear_prediction_line += " -f"
+            elif (
+                dimension_tab.linear_prediction.linear_prediction_indirect_coefficients_selection
+                == 1
+            ):
+                linear_prediction_line += " -b"
+            elif (
+                dimension_tab.linear_prediction.linear_prediction_indirect_coefficients_selection
+                == 2
+            ):
+                linear_prediction_line += " -fb"
+
         nmrproc_com.write(linear_prediction_line + " \\\n")
 
         return nmrproc_com
