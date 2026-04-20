@@ -194,8 +194,14 @@ def inflate_spectra_2D_signal(spectrum: NDArray, sample_dict: dict,
 
 
 def apply_sampling_schedule_to_3d_signal_and_collapse(spectrum: NDArray, sample_dict: dict,
-                                              sampling_schedule: Union[list[int], NDArray]) -> tuple[NDArray, dict]:
+                                              sampling_schedule: Union[list[int], NDArray],
+                                              acq_ord: int = 0) -> tuple[NDArray, dict]:
     """
+    acq_ord = 0: this means we first do cos/sin modulation on the final dimension (t3) 
+                 before the t2 dimension
+    acq_ord = 1: This means we first do cos/sin modulation on the (t2) dimnesion before
+                 the t3 dimension
+
     Prepare an nD NMR dataset for IST reconstruction by:
     1. Extracting only the sampled points from the interleaved spectrum
     2. Updating the spectral dictionary to reflect the reduced size
@@ -227,12 +233,20 @@ def apply_sampling_schedule_to_3d_signal_and_collapse(spectrum: NDArray, sample_
     sampled_data = np.zeros((n_sampled * n_combos, n_direct), dtype=spectrum.dtype)
     idx = 0
 
-    for sr0, sr1 in sampling_schedule:
-        sampled_data[idx] = spectrum[2*sr0,   2*sr1,   :]; idx += 1
-        sampled_data[idx] = spectrum[2*sr0+1, 2*sr1,   :]; idx += 1
-        sampled_data[idx] = spectrum[2*sr0,   2*sr1+1, :]; idx += 1
-        sampled_data[idx] = spectrum[2*sr0+1, 2*sr1+1, :]; idx += 1
-
+    if acq_ord == 0:
+        for sr0, sr1 in sampling_schedule:
+            sampled_data[idx] = spectrum[2*sr0,   2*sr1,   :]; idx += 1
+            sampled_data[idx] = spectrum[2*sr0+1, 2*sr1,   :]; idx += 1
+            sampled_data[idx] = spectrum[2*sr0,   2*sr1+1, :]; idx += 1
+            sampled_data[idx] = spectrum[2*sr0+1, 2*sr1+1, :]; idx += 1
+    
+    elif acq_ord == 1:
+        for sr0, sr1 in sampling_schedule:
+            sampled_data[idx] = spectrum[2*sr0,   2*sr1,   :]; idx += 1
+            sampled_data[idx] = spectrum[2*sr0, 2*sr1+1,   :]; idx += 1
+            sampled_data[idx] = spectrum[2*sr0+1,   2*sr1, :]; idx += 1
+            sampled_data[idx] = spectrum[2*sr0+1, 2*sr1+1, :]; idx += 1
+    
 
     dim_map = {0: 'FDF1', 1: 'FDF3', 2: 'FDF4'}
 
@@ -255,7 +269,8 @@ def apply_sampling_schedule_to_3d_signal_and_collapse(spectrum: NDArray, sample_
 
 def inflate_spectra_3D_signal(spectrum: NDArray, sample_dict: dict,
                                    sampling_schedule: Union[list[int], NDArray],
-                                   max_points: Union[int, list[int]]) -> tuple[NDArray, dict]:
+                                   max_points: Union[int, list[int]],
+                                   acq_ord: int = 0) -> tuple[NDArray, dict],:
     inflated_dict     = sample_dict.copy()
 
 
@@ -279,10 +294,18 @@ def inflate_spectra_3D_signal(spectrum: NDArray, sample_dict: dict,
     idx = 0
 
     for sr0, sr1 in sampling_schedule:
-        inflated[2*sr0,   2*sr1,   :] = spectrum[idx]; idx += 1
-        inflated[2*sr0+1, 2*sr1,   :] = spectrum[idx]; idx += 1
-        inflated[2*sr0,   2*sr1+1, :] = spectrum[idx]; idx += 1
-        inflated[2*sr0+1, 2*sr1+1, :] = spectrum[idx]; idx += 1
+
+        if acq_ord == 0:
+            inflated[2*sr0,   2*sr1,   :] = spectrum[idx]; idx += 1
+            inflated[2*sr0+1, 2*sr1,   :] = spectrum[idx]; idx += 1
+            inflated[2*sr0,   2*sr1+1, :] = spectrum[idx]; idx += 1
+            inflated[2*sr0+1, 2*sr1+1, :] = spectrum[idx]; idx += 1
+        
+        if acq_ord == 1: 
+            inflated[2*sr0,   2*sr1,   :] = spectrum[idx]; idx += 1
+            inflated[2*sr0+1, 2*sr1,   :] = spectrum[idx]; idx += 1
+            inflated[2*sr0,   2*sr1+1, :] = spectrum[idx]; idx += 1
+            inflated[2*sr0+1, 2*sr1+1, :] = spectrum[idx]; idx += 1
 
 
     # Update header

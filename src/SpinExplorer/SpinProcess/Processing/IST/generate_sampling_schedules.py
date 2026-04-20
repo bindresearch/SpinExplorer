@@ -15,6 +15,66 @@ def generate_sampling_schedule_1d(num_points:int, sampling:float)->NDArray:
 
     return np.sort(sampled_points)
 
+
+def generate_random_sampling_schedule_2d(
+    num_points_indirect: tuple[int, int],
+    sampling: float
+) -> NDArray:
+    """
+    Random 2D NUS schedule with no repeated points, always including (0,0).
+    
+    Args:
+        num_points_indirect: (n1, n2) — grid dimensions for the two indirect dims
+        sampling: fractional sampling density (e.g. 0.25 for 25%)
+    
+    Returns:
+        Sorted (M, 2) array of [t1, t2] index pairs
+    """
+    n1, n2 = num_points_indirect
+    total_grid = n1 * n2
+    points_to_sample = int(total_grid * sampling) - 1  # reserve one slot for (0,0)
+
+    # All grid points except (0,0)
+    all_points = [(i, j) for i in range(n1) for j in range(n2) if (i, j) != (0, 0)]
+    sampled = random.sample(all_points, points_to_sample)
+    sampled.append((0, 0))
+
+    # Sort lexicographically: t1 first, then t2
+    sampled.sort()
+    return np.array(sampled)
+
+
+def generate_random_sampling_schedule_nd(
+    num_points_indirect: tuple[int, ...],
+    sampling: float
+) -> NDArray:
+    """
+    Random nD NUS schedule with no repeated points, always including the origin.
+
+    Args:
+        num_points_indirect: grid dimensions for each indirect dimension
+        sampling: fractional sampling density (e.g. 0.25 for 25%)
+
+    Returns:
+        Sorted (M, n) array of index tuples, one row per sampled point
+    """
+    from itertools import product
+
+    total_grid = math.prod(num_points_indirect)
+    points_to_sample = int(total_grid * sampling) - 1  # reserve slot for origin
+
+    origin = tuple(0 for _ in num_points_indirect)
+
+    # All grid points except the origin
+    all_points = [p for p in product(*[range(n) for n in num_points_indirect]) if p != origin]
+    sampled = random.sample(all_points, points_to_sample)
+    sampled.append(origin)
+
+    sampled.sort()
+    return np.array(sampled)
+
+
+
 def poisson_func(lmbd:float)->int:
     """
     Generate a Poisson-distributed random integer using Knuth's algorithm.
