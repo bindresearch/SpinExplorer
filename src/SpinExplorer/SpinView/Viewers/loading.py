@@ -144,6 +144,7 @@ class ReadSession:
                     self.main_frame.viewer.files.first_drop = False
                     count = 1
                     # Loop over the rest of the lines to get the file paths of the other data
+
                     for i, line in enumerate(lines):
                         if i < 19:
                             continue
@@ -223,8 +224,8 @@ class ReadSession:
                             # Now need to add this plot to the canvas
                             self.add_saved_plot1D(count)
                             count += 1
-                    self.main_frame.viewer.files.choices = self.choices
-
+                    self.main_frame.viewer.files.choices = self.choices      
+                    
                     # Loop through all the plots and perform OnSelectPlot function
                     for i in range(len(self.main_frame.viewer.files.choices)):
                         self.main_frame.viewer.plot_combobox.SetSelection(i)
@@ -232,6 +233,9 @@ class ReadSession:
 
                     self.main_frame.viewer.plot_combobox.SetSelection(0)
                     self.main_frame.viewer.OnSelectPlot(event=None)
+
+          
+
 
                 else:
                     multiplot = False
@@ -324,6 +328,7 @@ class ReadSession:
                     self.multiplot_mode = True
                     transposed2D = lines[2].split("\n")[0].split(":")[1]
 
+
                     # Get the file path of the original data
                     file_path_original = lines[3].split("\n")[0].split("file_path:")[1]
                     self.main_frame.nmrdata = GetData(self, file_path_original)
@@ -337,7 +342,7 @@ class ReadSession:
                     p0_fine = float(lines[6].split("\n")[0].split(":")[1])
                     p1_coarse = float(lines[7].split("\n")[0].split(":")[1])
                     p1_fine = float(lines[8].split("\n")[0].split(":")[1])
-                    if(transposed2D==False):
+                    if(transposed2D=="False"):
                         move_x = float(lines[9].split("\n")[0].split(":")[1])
                         move_y = float(lines[10].split("\n")[0].split(":")[1])
                         move_x_index = int(lines[11].split("\n")[0].split(":")[1])
@@ -347,6 +352,7 @@ class ReadSession:
                         move_x = float(lines[10].split("\n")[0].split(":")[1])
                         move_y_index = int(lines[11].split("\n")[0].split(":")[1])
                         move_x_index = int(lines[12].split("\n")[0].split(":")[1])
+
                     contour_linewidth = float(lines[13].split("\n")[0].split(":")[1])
                     multiply_factor = float(lines[14].split("\n")[0].split(":")[1])
                     contour_levels = int(lines[15].split("\n")[0].split(":")[1])
@@ -432,9 +438,17 @@ class ReadSession:
                     count = 1
                     self.main_frame.viewer.values_dictionary[count] = {}
                     # Loop over the rest of the lines to get the file paths of the other data
+                    peaklists = False
+                    peaklist_line = 0
                     for i, line in enumerate(lines):
                         if i < 17:
                             continue
+                        elif('Peaklist path' in line):
+                            peaklists = True
+                            peaklist_line = i
+                            break
+                        else:
+                            pass
                         if "file_path:" in line.split("\n")[0]:
                             file_path = line.split("\n")[0].split("file_path:")[1]
                             self.main_frame.viewer.values_dictionary[count][
@@ -535,6 +549,7 @@ class ReadSession:
                             count += 1
                             self.main_frame.viewer.values_dictionary[count] = {}
 
+
                     # Search thrugh values dictionary and remove empty entries
                     keys = list(self.main_frame.viewer.values_dictionary.keys())
                     for key in keys:
@@ -542,6 +557,74 @@ class ReadSession:
                             del self.main_frame.viewer.values_dictionary[key]
 
                     self.plot_overlaid_2D()
+                    if(peaklists==True):
+                        self.main_frame.viewer.OnReadPeaks(wx.EVT_BUTTON)
+                    for l in lines[peaklist_line+1:]:
+                        peaklist_file=l.split('\n')[0]
+                        self.main_frame.viewer.peaklist_frame.OnAddPeakList(wx.EVT_BUTTON, file=peaklist_file)
+                    
+                else:
+                    self.multiplot_mode = False
+                    transposed2D = lines[2].split("\n")[0].split(":")[1]
+                    # Get the file path of the original data
+                    file_path_original = lines[3].split("\n")[0].split("file_path:")[1]
+                    self.main_frame.nmrdata = GetData(self, file_path_original)
+                    self.main_frame.viewer = TwoDViewer(
+                        parent=self.main_frame, nmrdata=self.main_frame.nmrdata
+                    )
+                    self.main_frame.main_sizer.Add(self.main_frame.viewer, 1, wx.EXPAND)
+                    p0_coarse = float(lines[4].split("\n")[0].split(":")[1])
+                    p0_fine = float(lines[5].split("\n")[0].split(":")[1])
+                    p1_coarse = float(lines[6].split("\n")[0].split(":")[1])
+                    p1_fine = float(lines[7].split("\n")[0].split(":")[1])
+                    if(transposed2D==False):
+                        move_x = float(lines[8].split("\n")[0].split(":")[1])
+                        move_y = float(lines[9].split("\n")[0].split(":")[1])
+                        move_x_index = int(lines[10].split("\n")[0].split(":")[1])
+                        move_y_index = int(lines[11].split("\n")[0].split(":")[1])
+                    else:
+                        move_y = float(lines[8].split("\n")[0].split(":")[1])
+                        move_x = float(lines[9].split("\n")[0].split(":")[1])
+                        move_y_index = int(lines[10].split("\n")[0].split(":")[1])
+                        move_x_index = int(lines[11].split("\n")[0].split(":")[1])
+                    contour_linewidth = float(lines[12].split("\n")[0].split(":")[1])
+                    multiply_factor = float(lines[13].split("\n")[0].split(":")[1])
+                    contour_levels = int(lines[14].split("\n")[0].split(":")[1])
+                    transposed = lines[15].split("\n")[0].split(":")[1]
+                    self.main_frame.viewer.contour_width_slider.SetValue(
+                        contour_linewidth
+                    )
+                    self.main_frame.viewer.contour_levels_slider.SetValue(
+                        contour_levels
+                    )
+                    self.main_frame.viewer.multiply_slider.SetValue(multiply_factor)
+                    self.main_frame.viewer.reference_range_chooserX.SetSelection(
+                        move_x_index
+                    )
+                    self.main_frame.viewer.reference_range_chooserY.SetSelection(
+                        move_y_index
+                    )
+                    self.main_frame.viewer.move_x_slider.SetValue(move_x)
+                    self.main_frame.viewer.move_y_slider.SetValue(move_y)
+                    self.main_frame.viewer.P0_slider.SetValue(p0_coarse)
+                    self.main_frame.viewer.P1_slider.SetValue(p1_coarse)
+                    self.main_frame.viewer.P0_slider_fine.SetValue(p0_fine)
+                    self.main_frame.viewer.P1_slider_fine.SetValue(p1_fine)
+                    self.main_frame.viewer.OnSliderScroll2D(event=None)
+                    
+                    peaklists = False
+                    peaklist_line = 0
+                    # Loop over the rest of the lines to get the file paths of the other data
+                    for i, line in enumerate(lines):
+                        if('Peaklist paths' in line):
+                            peaklists = True
+                            peaklist_line = i
+                    if(peaklists==True):
+                        self.main_frame.viewer.OnReadPeaks(wx.EVT_BUTTON)
+                    for l in lines[peaklist_line+1:]:
+                        peaklist_file=l.split('\n')[0]
+                        self.main_frame.viewer.peaklist_frame.OnAddPeakList(wx.EVT_BUTTON, file=peaklist_file)
+
 
             elif lines[0].split("\n")[0].split()[0] == "3D":
                 # This is a 3D window
@@ -823,11 +906,10 @@ class ReadSession:
         self.main_frame.viewer.plot_combobox.Clear()
         self.main_frame.viewer.plot_combobox.AppendItems(self.custom_labels)
         self.main_frame.viewer.plot_combobox.SetSelection(self.main_frame.viewer.plot_combobox.GetCount()-1)
-        self.main_frame.viewer.OnSelectPlot2D(wx.EVT_COMBOBOX)
-
         self.main_frame.viewer.files.custom_labels = self.custom_labels
         self.main_frame.viewer.ax.legend(
             self.main_frame.viewer.files.custom_lines, self.custom_labels
         )
 
+        self.main_frame.viewer.OnSelectPlot2D(wx.EVT_COMBOBOX)
         self.main_frame.viewer.UpdateFrame()

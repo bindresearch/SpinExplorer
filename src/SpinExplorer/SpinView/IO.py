@@ -303,9 +303,9 @@ class ChooseFile(wx.Dialog):
         self.Show()
 
     def OnOK(self, event):
-        file_selection = self.file_combobox.GetSelection()
-        self.parent.file = self.spectrum_file[file_selection]
-        self.parent.session_file = self.spectrum_file[file_selection]
+        file_selection = self.file_combobox.GetValue()
+        self.parent.file = file_selection
+        self.parent.session_file = file_selection
         self.Close()
         if self.session_choice == False:
             self.parent.read_data()

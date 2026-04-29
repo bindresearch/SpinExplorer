@@ -31,7 +31,7 @@ from SpinExplorer.SpinView.config import *
 
 # A class to create a panel for viewing 2D NMR spectra
 class TwoDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False):
+    def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False, title=''):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -41,6 +41,7 @@ class TwoDViewer(wx.Panel):
         self.parent = parent
         self.threeDprojection = threeDprojection
         self.fid_viewer=fid_viewer
+        self.title=title
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
         self.nmrdata = nmrdata
         self.set_initial_variables_2D()
@@ -155,6 +156,13 @@ class TwoDViewer(wx.Panel):
         self.start_point = None
         self.rect = None
 
+        # A list to hold the names of spectra which are currently selected to be hidden from view
+        self.hidden_list = []
+
+        # Flags to determine whether to plot horizontal/vertical slices or not
+        self.plot_horizontal = False
+        self.plot_vertical = False
+
         # Suppress complex warning from numpy
         import warnings
 
@@ -182,6 +190,9 @@ class TwoDViewer(wx.Panel):
         self.select_all_checkbox = wx.CheckBox(self, label="Select All")
         self.select_all_checkbox.SetValue(False)
 
+        self.hide_checkbox = wx.CheckBox(self, label="Hide")
+        self.hide_checkbox.Bind(wx.EVT_CHECKBOX, self.OnHideSpectrum)
+
         self.plot_combobox = wx.ComboBox(
             self, choices=["Main Plot"], style=wx.CB_READONLY
         )
@@ -192,6 +203,8 @@ class TwoDViewer(wx.Panel):
             self.select_all_checkbox, 1, wx.ALIGN_CENTER_HORIZONTAL, 5
         )
         self.select_plot_sizer.AddSpacer(5)
+
+        self.select_plot_sizer.Add(self.hide_checkbox, 1, wx.ALIGN_CENTER_HORIZONTAL, 5)
 
         # Create a button to change the labels of the x and y axes (Don't include this button if in 3D mode)
         width = 100
@@ -443,7 +456,7 @@ class TwoDViewer(wx.Panel):
         self.x_val = 10.00
         self.contour2_label = wx.StaticText(self, label="x:")
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.001, size=(200, height)
+            self, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, height)
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnMinContour2D)
         self.csizer.Add(self.contour2_label)
@@ -718,6 +731,25 @@ class TwoDViewer(wx.Panel):
         except:
             self.contour_value_label.SetValue(self.x_val)
 
+    def OnHideSpectrum(self, event):
+        if(self.multiplot_mode==False):
+            if(self.hide_checkbox.GetValue()==True):
+                self.hidden_list.append('Main Plot')
+            else:
+                self.hidden_list = []
+        else:
+            if(self.hide_checkbox.GetValue()==True):
+                self.hidden_list.append(self.files.custom_labels[self.active_plot_index])
+            else:
+                
+                self.hidden_list.remove(self.files.custom_labels[self.active_plot_index])
+                if(self.hidden_list==None):
+                    self.hidden_list=[]
+        
+
+        self.OnMinContour2D(wx.EVT_BUTTON)
+        self.on_click_2d(wx.EVT_BUTTON, replot=True)
+
     def OnHideButton(self, event):
         if self.show_bottom_sizer == True:
             self.main_sizer.Hide(self.bottom_sizer)
@@ -893,7 +925,25 @@ class TwoDViewer(wx.Panel):
                         )
                     except:
                         f.write("transposed:False\n")
+            f = self.save_peaklists_to_session(f)
             f.close()
+
+    def save_peaklists_to_session(self, f):
+        """
+        See if the peaklist window exists
+        If it exists, determine if there are any peaklists loaded
+        Save these to the session file (f)
+        """
+
+        for window in wx.GetTopLevelWindows():
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
+                if(len(self.peaklist_frame.peaklist_paths)>0):
+                    f.write("Peaklist paths\n")
+                    for peaklist_path in self.peaklist_frame.peaklist_paths:
+                        f.write(str(peaklist_path)+'\n')
+
+        return f
+
 
     def OnCalculateIntensity2D(self, event):
         """
@@ -904,7 +954,7 @@ class TwoDViewer(wx.Panel):
         """
 
         for window in wx.GetTopLevelWindows():
-            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
                 self.peaklist_frame.turn_off_togglebuttons()
 
         dlg = wx.MessageDialog(
@@ -1125,8 +1175,8 @@ class TwoDViewer(wx.Panel):
                     self.move_y_slider.SetValue(0)
                     self.move_x_value_label.SetLabel("0.00")
                     self.move_y_value_label.SetLabel("0.00")
-                    self.multiply_slider.SetValue(0)
-                    self.multiply_value_label.SetLabel("0")
+                    self.multiply_slider.SetValue(1.0)
+                    self.multiply_value_label.SetLabel("1.0")
                     self.line_width_slider.SetValue(1)
                     self.values_dictionary[self.active_plot_index]["p0 Coarse"] = 0
                     self.values_dictionary[self.active_plot_index]["p1 Coarse"] = 0
@@ -1194,8 +1244,8 @@ class TwoDViewer(wx.Panel):
                     self.move_y_slider.SetValue(0)
                     self.move_x_value_label.SetLabel("0.00")
                     self.move_y_value_label.SetLabel("0.00")
-                    self.multiply_slider.SetValue(0)
-                    self.multiply_value_label.SetLabel("0")
+                    self.multiply_slider.SetValue(1.0)
+                    self.multiply_value_label.SetLabel("1.0")
                     self.line_width_slider.SetValue(1)
                     for key in self.values_dictionary:
                         self.values_dictionary[key]["p0 Coarse"] = 0
@@ -1398,15 +1448,17 @@ class TwoDViewer(wx.Panel):
 
         Supported file formats are:
         (test).ft2.list files (Sparky/tabular format)
-        CCPN peak table output 
+        CCPN peak table output (not currently implemented)
         """
 
         for window in wx.GetTopLevelWindows():
-            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
-                # The window already exists (return)
+            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
+                # The window already exists - move it to the foreground and then return
+                self.peaklist_frame.Raise()
+                self.peaklist_frame.SetFocus()
                 return
 
-        self.peaklist_frame = PeakListWindow2D(title="Peak Lists", parent=self)
+        self.peaklist_frame = PeakListWindow2D(title="Peak Lists - "+self.title, parent=self)
 
     def draw_figure_2D(self):
         self.ax = self.fig.add_subplot(111)
@@ -1783,7 +1835,7 @@ class TwoDViewer(wx.Panel):
             self.move_y_slider.SetValue(move_x_value)
 
             for window in wx.GetTopLevelWindows():
-                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
+                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
                     # Need to swap the order of the peaklist dimensions
                     try:
                         for (
@@ -1803,8 +1855,13 @@ class TwoDViewer(wx.Panel):
 
                     except:
                         pass
+
+                    self.peaklist_frame.selected_area = []
+                    self.peaklist_frame.selected_peak_indexes = []
                 else:
                     pass
+
+
 
             self.OnMinContour2D(wx.EVT_SCROLL, textcontrol=True)
             self.toolbar.update()
@@ -1951,6 +2008,33 @@ class TwoDViewer(wx.Panel):
             self.move_y_slider.SetValue(
                 self.values_dictionary[self.active_plot_index]["move x"]
             )
+
+            for window in wx.GetTopLevelWindows():
+                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
+                    # Need to swap the order of the peaklist dimensions
+                    try:
+                        for (
+                            peaklist_name,
+                            dictionary,
+                        ) in self.peaklist_frame.peak_list_dictionary.items():
+                            shift1 = dictionary["shift1"]
+                            shift2 = dictionary["shift2"]
+                            self.peaklist_frame.peak_list_dictionary[peaklist_name][
+                                "shift1"
+                            ] = shift2
+                            self.peaklist_frame.peak_list_dictionary[peaklist_name][
+                                "shift2"
+                            ] = shift1
+                            axis_names_old = self.peaklist_frame.names[peaklist_name]
+                            self.peaklist_frame.names[peaklist_name] = [axis_names_old[1], axis_names_old[0]]
+
+                    except:
+                        pass
+
+                    self.peaklist_frame.selected_area = []
+                    self.peaklist_frame.selected_peak_indexes = []
+                else:
+                    pass
 
             self.OnMinContour2D(wx.EVT_SCROLL, textcontrol=True)
             self.toolbar.update()
@@ -2153,9 +2237,10 @@ class TwoDViewer(wx.Panel):
             self.error_window.ShowModal()
             self.error_window.Destroy()
 
-
-    def DrawContours2D(self):
-        """Core drawing function — call this from any trigger."""
+    def OnMinContour2D(self, event, textcontrol=False, showpeaks=True):
+        # Function to update the contour levels when the user changes the number of contour levels
+        if textcontrol == False:
+            self.x_val = 10 ** float(self.contour_slider.GetValue())
         intensity_percent = 10 ** (float(self.intensity_slider.GetValue()))
         self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
 
@@ -2193,7 +2278,13 @@ class TwoDViewer(wx.Panel):
             xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             xlabel, ylabel = self.ax.get_xlabel(), self.ax.get_ylabel()
             self.ax.clear()
+            list_of_legend_elements = []
+            list_of_legend_entries = []
             for i in range(len(self.values_dictionary.keys())):
+                if(self.files.custom_labels[i] in self.hidden_list):
+                    continue
+                list_of_legend_elements.append(self.files.custom_lines[i])
+                list_of_legend_entries.append(self.files.custom_labels[i])
                 self.cl = self.contour_start * self.contour_factor ** np.arange(
                     self.values_dictionary[i]["contour levels"]
                 )
@@ -2210,7 +2301,9 @@ class TwoDViewer(wx.Panel):
                     linewidths=self.values_dictionary[i]["contour linewidth"],
                     zorder=1,
                 )
-                self.ax.legend(self.files.custom_lines, self.files.custom_labels)
+            
+            self.ax.legend(list_of_legend_elements, list_of_legend_entries)
+                
 
             if self.twoD_slices_horizontal[0][0].get_visible():
                 self.line_h = self.ax.axhline(self.y1, color="k")
@@ -2229,47 +2322,107 @@ class TwoDViewer(wx.Panel):
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
 
-        # Peak list plotting
-        for window in wx.GetTopLevelWindows():
-            self.peaklist_colours = ["black", "gray", "saddlebrown", "purple", "purple", "blue", "red", "orange"]
-            if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists":
-                count = 0
-                self.points = []
-                self.annotations = []
-                for peaklist_name, dictionary in self.peaklist_frame.peak_list_dictionary.items():
-                    if (self.peaklist_frame.select_peak_button.GetValue() == True
-                            or self.peaklist_frame.select_peaks_button.GetValue() == True):
-                        if peaklist_name == self.peaklist_frame.selected_peaklist:
-                            if "N/A" in self.peaklist_frame.selected_peak_indexes:
-                                cs = self.peaklist_colours[count]
+        if textcontrol == False:
+            self.contour_value_label.SetValue(
+                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+            )
+
+
+        if(showpeaks == True):
+            for window in wx.GetTopLevelWindows():
+                self.peaklist_colours = [
+                    "black",
+                    "gray",
+                    "saddlebrown",
+                    "purple",
+                    "purple",
+                    "blue",
+                    "red",
+                    "orange",
+                ]
+                if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - " + self.title:
+                    # Plot Peaklists
+                    count = 0
+                    self.points = []
+                    self.point_names = []
+                    self.point_colours = []
+                    self.annotations = []
+
+                    front_plot = self.peaklist_frame.current_peaklist_box.GetValue()
+
+                    for (
+                        peaklist_name,
+                        dictionary,
+                    ) in self.peaklist_frame.peak_list_dictionary.items():
+                        
+                        if(peaklist_name in self.peaklist_frame.hidden_peaklists):
+                            count+=1
+                            continue
+
+                        if(peaklist_name == front_plot):
+                            # Setting the currently selected plot to the top
+                            zorder = 3
+                        else:
+                            zorder=2
+
+                        if (
+                            self.peaklist_frame.select_peak_button.GetValue() == True
+                            or self.peaklist_frame.select_peaks_button.GetValue() == True
+                        ):
+                            if peaklist_name == self.peaklist_frame.selected_peaklist:
+                                if "N/A" in self.peaklist_frame.selected_peak_indexes:
+                                    cs = self.peaklist_colours[count]
+                                else:
+                                    cs = []
+                                    for i, peak in enumerate(dictionary["peak_name"]):
+                                        if i in self.peaklist_frame.selected_peak_indexes:
+                                            cs.append("darkviolet")
+                                        else:
+                                            cs.append(self.peaklist_colours[count])
                             else:
-                                cs = []
-                                for i, peak in enumerate(dictionary["peak_name"]):
-                                    if i in self.peaklist_frame.selected_peak_indexes:
-                                        cs.append("darkviolet")
-                                    else:
-                                        cs.append(self.peaklist_colours[count])
+                                cs = self.peaklist_colours[count]
                         else:
                             cs = self.peaklist_colours[count]
-                    else:
-                        cs = self.peaklist_colours[count]
 
-                    shift1 = dictionary["shift1"]
-                    shift2 = dictionary["shift2"]
-                    self.points.append(
-                        self.ax.scatter(shift1, shift2, s=5, marker="o", c=cs, picker=5, zorder=2)
-                    )
-                    count += 1
-                    self.annotations.append(
-                        self.ax.annotate(
-                            "", xy=(0, 0), xytext=(15, 15),
-                            textcoords="offset points",
-                            bbox=dict(boxstyle="round", fc="w"),
-                            arrowprops=dict(arrowstyle="->"),
+                        shift1 = dictionary["shift1"]
+                        shift2 = dictionary["shift2"]
+
+                        self.point_names.append(peaklist_name)
+                        self.point_colours.append(self.peaklist_colours[count])
+                        self.points.append(
+                            self.ax.scatter(
+                                shift1,
+                                shift2,
+                                s=5,
+                                marker="o",
+                                c=cs,
+                                picker=5,
+                                zorder=zorder,
+                            )
                         )
-                    )
-                    self.annotations[-1].set_visible(False)
-                    self.hover_connect = self.canvas.mpl_connect("motion_notify_event", self.on_hover)
+                        count += 1
+
+                        # Annotation for hover
+                        self.annotations.append(
+                            self.ax.annotate(
+                                "",
+                                xy=(0, 0),
+                                xytext=(15, 15),
+                                textcoords="offset points",
+                                bbox=dict(boxstyle="round", fc="w"),
+                                arrowprops=dict(arrowstyle="->"),
+                            )
+                        )
+                        self.annotations[-1].set_visible(False)
+                        # adjust_text(self.annotations, ax=self.ax)
+
+                        # Connect event
+                        self.hover_connect = self.canvas.mpl_connect(
+                            "motion_notify_event", self.on_hover
+                        )
+
+                else:
+                    pass
 
         self.OnSliderScroll2D(wx.EVT_SCROLL)
         self.OnIntensityScroll2D(wx.EVT_SCROLL)
@@ -2338,7 +2491,7 @@ class TwoDViewer(wx.Panel):
                 if cont:
                     # Show annotation
                     index = ind["ind"][0]  # first index found
-                    peaklist_name = self.peaklist_frame.peak_list_choices[i]
+                    peaklist_name = self.point_names[i]
                     dictionary = self.peaklist_frame.peak_list_dictionary[peaklist_name]
 
                     peakname = (
@@ -2350,7 +2503,7 @@ class TwoDViewer(wx.Panel):
 
                     text = peakname
                     self.annotations[i].set_text(text)
-                    self.annotations[i].set_color(self.peaklist_colours[i])
+                    self.annotations[i].set_color(self.point_colours[i])
                     self.annotations[i].set_position((36, i * 36))
                     self.annotations[i].set_visible(True)
                     self.canvas.draw_idle()
@@ -2698,6 +2851,23 @@ class TwoDViewer(wx.Panel):
         if event.key == "c":
             self.mouse_wheel_mode = cycle_scroll_mode(self.mouse_wheel_mode, TWOD_SCROLL_MODES)
 
+
+        if event.key == "h":
+            if(self.plot_horizontal==True):
+                self.plot_horizontal=False
+            else:
+                self.plot_horizontal=True
+            if(self.plot_vertical==True):
+                self.plot_vertical=False
+        
+        if event.key == "v":
+            if(self.plot_vertical==True):
+                self.plot_vertical=False
+            else:
+                self.plot_vertical=True
+            if(self.plot_horizontal==True):
+                self.plot_horizontal=False
+
         # key press event for 2D plot (Plot horizontal and vertical slices)
         if self.multiplot_mode == False:
             if event.key == "h":
@@ -2705,73 +2875,71 @@ class TwoDViewer(wx.Panel):
                     -np.max(self.nmrdata.data / 8), np.max(self.nmrdata.data)
                 )
                 # plot a horizontal slice of the data
-                if self.line1.get_visible() == True:
+                if self.plot_horizontal == False:
                     self.slice_mode = None
                     self.line1.set_visible(False)
                     self.line2.set_visible(False)
                     self.UpdateFrame()
 
                 else:
-                    if self.line3.get_visible() == True:
+                    if self.plot_vertical == False:
                         self.slice_mode = None
                         self.line3.set_visible(False)
                         self.line4.set_visible(False)
                         self.UpdateFrame()
 
+                    self.slice_mode = "x"
+                    if(self.fid_viewer==False):
+                        data = self.nmrdata.data[
+                                :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
+                            ]
                     else:
-                        self.slice_mode = "x"
-                        if(self.fid_viewer==False):
-                            data = self.nmrdata.data[
-                                    :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
-                                ]
-                        else:
-                            data = self.nmrdata.data[
-                                    :, int(self.new_y_ppms[1])
-                                ]
-                        (self.line1,) = self.axes1D.plot(
-                            self.new_x_ppms,
-                            data
-                            * self.multiply_factor,
-                            color=self.slice_colour,
-                        )
-                        self.line2 = self.ax.axhline(self.new_y_ppms[1], color="k")
-                        self.UpdateFrame()
+                        data = self.nmrdata.data[
+                                :, int(self.new_y_ppms[1])
+                            ]
+                    (self.line1,) = self.axes1D.plot(
+                        self.new_x_ppms,
+                        data
+                        * self.multiply_factor,
+                        color=self.slice_colour,
+                    )
+                    self.line2 = self.ax.axhline(self.new_y_ppms[1], color="k")
+                    self.UpdateFrame()
 
             if event.key == "v":
                 self.axes1D_2.set_xlim(
                     -np.max(self.nmrdata.data / 8), np.max(self.nmrdata.data)
                 )
-                if self.line3.get_visible() == True:
+                if self.plot_vertical==False:
                     self.slice_mode = None
                     self.line3.set_visible(False)
                     self.line4.set_visible(False)
                     self.UpdateFrame()
                 else:
-                    if self.line1.get_visible() == True:
+                    if self.plot_horizontal==False:
                         self.slice_mode = None
                         self.line1.set_visible(False)
                         self.line2.set_visible(False)
                         self.UpdateFrame()
+                    self.line3.set_visible = True
+                    self.line4.set_visible = True
+                    if(self.fid_viewer==False):
+                        data = self.nmrdata.data[
+                            self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
+                        ]
                     else:
-                        self.line3.set_visible = True
-                        self.line4.set_visible = True
-                        if(self.fid_viewer==False):
-                            data = self.nmrdata.data[
-                                self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
-                            ]
-                        else:
-                            data = self.nmrdata.data[
-                                int(self.new_x_ppms[1]), :
-                            ]
-                        (self.line3,) = self.axes1D_2.plot(
-                            data
-                            * self.multiply_factor,
-                            self.new_y_ppms,
-                            color=self.slice_colour,
-                        )
-                        self.line4 = self.ax.axvline(self.new_x_ppms[1], color="k")
-                        self.slice_mode = "y"
-                        self.UpdateFrame()
+                        data = self.nmrdata.data[
+                            int(self.new_x_ppms[1]), :
+                        ]
+                    (self.line3,) = self.axes1D_2.plot(
+                        data
+                        * self.multiply_factor,
+                        self.new_y_ppms,
+                        color=self.slice_colour,
+                    )
+                    self.line4 = self.ax.axvline(self.new_x_ppms[1], color="k")
+                    self.slice_mode = "y"
+                    self.UpdateFrame()
 
         else:
             if event.key == "h":
@@ -2779,105 +2947,109 @@ class TwoDViewer(wx.Panel):
                     -np.max(self.nmrdata.data / 8), np.max(self.nmrdata.data)
                 )
                 # plot a horizontal slice of the data
-                if self.twoD_slices_horizontal[0][0].get_visible() == True:
+                if self.plot_horizontal==False:
                     for i in range(len(self.twoD_slices_horizontal)):
                         self.twoD_slices_horizontal[i][0].set_visible(False)
                     self.line_h.set_visible(False)
                     self.UpdateFrame()
                 else:
-                    if self.twoD_slices_vertical[0][0].get_visible() == True:
+                    if self.plot_vertical==False:
                         for i in range(len(self.twoD_slices_vertical)):
                             self.twoD_slices_vertical[i][0].set_visible(False)
                         self.line_v.set_visible(False)
                         self.UpdateFrame()
-                    else:
-                        for i in range(len(self.twoD_slices_horizontal)):
-                            multiply_factor = self.values_dictionary[i][
-                                "multiply factor"
-                            ]
-                            try:
-                                self.twoD_slices_horizontal[i] = self.axes1D.plot(
-                                    self.values_dictionary[i]["new_x_ppms"],
-                                    self.values_dictionary[i]["z_data"][
-                                        :,
-                                        self.values_dictionary[i]["uc1"](
-                                            str(self.new_y_ppms[1]) + "ppm"
-                                        ),
-                                    ]
-                                    * multiply_factor,
-                                    color=self.twoD_label_colours[i],
-                                    linewidth=self.values_dictionary[i]["linewidth 1D"],
-                                )
-                            except:
-                                self.twoD_slices_horizontal[i] = self.axes1D.plot(
-                                    self.values_dictionary[i]["new_x_ppms"],
-                                    self.values_dictionary[i]["z_data"][
-                                        :,
-                                        self.values_dictionary[i]["uc0"](
-                                            str(self.new_y_ppms[1]) + "ppm"
-                                        ),
-                                    ]
-                                    * multiply_factor,
-                                    color=self.twoD_label_colours[i],
-                                    linewidth=self.values_dictionary[i]["linewidth 1D"],
-                                )
-                        self.line_h = self.ax.axhline(self.new_y_ppms[1], color="k")
-                        self.UpdateFrame()
+
+                    for i in range(len(self.twoD_slices_horizontal)):
+                        multiply_factor = self.values_dictionary[i][
+                            "multiply factor"
+                        ]
+                        try:
+                            self.twoD_slices_horizontal[i] = self.axes1D.plot(
+                                self.values_dictionary[i]["new_x_ppms"],
+                                self.values_dictionary[i]["z_data"][
+                                    :,
+                                    self.values_dictionary[i]["uc1"](
+                                        str(self.new_y_ppms[1]) + "ppm"
+                                    ),
+                                ]
+                                * multiply_factor,
+                                color=self.twoD_label_colours[i],
+                                linewidth=self.values_dictionary[i]["linewidth 1D"],
+                            )
+                        except:
+                            self.twoD_slices_horizontal[i] = self.axes1D.plot(
+                                self.values_dictionary[i]["new_x_ppms"],
+                                self.values_dictionary[i]["z_data"][
+                                    :,
+                                    self.values_dictionary[i]["uc0"](
+                                        str(self.new_y_ppms[1]) + "ppm"
+                                    ),
+                                ]
+                                * multiply_factor,
+                                color=self.twoD_label_colours[i],
+                                linewidth=self.values_dictionary[i]["linewidth 1D"],
+                            )
+                        if(self.files.custom_labels[i] in self.hidden_list):
+                            self.twoD_slices_horizontal[i][0].set_visible(False)
+                    self.line_h = self.ax.axhline(self.new_y_ppms[1], color="k")
+                    self.UpdateFrame()
 
             if event.key == "v":
                 self.axes1D_2.set_xlim(
                     -np.max(self.nmrdata.data / 8), np.max(self.nmrdata.data)
                 )
-                if self.twoD_slices_vertical[0][0].get_visible() == True:
+                if self.plot_vertical==False:
                     for i in range(len(self.twoD_slices_vertical)):
                         self.twoD_slices_vertical[i][0].set_visible(False)
                     self.line_v.set_visible(False)
                     self.UpdateFrame()
                 else:
-                    if self.twoD_slices_horizontal[0][0].get_visible() == True:
+                    if self.plot_horizontal==False:
                         for i in range(len(self.twoD_slices_horizontal)):
                             self.twoD_slices_horizontal[i][0].set_visible(False)
                         self.line_h.set_visible(False)
                         self.UpdateFrame()
-                    else:
-                        for i in range(len(self.twoD_slices_vertical)):
-                            multiply_factor = self.values_dictionary[i][
-                                "multiply factor"
-                            ]
-                            try:
-                                self.twoD_slices_vertical[i] = self.axes1D_2.plot(
-                                    self.values_dictionary[i]["z_data"][
-                                        self.values_dictionary[i]["uc0"](
-                                            str(self.new_x_ppms[1]) + "ppm"
-                                        ),
-                                        :,
-                                    ]
-                                    * multiply_factor,
-                                    self.values_dictionary[i]["new_y_ppms"],
-                                    color=self.twoD_label_colours[i],
-                                    linewidth=self.values_dictionary[i]["linewidth 1D"],
-                                )
-                            except:
-                                self.twoD_slices_vertical[i] = self.axes1D_2.plot(
-                                    self.values_dictionary[i]["z_data"][
-                                        self.values_dictionary[i]["uc1"](
-                                            str(self.new_x_ppms[1]) + "ppm"
-                                        ),
-                                        :,
-                                    ]
-                                    * multiply_factor,
-                                    self.values_dictionary[i]["new_y_ppms"],
-                                    color=self.twoD_label_colours[i],
-                                    linewidth=self.values_dictionary[i]["linewidth 1D"],
-                                )
-                        self.line_v = self.ax.axvline(self.new_x_ppms[1], color="k")
-                        self.UpdateFrame()
+                    for i in range(len(self.twoD_slices_vertical)):
+                        multiply_factor = self.values_dictionary[i][
+                            "multiply factor"
+                        ]
+                        try:
+                            self.twoD_slices_vertical[i] = self.axes1D_2.plot(
+                                self.values_dictionary[i]["z_data"][
+                                    self.values_dictionary[i]["uc0"](
+                                        str(self.new_x_ppms[1]) + "ppm"
+                                    ),
+                                    :,
+                                ]
+                                * multiply_factor,
+                                self.values_dictionary[i]["new_y_ppms"],
+                                color=self.twoD_label_colours[i],
+                                linewidth=self.values_dictionary[i]["linewidth 1D"],
+                            )
+                        except:
+                            self.twoD_slices_vertical[i] = self.axes1D_2.plot(
+                                self.values_dictionary[i]["z_data"][
+                                    self.values_dictionary[i]["uc1"](
+                                        str(self.new_x_ppms[1]) + "ppm"
+                                    ),
+                                    :,
+                                ]
+                                * multiply_factor,
+                                self.values_dictionary[i]["new_y_ppms"],
+                                color=self.twoD_label_colours[i],
+                                linewidth=self.values_dictionary[i]["linewidth 1D"],
+                            )
+                        if(self.files.custom_labels[i] in self.hidden_list):
+                            self.twoD_slices_vertical[i][0].set_visible(False)
+                    self.line_v = self.ax.axvline(self.new_x_ppms[1], color="k")
+                    self.UpdateFrame()
 
-    def on_click_2d(self, event):
+    def on_click_2d(self, event, replot=False):
 
         # mouse click event for 2D plot (Plot horizontal and vertical slices for given mouse position on-click)
 
-        self.x1, self.y1 = self.ax.transData.inverted().transform((event.x, event.y))
+        if(replot==False):
+            self.x1, self.y1 = self.ax.transData.inverted().transform((event.x, event.y))
 
         if self.x1 != None and self.y1 != None:
 
@@ -2916,7 +3088,7 @@ class TwoDViewer(wx.Panel):
                     self.UpdateFrame()
 
             else:
-                if self.twoD_slices_horizontal[0][0].get_visible() == True:
+                if self.plot_horizontal==True:
                     for i in range(len(self.twoD_slices_horizontal)):
                         multiply_factor = self.values_dictionary[i]["multiply factor"]
                         self.y_difference = self.values_dictionary[i]["move y"]
@@ -2947,6 +3119,12 @@ class TwoDViewer(wx.Panel):
                                 self.twoD_slices_horizontal[i][0].set_xdata(
                                     self.values_dictionary[i]["new_x_ppms"]
                                 )
+                            if(self.files.custom_labels[i] in self.hidden_list):
+                                self.twoD_slices_horizontal[i][0].set_visible(False)
+                                self.twoD_slices_vertical[i][0].set_visible(False)
+                            else:
+                                self.twoD_slices_horizontal[i][0].set_visible(True)
+
                         except:
                             self.twoD_slices_vertical[i][0].set_xdata(
                                 0
@@ -2961,10 +3139,15 @@ class TwoDViewer(wx.Panel):
                                 0
                                 * np.ones(len(self.values_dictionary[i]["new_x_ppms"]))
                             )
+                            if(self.files.custom_labels[i] in self.hidden_list):
+                                self.twoD_slices_horizontal[i][0].set_visible(False)
+                                self.twoD_slices_vertical[i][0].set_visible(False)
+                            else:
+                                self.twoD_slices_horizontal[i][0].set_visible(True)
                     self.line_h.set_ydata([self.y1])
                     self.OnSliderScroll2D(wx.EVT_SCROLL)
                     self.UpdateFrame()
-                if self.twoD_slices_vertical[0][0].get_visible() == True:
+                if self.plot_vertical==True:
                     for i in range(len(self.twoD_slices_vertical)):
                         multiply_factor = self.values_dictionary[i]["multiply factor"]
                         self.x_difference = self.values_dictionary[i]["move x"]
@@ -2995,6 +3178,11 @@ class TwoDViewer(wx.Panel):
                                 self.twoD_slices_vertical[i][0].set_ydata(
                                     self.values_dictionary[i]["new_y_ppms"]
                                 )
+                            if(self.files.custom_labels[i] in self.hidden_list):
+                                self.twoD_slices_horizontal[i][0].set_visible(False)
+                                self.twoD_slices_vertical[i][0].set_visible(False)
+                            else:
+                                self.twoD_slices_vertical[i][0].set_visible(True)
                         except:
                             self.twoD_slices_vertical[i][0].set_xdata(
                                 0
@@ -3009,6 +3197,11 @@ class TwoDViewer(wx.Panel):
                                 0
                                 * np.ones(len(self.values_dictionary[i]["new_y_ppms"]))
                             )
+                            if(self.files.custom_labels[i] in self.hidden_list):
+                                self.twoD_slices_horizontal[i][0].set_visible(False)
+                                self.twoD_slices_vertical[i][0].set_visible(False)
+                            else:
+                                self.twoD_slices_vertical[i][0].set_visible(True)
                     self.line_v.set_xdata([self.x1])
                     self.OnSliderScroll2D(wx.EVT_SCROLL)
                     self.UpdateFrame()

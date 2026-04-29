@@ -771,3 +771,83 @@ class FormatParametersBruker:
             self.nmrdata.params.remove_acquisition_padding = True
         else:
             self.nmrdata.params.remove_acquisition_padding = False
+
+
+    def add_change_aqseq_box(self):
+        """
+        Sometimes the automatic change detection of aqseq does not work as intended.
+        This change acquisition order button allows the 2nd and 3rd dimensions to be
+        swapped before conversion takes place.
+        """
+        self.aqseq_button = wx.Button(self.app, label='Change acqusition order')
+        self.aqseq_button.Bind(wx.EVT_BUTTON, self.OnChangeAqseq)
+
+        self.app.menu_bar.AddSpacer(10)
+        self.app.menu_bar.Add(self.aqseq_button, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+
+    def OnChangeAqseq(self, event):
+        """
+        Swapping parameters in boxes 2 and 3
+        """
+
+        # Obtaining the current values for each box
+        complex_2 = self.N_complex_boxes[1].GetValue()
+        complex_3 = self.N_complex_boxes[2].GetValue()
+
+        real_2 = self.N_real_boxes[1].GetValue()
+        real_3 = self.N_real_boxes[2].GetValue()
+
+        aqmode_2 = self.acqusition_combo_boxes[1].GetSelection()
+        aqmode_3 = self.acqusition_combo_boxes[2].GetSelection()
+
+        nuc_freq2 = self.nuclei_frequency_boxes[1].GetValue()
+        nuc_freq3 = self.nuclei_frequency_boxes[2].GetValue()
+
+        label2 = self.nucleus_type_boxes[1].GetValue()
+        label3 = self.nucleus_type_boxes[2].GetValue()
+
+        sw2_value = self.sweep_width_boxes[1].GetValue()
+        sw3_value = self.sweep_width_boxes[2].GetValue()
+
+        sw2_selection = self.sweep_width_boxes[1].GetSelection()
+        sw3_selection = self.sweep_width_boxes[2].GetSelection()
+
+        carrier_box2_value = self.carrier_frequency_boxes[1].GetValue()
+        carrier_box3_value = self.carrier_frequency_boxes[2].GetValue()
+
+        carrier_combobox2 = self.carrier_combo_boxes[1].GetSelection()
+        carrier_combobox3 = self.carrier_combo_boxes[2].GetSelection()
+
+
+        # Swapping the values between boxes 2 and 3
+
+        self.nuclei_frequency_boxes[1].SetValue(nuc_freq3)
+        self.nuclei_frequency_boxes[2].SetValue(nuc_freq2)
+
+        self.sweep_width_boxes[1].SetSelection(sw3_selection)
+        self.sweep_width_boxes[2].SetSelection(sw2_selection)
+
+        self.sweep_width_boxes[1].SetValue(sw3_value)
+        self.sweep_width_boxes[2].SetValue(sw2_value)
+
+        self.nucleus_type_boxes[1].SetValue(label3)
+        self.nucleus_type_boxes[2].SetValue(label2)
+
+        self.acqusition_combo_boxes[1].SetSelection(aqmode_3)
+        self.acqusition_combo_boxes[2].SetSelection(aqmode_2)
+
+        self.carrier_combo_boxes[1].SetSelection(carrier_combobox3)
+        self.carrier_combo_boxes[2].SetSelection(carrier_combobox2)
+
+        self.carrier_frequency_boxes[1].SetValue(carrier_box3_value)
+        self.carrier_frequency_boxes[2].SetValue(carrier_box2_value)
+
+        self.N_complex_boxes[1].SetValue(complex_3)
+        self.N_complex_boxes[2].SetValue(complex_2)
+
+        self.N_real_boxes[1].SetValue(real_3)
+        self.N_real_boxes[2].SetValue(real_2)
+
+
+

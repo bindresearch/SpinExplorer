@@ -599,6 +599,7 @@ class FileDrop(wx.FileDropTarget):
                             self.parent.values_dictionary[index]["contour levels"] = 20
                             self.parent.values_dictionary[index]["path"] = name
 
+
                             # Work out the difference in max intensities between the first and the added spectra
                             max_intensity = np.max(data)
                             max_intensity_0 = np.max(self.parent.nmrdata.data)
@@ -987,6 +988,8 @@ class FileDrop(wx.FileDropTarget):
                             if self.transposed == True:
                                 self.parent.do_not_update = False
                                 self.parent.OnTransposeButton(wx.EVT_BUTTON)
+
+                            self.parent.OnMinContour2D(wx.EVT_BUTTON,textcontrol=True)
 
                         else:
                             msg = "This is not 1D or 2D data - currently more dimensions are not supported..."
