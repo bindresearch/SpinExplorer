@@ -2237,11 +2237,8 @@ class TwoDViewer(wx.Panel):
             self.error_window.ShowModal()
             self.error_window.Destroy()
 
-    def OnMinContour2D(self, event, textcontrol=False, showpeaks=True):
+    def DrawContours2D(self, event, textcontrol=False, showpeaks=True):
         # Function to update the contour levels when the user changes the number of contour levels
-        if textcontrol == False:
-            self.x_val = 10 ** float(self.contour_slider.GetValue())
-        intensity_percent = 10 ** (float(self.intensity_slider.GetValue()))
         self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
 
         if self.multiplot_mode == False:
@@ -2429,14 +2426,14 @@ class TwoDViewer(wx.Panel):
         self.UpdateFrame()
 
 
-    def OnMinContour2D(self, event, textcontrol=False):
+    def OnMinContour2D(self, event, textcontrol=False, showpeaks=True):
         """Triggered by slider."""
         if not textcontrol:
             self.x_val = 10 ** float(self.contour_slider.GetValue())
             self.contour_value_label.SetValue(
                 "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
             )
-        self.DrawContours2D()
+        self.DrawContours2D(event, textcontrol, showpeaks)
 
 
     def OnMinContour2DText(self, event):
