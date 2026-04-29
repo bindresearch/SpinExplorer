@@ -24,8 +24,9 @@ from SpinExplorer.SpinView.Modules.relax import RelaxFit
 from SpinExplorer.SpinView.Peaks.peaks import PeakListWindow2D
 from SpinExplorer.SpinView.Viewers.overlays import FileDrop, ReadProjection
 from SpinExplorer.SpinView.IO import GetData
-from SpinExplorer.SpinView.config import height, platform, colours, twoD_colours
-from SpinExplorer.SpinView.config import reference_range_values, multiply_range_values
+from SpinExplorer.SpinView.config import *
+
+
 
 
 # A class to create a panel for viewing 2D NMR spectra
@@ -49,6 +50,7 @@ class TwoDViewer(wx.Panel):
         self.create_canvas_2D()
         self.add_to_main_sizer_2D()
         self.draw_figure_2D()
+        self.mouse_wheel_mode = ScrollMode.ZOOM
 
     def add_to_main_sizer_2D(self):
         # Create the main sizer
@@ -2240,21 +2242,15 @@ class TwoDViewer(wx.Panel):
         if textcontrol == False:
             self.x_val = 10 ** float(self.contour_slider.GetValue())
         intensity_percent = 10 ** (float(self.intensity_slider.GetValue()))
+        self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
 
         if self.multiplot_mode == False:
-            # update contour levels
-            self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
-            self.cl = self.contour_start * self.contour_factor ** np.arange(
-                self.contour_num
-            )
-            self.cl_neg = -self.contour_start * self.contour_factor ** np.flip(
-                np.arange(self.contour_num)
-            )
+            self.cl = self.contour_start * self.contour_factor ** np.arange(self.contour_num)
+            self.cl_neg = -self.contour_start * self.contour_factor ** np.flip(np.arange(self.contour_num))
             xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             self.ax.clear()
             self.contour1 = self.ax.contour(
-                self.Y,
-                self.X,
+                self.Y, self.X,
                 self.nmrdata.data * self.multiply_factor,
                 self.cl,
                 colors=self.cmap,
@@ -2262,27 +2258,23 @@ class TwoDViewer(wx.Panel):
                 zorder=1,
             )
             self.contour1_neg = self.ax.contour(
-                self.Y,
-                self.X,
+                self.Y, self.X,
                 self.nmrdata.data * self.multiply_factor,
                 self.cl_neg,
                 colors=self.cmap_neg,
                 linewidths=self.linewidth,
                 zorder=1,
             )
-
-            if self.line1.get_visible() == True:
+            if self.line1.get_visible():
                 self.line2 = self.ax.axhline(self.y1, color="k")
-
-            if self.line3.get_visible() == True:
+            if self.line3.get_visible():
                 self.line4 = self.ax.axvline(self.x1, color="k")
-
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
             self.ax.set_xlabel(self.nmrdata.axislabels[1])
             self.ax.set_ylabel(self.nmrdata.axislabels[0])
+
         else:
-            self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
             xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             xlabel, ylabel = self.ax.get_xlabel(), self.ax.get_ylabel()
             self.ax.clear()
@@ -2302,8 +2294,7 @@ class TwoDViewer(wx.Panel):
                     self.values_dictionary[i]["new_x_ppms"],
                 )
                 self.ax.contour(
-                    y,
-                    x,
+                    y, x,
                     self.values_dictionary[i]["z_data"] * multiply_factor,
                     self.cl,
                     colors=self.twoD_colours[i],
@@ -2314,22 +2305,18 @@ class TwoDViewer(wx.Panel):
             self.ax.legend(list_of_legend_elements, list_of_legend_entries)
                 
 
-            if self.twoD_slices_horizontal[0][0].get_visible() == True:
-                # for i in range(len(self.twoD_slices_horizontal)):
+            if self.twoD_slices_horizontal[0][0].get_visible():
                 self.line_h = self.ax.axhline(self.y1, color="k")
                 self.axes1D.set_ylim(
                     -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
                     np.max(self.nmrdata.data) / (intensity_percent / 100),
                 )
-
-            if self.twoD_slices_vertical[0][0].get_visible() == True:
-                # for i in range(len(self.twoD_slices_horizontal)):
+            if self.twoD_slices_vertical[0][0].get_visible():
                 self.line_v = self.ax.axhline(self.x1, color="k")
                 self.axes1D_2.set_ylim(
                     -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
                     np.max(self.nmrdata.data) / (intensity_percent / 100),
                 )
-
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
             self.ax.set_xlabel(xlabel)
@@ -2439,8 +2426,59 @@ class TwoDViewer(wx.Panel):
 
         self.OnSliderScroll2D(wx.EVT_SCROLL)
         self.OnIntensityScroll2D(wx.EVT_SCROLL)
-
         self.UpdateFrame()
+
+
+    def OnMinContour2D(self, event, textcontrol=False):
+        """Triggered by slider."""
+        if not textcontrol:
+            self.x_val = 10 ** float(self.contour_slider.GetValue())
+            self.contour_value_label.SetValue(
+                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+            )
+        self.DrawContours2D()
+
+
+    def OnMinContour2DText(self, event):
+        """Triggered by text control."""
+        self.x_val = float(self.contour_value_label.GetValue())
+        self.DrawContours2D()
+
+    def on_mouse_wheel(self, event):
+
+        toolbar = self.fig.canvas.toolbar
+        if toolbar:
+            toolbar.push_current() # logs position in toolbar so commands back, forward, home work
+
+        if self.mouse_wheel_mode == ScrollMode.ZOOM:
+            self.mouse_wheel_zoom(event)
+        
+        if self.mouse_wheel_mode == ScrollMode.CONTOUR:
+            delta = 0.1 if event.GetWheelRotation() > 0 else -0.1
+            current = float(self.contour_slider.GetValue())
+            self.contour_slider.SetValue(current + delta)
+            self.x_val = 10 ** float(self.contour_slider.GetValue())
+            self.contour_value_label.SetValue(
+                "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+            )
+            self.DrawContours2D()
+
+    # def OnMouseWheel(self, event):
+    #     """Triggered by mouse wheel."""
+    #     match self.MOUSE_WHEEL_MODE:
+    #         case ScrollMode.ZOOM:
+    #             self.OnZoom(event)
+    #         case ScrollMode.CONTOUR:
+    #             delta = 1 if event.GetWheelRotation() > 0 else -1
+    #             current = float(self.contour_slider.GetValue())
+    #             self.contour_slider.SetValue(current + delta)
+    #             self.x_val = 10 ** float(self.contour_slider.GetValue())
+    #             self.contour_value_label.SetValue(
+    #                 "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
+    #             )
+    #             self.DrawContours2D()
+    #         case ScrollMode.PLANE:
+    #             self.OnChangePlane(event)
 
     def on_hover(self, event):
 
@@ -2763,12 +2801,8 @@ class TwoDViewer(wx.Panel):
         self.move_y_slider.SetRes(self.reference_rangeY / 1000)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY)
 
-    def on_mouse_wheel(self, event):
 
-        toolbar = self.fig.canvas.toolbar
-        if toolbar:
-            toolbar.push_current() # logs position in toolbar so commands back, forward, home work
-
+    def mouse_wheel_zoom(self, event):
         mx, my = event.GetPosition()
 
         scale = self.fig.canvas.GetDPIScaleFactor()
@@ -2813,6 +2847,9 @@ class TwoDViewer(wx.Panel):
             self.toolbar.back()
         if event.key == "f":
             self.toolbar.forward()
+        
+        if event.key == "c":
+            self.mouse_wheel_mode = cycle_scroll_mode(self.mouse_wheel_mode, TWOD_SCROLL_MODES)
 
 
         if event.key == "h":
