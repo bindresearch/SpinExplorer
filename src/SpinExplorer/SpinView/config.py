@@ -50,13 +50,12 @@ twoD_colours = [
             "#4daf4a",
             "#984ea3",
             "#ff7f00",
-            "#ff33eb",
             "tan",
             "lightcoral",
             "maroon",
             "lightgreen",
             "deeppink",
-            "fuchsia",
+            "#ff33eb",
         ]
 
 reference_range_values = [

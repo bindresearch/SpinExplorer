@@ -379,7 +379,7 @@ class ProcessNMRGlue:
             os.chdir(self.notebook.parent.original_frame.parent.path)
         from SpinExplorer.SpinView.SpinView import SpinView
 
-        app = SpinView()
+        app = SpinView(reprocess = True)
         if self.notebook.parent.original_frame.parent.cwd != "":
             app.path = path
             app.cwd = cwd
