@@ -2239,6 +2239,7 @@ class TwoDViewer(wx.Panel):
 
     def DrawContours2D(self, event, textcontrol=False, showpeaks=True):
         # Function to update the contour levels when the user changes the number of contour levels
+        intensity_percent = 10 ** (float(self.intensity_slider.GetValue()))
         self.contour_start = np.max(np.abs(self.nmrdata.data)) / self.x_val
 
         if self.multiplot_mode == False:
