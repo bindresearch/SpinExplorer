@@ -55,6 +55,10 @@ def process_from_config(config_path: str, organise_by: str | None = None) -> Non
     df = pd.read_csv(config_data["csv_path"])
 
     for exp in config_data["experiments"]:
+        if('_icon' in exp):
+            exp_name = exp.split('_icon')[0]
+            suffix = exp.split('.')[-1]
+            exp = exp_name + '.' + suffix
         config = registry._registry[exp]
         for prot in config_data["proteins"]:
             filtered_exps = filter_experiments(df, exp, prot)
@@ -83,7 +87,7 @@ def write_1d_multi_session(df, exp, protein_name, config, outy_name=None, outy_f
         outy.write('MultiplotMode:True\n')
 
         for i, (_, row) in enumerate(df.iterrows()):
-            outy.write(f'file_path:{str(Path.cwd())+'/'+str(row['Expno'])+'/test.ft'}\n')
+            outy.write(f'file_path:{str(Path.cwd())+'/'+str(int(row['Expno']))+'/test.ft'}\n')
             outy.write(f'title:{str(row['Expno'])}\n')
             outy.write(f'p0_coarse:0.0\n')
             outy.write(f'p1_coarse:0.0\n')
