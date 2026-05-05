@@ -2393,7 +2393,7 @@ class SpinBore(wx.Frame):
         self.display_index_current = self.display_index
         self.width = int(1.0 * sizes[self.display_index][0])
         self.height = int(0.875 * sizes[self.display_index][1])
-        self.title = title
+        self.title = 'SpinBore - ' + title
         wx.Frame.__init__(
             self, parent=parent, title=title, size=(self.width, self.height)
         )
@@ -2639,8 +2639,10 @@ class SpinBore(wx.Frame):
         Open up the Peak Lists 3D frame
         """
 
+        self.title = 'SpinBore - ' + self.main_frame.parent.title
+
         self.peak_lists3D = PeakListWindow3D(
-            title="3D Peak List - " + self.main_frame.parent.title, parent=self
+            title="3D Peak List - " + self.title, parent=self
         )
         self.peak_lists3D.Show()
 

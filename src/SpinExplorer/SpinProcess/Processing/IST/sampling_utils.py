@@ -270,7 +270,7 @@ def apply_sampling_schedule_to_3d_signal_and_collapse(spectrum: NDArray, sample_
 def inflate_spectra_3D_signal(spectrum: NDArray, sample_dict: dict,
                                    sampling_schedule: Union[list[int], NDArray],
                                    max_points: Union[int, list[int]],
-                                   acq_ord: int = 0) -> tuple[NDArray, dict],:
+                                   acq_ord: int = 0) -> tuple[NDArray, dict]:
     inflated_dict     = sample_dict.copy()
 
 
