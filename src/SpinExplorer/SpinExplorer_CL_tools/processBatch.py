@@ -58,8 +58,8 @@ def process_from_config(config_path: str, organise_by: str | None = None) -> Non
         if('_icon' in exp):
             exp_name = exp.split('_icon')[0]
             suffix = exp.split('.')[-1]
-            exp = exp_name + '.' + suffix
-        config = registry._registry[exp]
+            register_exp = exp_name + '.' + suffix
+        config = registry._registry[register_exp]
         for prot in config_data["proteins"]:
             filtered_exps = filter_experiments(df, exp, prot)
             groups = group_by_base_title(filtered_exps, prot)
@@ -155,8 +155,13 @@ def main():
             params = parameter_write_cl(nmr_glue_conv, config)
             params.write_out_dict(params.dictionary)
 
+            if(nmr_glue_conv.params.remove_filter_before_processing==True):
+                remove_filter=False
+            else:
+                remove_filter=True
 
-            config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag)
+
+            config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag, filter_removal=remove_filter)
 
             print(f"Successfully processed: {folder.name}")
 
