@@ -316,7 +316,6 @@ class Populate_dictionary_global:
                 )
                 nus_cpu = dimension_tab.linear_prediction.number_of_nus_CPU_indirect
                 nus_iterations = dimension_tab.linear_prediction.nus_iterations_indirect
-                lp_only = dimension_tab.linear_prediction.smile_linear_prediction_only_flag
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS file"
                 ] = nusfile
@@ -329,9 +328,6 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS iterations"
                 ] = nus_iterations
-                dimension_dictionary["Linear Prediction"][choices[value]][
-                    "Linear prediction only"
-                ] = lp_only
             elif(value==3):
                 nusfile = dimension_tab.linear_prediction.nuslist_name_indirect
                 nus_extension = (
