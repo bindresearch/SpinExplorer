@@ -24,7 +24,7 @@ dependencies = [
     "pyyaml == 6.0.3",
     "pandas == 3.0.1",
     "pyfftw == 0.15.1",
-    "joblib == 1.5.3"
+    "joblib == 1.5.3",
     "scikit-learn==1.8.0"
 ]
 
