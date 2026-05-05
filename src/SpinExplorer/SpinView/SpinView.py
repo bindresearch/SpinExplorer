@@ -252,10 +252,10 @@ class SpinView(wx.Frame):
             self.title += ' Session: ' + pathlib.Path(self.session_file).name
             self.SetTitle(self.title)
             self.viewer.title=self.title
-            # try:
-            self.viewer.peaklist_frame.SetTitle('Peak Lists - ' + self.title)
-            # except:
-                # pass
+            try:
+                self.viewer.peaklist_frame.SetTitle('Peak Lists - ' + self.title)
+            except:
+                pass
 
         self.SetSizer(self.main_sizer)
 

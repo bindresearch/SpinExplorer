@@ -124,7 +124,7 @@ def ist_iteration_3d(data: NDArray,
 
     # FT along faster indirect (axis=1): collapse cos/sin pairs → complex, FT, take real
 
-    data = data[:, 0::2] + 1.0j * data[:, 1::2]       
+    data = data[:, 0::2] + 1.0j * data[:, 1::2]    
     data = fft.fftshift(fft.fft(data, axis=-1), axes=-1)
     #data = ng.proc_base.fft_positive(data)
     data_real = np.real(data)                                 
@@ -134,8 +134,7 @@ def ist_iteration_3d(data: NDArray,
     data_imag = np.transpose(data_imag)
 
     data_real = data_real[:,0::2] + 1.0j*data_real[:,1::2]
-    data_imag = data_imag[:,0::2] + 1.0j*data_imag[:,1::2]
-    
+    data_imag = data_imag[:,0::2] + 1.0j*data_imag[:,1::2]    
 
     # data_real = ng.proc_base.fft_positive(data_real)
     # data_imag = ng.proc_base.fft_positive(data_imag)
@@ -207,7 +206,8 @@ def ist_3d(input_spec: NDArray,
            max_iter: int = 800,
            mode: int = 1,
            sched_ord: int = 0,
-           verb: bool = False) -> NDArray:
+           verb: bool = False,
+           ist_callback = None) -> NDArray:
     
     """
     IST reconstruction of 3D NUS data
@@ -215,6 +215,7 @@ def ist_3d(input_spec: NDArray,
     if sched_ord == 1:
         sampling_schedule = np.asarray(sampling_schedule)
         sampling_schedule = sampling_schedule[:, ::-1]
+
 
     def _reconstruct_until_convergence(nus_fid: NDArray) -> tuple[NDArray,NDArray]:
         reconstructed_r = None
@@ -237,12 +238,14 @@ def ist_3d(input_spec: NDArray,
             prev_norm = curr_norm
 
             if relative_change < convergence_tol:
-                print(f"  converged at iteration {iteration} — "
-                      f"relative change: {relative_change:.2e}")
+                if(verb):
+                    print(f"  converged at iteration {iteration} — "
+                        f"relative change: {relative_change:.2e}")
                 break
             if iteration == max_iter:
-                print(f"  reached max iterations of {iteration} — "
-                      f"relative change: {relative_change:.2e}")
+                if(verb):
+                    print(f"  reached max iterations of {iteration} — "
+                        f"relative change: {relative_change:.2e}")
 
         return reconstructed_r, reconstructed_i
 
@@ -274,10 +277,14 @@ def ist_3d(input_spec: NDArray,
         slice_data = input_spec[i].copy()
         recon_real, recon_imag = reconstruct(slice_data)
         recon_slice = retrieve_signal_ist_3d(recon_real, recon_imag)
+
         return i, recon_slice
 
-    results = Parallel(n_jobs = -1)(delayed(_process_slice_3d)(i) for i in range(input_spec.shape[0]))
+
+    results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice_3d)(i) for i in range(input_spec.shape[0]))
     for i, result in results:
+        if(ist_callback!=None):
+            ist_callback()
         recon_spec[i] = result
 
     # for i in range(input_spec.shape[0]):
@@ -287,6 +294,9 @@ def ist_3d(input_spec: NDArray,
     #     recon_real, recon_imag = reconstruct(slice_data)
     #     recon_slice = retrieve_signal_ist_3d(recon_real, recon_imag)
     #     recon_spec[i] = recon_slice
+
+    if verb:
+        print(f"Finished IST slice {i}")
     return recon_spec
 
 
@@ -350,7 +360,8 @@ def ist_2d(input_spec: NDArray,
            convergence_tol: float = 1e-10,
            max_iter: int = 4000,
            mode: int = 1,
-           verb: bool = False) -> NDArray:
+           verb: bool = False,
+           ist_callback = None) -> NDArray:
     """
     IST reconstruction of 2D NUS data. Direct dimension is assumed to be
     already Fourier transformed. IST is applied column by column along
@@ -365,6 +376,8 @@ def ist_2d(input_spec: NDArray,
     convergence_tol : relative change termination criterion (mode 1 only)
     max_iter        : maximum number of iterations
     mode            : 1 = converge on relative change, 2 = converge on L2 norm
+    ist_callback    : A function to update the SpinExplorer counter so that the % through
+                      reconstruction can be reported.
     """
 
     def _reconstruct_until_convergence(nus_fid: NDArray) -> NDArray:
@@ -422,9 +435,12 @@ def ist_2d(input_spec: NDArray,
     #     print(f"IST slice {i + 1} / {input_spec.shape[0]}")
     #     recon_buffer[i] = reconstruct(input_spec[i].copy())
     
-    results = Parallel(n_jobs = -1)(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
+    results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
     for i, result in results:
+        if(ist_callback!=None):
+            ist_callback()
         recon_buffer[i] = result
+
 
     recon_spec = fft.ifft(recon_buffer, axis = -1)
     recon_spec[...,0] = recon_spec[...,0]*2.0
