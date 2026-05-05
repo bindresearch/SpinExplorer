@@ -25,6 +25,7 @@ registry.register("zgesgp.apk", standard_1H_1D)
 
 
 registry.register("t1rho.rf", standard_1H_1D)
+registry.register("t1rho.apk", standard_1H_1D)
 registry.register("wlogsy.rf", standard_1H_1D)
 registry.register("PO_waterlogsy.bind", waterlogsy_icon)
 
