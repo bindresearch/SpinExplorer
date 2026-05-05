@@ -21,6 +21,7 @@ waterlogsy_icon = ExperimentConfigStore(['Dimension 0 (1H)'], [DimensionConfig.s
 registry.register("zg", standard_1H_1D)
 registry.register("zgpr", standard_1H_1D)
 registry.register("zgesgp", standard_1H_1D)
+registry.register("zgesgp.apk", standard_1H_1D)
 
 
 registry.register("t1rho.rf", standard_1H_1D)
