@@ -1555,7 +1555,7 @@ class ExperimentConfigStore:
             print(f"Processing dimension {i} ({label})...")
             
             # Apply processing for this dimension
-            dic, data = config.apply_processing(dic, data, i, filter_removal=False)
+            dic, data = config.apply_processing(dic, data, i, filter_removal=filter_removal)
 
             # Transpose if not the last dimension
             if i < len(self.dim_configs) - 1:
