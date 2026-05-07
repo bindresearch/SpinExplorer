@@ -58,7 +58,7 @@ class fit_peaks():
         
         if(self.peaklist_frame.selected_peak_indexes==[]):
             dlg = wx.MessageDialog(
-                    self,
+                    self.peaklist_frame,
                     "Please ensure that at least one peak is selected using the select group feature and try again."
                     ,
                     "Warning",
@@ -437,7 +437,7 @@ class fit_peaks():
         except:
             # report that the fit failed
             dlg = wx.MessageDialog(
-                    self,
+                    self.peaklist_frame,
                     "The fit of the selected peak or peaks failed. Please ensure that the peaks are moved close to their local maxima and try again."
                     ,
                     "Warning",
