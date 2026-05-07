@@ -35,6 +35,7 @@ def group_by_base_title(df: pd.DataFrame, protein: str) -> list[pd.DataFrame]:
     base_titles = df[~df["Title"].str.contains(" ")]["Title"].unique()
     
     groups = []
+    titles = []
     for base_title in base_titles:
         base_mask = df["Title"] == base_title
         compound_mask = (
@@ -44,8 +45,9 @@ def group_by_base_title(df: pd.DataFrame, protein: str) -> list[pd.DataFrame]:
         group = df[base_mask | compound_mask]
         if len(group) > 1:
             groups.append(group)
+        titles.append(base_title)
     
-    return groups
+    return groups, titles
 
 def process_from_config(config_path: str, organise_by: str | None = None) -> None:
     with open(config_path, "r") as f:
@@ -62,9 +64,9 @@ def process_from_config(config_path: str, organise_by: str | None = None) -> Non
         config = registry._registry[register_exp]
         for prot in config_data["proteins"]:
             filtered_exps = filter_experiments(df, exp, prot)
-            groups = group_by_base_title(filtered_exps, prot)
-            for group in groups:
-                output_dir = _resolve_output_dir(base_dir, organise_by, prot, exp)
+            groups, titles = group_by_base_title(filtered_exps, prot)
+            for i, group in enumerate(groups):
+                output_dir = _resolve_output_dir(base_dir, organise_by, prot, exp, titles[i])
                 write_1d_multi_session(group, exp, prot, config, output_dir=output_dir)
 
 
@@ -118,7 +120,7 @@ def main():
     parser.add_argument(
         "--organise-by",
         dest="organise_by",
-        choices=["protein", "experiment", "both"],
+        choices=["protein", "experiment", "both", "protein+compound", "compound"],
         default=None,
         help=(
             "Create organised output folders for sessions. "
@@ -181,15 +183,18 @@ def _resolve_output_dir(
     organise_by: str | None,
     protein: str,
     experiment: str,
+    compound: str,
 ) -> Path:
     """
     Build and create the output directory for a session based on
     the --organise-by mode.
 
-      protein    → base_dir/sessions/<protein>/
-      experiment → base_dir/sessions/<experiment>/
-      both       → base_dir/sessions/<protein>/<experiment>/
-      None       → base_dir/  (no subfolder created)
+      protein          → base_dir/sessions/<protein>/
+      experiment       → base_dir/sessions/<experiment>/
+      compound         → base_dir/sessions/<compound>/
+      both             → base_dir/sessions/<protein>/<experiment>/
+      protein+compound → base_dir/sessions/<protein>/<compound>/
+      None             → base_dir/  (no subfolder created)
     """
     if organise_by is None:
         return base_dir
@@ -200,8 +205,12 @@ def _resolve_output_dir(
         output_dir = sessions_root / protein
     elif organise_by == "experiment":
         output_dir = sessions_root / experiment
+    elif organise_by == "compound":
+        output_dir = sessions_root / compound
     elif organise_by == "both":
         output_dir = sessions_root / protein / experiment
+    elif organise_by == "protein+compound":
+        output_dir = sessions_root / protein / compound
     else:
         raise ValueError(f"Unknown organise_by value: {organise_by!r}")
 

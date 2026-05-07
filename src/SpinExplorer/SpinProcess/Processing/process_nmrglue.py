@@ -188,11 +188,15 @@ class ProcessNMRGlue:
         )
 
 
-        if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
-            # Phasing is to be applied before IST reconstruction
-            self.ist_phasing = True
-        else:
+        try:
+            if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
+                # Phasing is to be applied before IST reconstruction
+                self.ist_phasing = True
+            else:
+                self.ist_phasing = False
+        except:
             self.ist_phasing = False
+        
 
 
         # Adding processing lines for the first complex indirect dimension
@@ -376,7 +380,7 @@ class ProcessNMRGlue:
 
             maxiter = dimension_tab.linear_prediction.ist_nus_iterations_indirect
 
-            data = ist_3d(data, sampling_schedule=sched, sched_ord=1, max_iter=maxiter, ist_callback=self.ist_current_state_callback)
+            data, converged_results = ist_3d(data, sampling_schedule=sched, sched_ord=1, max_iter=maxiter, ist_callback=self.ist_current_state_callback)
 
             # Update spectrum sizes in dictionary if the data has been extended
             dic["FDF1SIZE"] = data.shape[1]
@@ -384,7 +388,18 @@ class ProcessNMRGlue:
             dic['FDF1APOD'] = data.shape[1]
             dic["FDF3SIZE"] = data.shape[2]
             dic['FDF3TDSIZE'] = data.shape[2]
-            dic['FDF3APOD'] = data.shape[2]      
+            dic['FDF3APOD'] = data.shape[2]
+
+            dlg = wx.MessageDialog(
+            self.notebook,
+            "Reconstruction completed with {:.2f}% of iterations converging".format(100*converged_results/self.number_of_points),
+            "Reconstruction completion",
+            wx.OK
+            )
+            self.notebook.Raise()
+            self.notebook.SetFocus()
+            dlg.ShowModal() 
+            dlg.Destroy()
 
 
         return dic, data
@@ -794,6 +809,13 @@ class ProcessNMRGlue:
                     size=int(tab.zero_filling_value_final_data_size),
                     auto=round,
                 )
+        else:
+            dic, data = self.zf(
+                    dic,
+                    data,
+                    pad=0,
+                    auto=False,
+                )
 
         return dic, data
 
@@ -973,7 +995,6 @@ class ProcessNMRGlue:
             )
 
         return dic, data
-
     
 
     """

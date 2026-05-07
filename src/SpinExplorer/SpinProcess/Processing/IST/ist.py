@@ -212,6 +212,8 @@ def ist_3d(input_spec: NDArray,
     """
     IST reconstruction of 3D NUS data
     """
+    converged_results = 0
+
     if sched_ord == 1:
         sampling_schedule = np.asarray(sampling_schedule)
         sampling_schedule = sampling_schedule[:, ::-1]
@@ -222,6 +224,8 @@ def ist_3d(input_spec: NDArray,
         
         reconstructed_i = None
         prev_norm = 0.0
+
+        converged = False
 
 
         for iteration in range(1, max_iter + 1):
@@ -241,17 +245,20 @@ def ist_3d(input_spec: NDArray,
                 if(verb):
                     print(f"  converged at iteration {iteration} — "
                         f"relative change: {relative_change:.2e}")
+                converged = True
                 break
             if iteration == max_iter:
                 if(verb):
                     print(f"  reached max iterations of {iteration} — "
                         f"relative change: {relative_change:.2e}")
 
-        return reconstructed_r, reconstructed_i
+        return reconstructed_r, reconstructed_i, converged
 
     def _reconstruct_until_l2(nus_fid: NDArray) -> NDArray:
         reconstructed = np.zeros((nus_fid.shape[1]//2,nus_fid.shape[0]//2))
         l2_norm = terminate * 1000.0
+
+        converged = False
 
         for iteration in range(1, max_iter + 1):
             nus_fid, threshold_signal_real, threshold_signal_imag, l2_norm = ist_iteration_3d(nus_fid, threshold, sampling_schedule)
@@ -260,12 +267,13 @@ def ist_3d(input_spec: NDArray,
                 if verb:
                     print(f"  converged at iteration {iteration} — "
                         f"l2 norm: {l2_norm:.2e}")
+                converged = True
                 break
             if iteration == max_iter:
                 if verb:
                     print(f"  reached max iterations — L2 norm: {l2_norm:.2e}")
 
-        return reconstructed
+        return reconstructed, converged
 
     recon_spec = np.zeros_like(input_spec)
     reconstruct = _reconstruct_until_convergence if mode == 1 else _reconstruct_until_l2
@@ -275,17 +283,19 @@ def ist_3d(input_spec: NDArray,
             print(f"Doing IST slice {i}")
         
         slice_data = input_spec[i].copy()
-        recon_real, recon_imag = reconstruct(slice_data)
+        recon_real, recon_imag, converged = reconstruct(slice_data)
         recon_slice = retrieve_signal_ist_3d(recon_real, recon_imag)
 
-        return i, recon_slice
+        return i, recon_slice, converged
 
-
+    
     results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice_3d)(i) for i in range(input_spec.shape[0]))
-    for i, result in results:
+    for i, result, converged in results:
         if(ist_callback!=None):
             ist_callback()
         recon_spec[i] = result
+        if(converged==True):
+            converged_results+=1
 
     # for i in range(input_spec.shape[0]):
     # #for i in range(1):
@@ -297,7 +307,7 @@ def ist_3d(input_spec: NDArray,
 
     if verb:
         print(f"Finished IST slice {i}")
-    return recon_spec
+    return recon_spec, converged_results
 
 
 # def get_thresh_signal(signal_ft: NDArray, threshold: float)->NDArray:

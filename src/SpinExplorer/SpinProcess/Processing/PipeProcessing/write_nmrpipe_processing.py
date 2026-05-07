@@ -459,7 +459,10 @@ class WriteNMRPipeProcessing:
                             str(dimension_tab1.apodization.loc)
                         )
                     )
-            nmrproc_com.write(smile_line_apod)
+            try:
+                nmrproc_com.write(smile_line_apod)
+            except:
+                pass
 
         if nus_dimensions == [2]:
             smile_line2 = (
