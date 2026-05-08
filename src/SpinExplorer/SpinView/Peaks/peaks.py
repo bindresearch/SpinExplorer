@@ -741,7 +741,7 @@ class PeakListWindow2D(wx.Frame):
             shift1 = self.peak_list_dictionary[peaklist]["shift1"][index]
             shift2 = self.peak_list_dictionary[peaklist]["shift2"][index]
             intensity = self.peak_list_dictionary[peaklist]["intensity"][index]
-            data.append([peak, shift1, shift2, intensity])
+            data.append([peak, "{:.5f}".format(shift1), "{:.5f}".format(shift2), "{:.5e}".format(intensity)])
 
         num_rows = self.grid.GetNumberRows()
         self.grid.AppendRows(len(data) - num_rows)
@@ -1222,8 +1222,13 @@ class PeakListWindow2D(wx.Frame):
             self.peak_list_dictionary[current_peaklist]["shift1"].append(x)
             self.peak_list_dictionary[current_peaklist]["shift2"].append(y)
 
+            intensity = self.find_new_intensity(x,y)
+
+            self.peak_list_dictionary[current_peaklist]["intensity"].append(intensity)
+
             self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
             self.AddToTable()
+
 
     def OnSelectPeak(self, event):
         """
@@ -2893,7 +2898,7 @@ class PeakListWindow3D(wx.Frame):
             shift2 = self.peak_list_dictionary[peaklist]["shift2"][index]
             shift3 = self.peak_list_dictionary[peaklist]["shift3"][index]
             intensity = self.peak_list_dictionary[peaklist]["intensity"][index]
-            data.append([peak, shift1, shift2, shift3, intensity])
+            data.append([peak, "{:.5f}".format(shift1), "{:.5f}".format(shift2), "{:.5f}".format(shift3), "{:.5e}".format(intensity)])
 
         num_rows = self.grid.GetNumberRows()
         self.grid.AppendRows(len(data) - num_rows)
