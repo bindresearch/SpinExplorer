@@ -44,7 +44,20 @@ class Convert_nmrglue:
         self.nmrdata = nmrdata
 
         sizes = []
-        if(self.app.shared_format.NUS_tickbox.GetValue() == False):
+
+        if(len(self.app.format.N_complex_boxes)>1):
+            if(self.app.shared_format.NUS_tickbox.GetValue() == False):
+                for i, box in enumerate(self.app.format.N_complex_boxes):
+                    size = int(box.GetValue())
+                    if i == 0:
+                        size = int(size / 2)
+                    sizes.append(size)
+                sizes.reverse()
+
+            else:
+                sampling_schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
+                sizes = [len(sampling_schedule)*4, int(self.app.format.N_real_boxes[0].GetValue())]
+        else:
             for i, box in enumerate(self.app.format.N_complex_boxes):
                 size = int(box.GetValue())
                 if i == 0:
@@ -52,12 +65,6 @@ class Convert_nmrglue:
                 sizes.append(size)
             sizes.reverse()
 
-        else:
-            sampling_schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
-            sizes = [len(sampling_schedule)*4, int(self.app.format.N_real_boxes[0].GetValue())]
-
-
-        print(sizes)
 
         C = ng.convert.converter()
         # Obtain first guesses of dictionary values
