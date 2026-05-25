@@ -1,6 +1,7 @@
 import wx # type: ignore
 import numpy as np
 import sys
+import math
 import matplotlib 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
@@ -12,7 +13,7 @@ from scipy.optimize import leastsq # type: ignore
 
 from SpinExplorer.SpinView.UI_objects.UI_tools import FloatSlider
 from SpinExplorer.SpinView.Viewers.overlays import DeleteSliceDialog
-from SpinExplorer.SpinView.Viewers.module_utils import DelaysManualInput
+from SpinExplorer.SpinView.Viewers.module_utils import DelaysManualInput, InputROI
 
 if sys.platform == "linux":
     platform = "linux"
@@ -228,6 +229,11 @@ class RelaxFit(wx.Frame):
         self.fitting_sizer.Add(self.add_region_button)
         self.fitting_sizer.AddSpacer(5)
 
+        self.input_region_button = wx.Button(self, -1, "Input ROI")
+        self.input_region_button.Bind(wx.EVT_BUTTON, self.OnInputROI)
+        self.fitting_sizer.Add(self.input_region_button)
+        self.fitting_sizer.AddSpacer(5)
+
         # Have a button to delete a region of interest
         self.delete_region_button = wx.Button(self, -1, "Delete ROI")
         self.delete_region_button.Bind(wx.EVT_BUTTON, self.OnDeleteROI)
@@ -367,7 +373,7 @@ class RelaxFit(wx.Frame):
         self.ax_relax.set_xlim([self.x_data[0], self.x_data[-1]])
 
         self.ax_relax.set_xlabel(self.main_frame.nmrdata.axislabels[1])
-        legend = self.ax_relax.legend(title="Slice Number")
+        legend = self.ax_relax.legend(title="Slice Number", ncol=math.ceil(len(self.slice_plots)/8))
         legend.get_title().set_color(self.titlecolor)
         self.ax_relax.set_ylabel("Intensity")
 
@@ -681,7 +687,7 @@ class RelaxFit(wx.Frame):
         self.ax_relax.set_xlim([self.x_data[0], self.x_data[-1]])
 
         self.ax_relax.set_xlabel(self.main_frame.nmrdata.axislabels[1])
-        legend = self.ax_relax.legend(title="Slice Number")
+        legend = self.ax_relax.legend(title="Slice Number", ncol=math.ceil(len(self.slice_plots)/8))
         legend.get_title().set_color(self.titlecolor)
         self.ax_relax.set_ylabel("Intensity")
         if self.R1_fit == True:
@@ -827,6 +833,93 @@ class RelaxFit(wx.Frame):
     def leastsq_global(self, p0):
         fit = leastsq(self.chi_global, p0)
         return fit[0]
+    
+    def OnInputROI(self, event):
+        # Check that the full spectrum has been fitted first
+        if self.whole_plot != True:
+            # Give an error message saying full spectrum has not been fitted
+            msg = wx.MessageDialog(
+                self,
+                "Please fit the whole spectrum before selecting a region of interest",
+                "Error",
+                wx.OK | wx.ICON_ERROR,
+            )
+            msg.ShowModal()
+            msg.Destroy()
+            return
+        
+
+
+        # Getting the user to input the new ROI values
+        self.user_input_region()
+
+
+    def user_input_region(self):
+        """
+        Have a poput mini window where a user can insert their desired chemical shift range
+        for the region of interest
+        """
+
+        input_roi = InputROI(title='Input ROI', parent=self)
+
+
+    def add_user_input_region(self, xmin, xmax):
+        # Adding an ROI region
+
+        if self.AddROI == True:
+            if self.ROI_regions[-1].get_xy()[0][0] == self.x_data[0]:
+                del self.ROI_regions[-1]
+                del self.ROI_regions_2[-1]
+                del self.ROI_regions_3[-1]
+
+        self.AddROI == True
+
+        # Add new region plots with the default values (min ppm values)
+        self.ROI_color.append(
+            self.main_frame.colours[
+                len(self.selected_regions_of_interest) + self.deleted_ROI_number
+            ]
+        )
+        self.ROI_regions.append(
+            self.ax_relax.axvspan(
+                self.x_data[0], self.x_data[0], alpha=0.2, color=self.ROI_color[-1]
+            )
+        )
+        self.ROI_regions_2.append(
+            self.ax_relax_whole_fit.axvspan(
+                self.x_data[0], self.x_data[0], alpha=0.2, color=self.ROI_color[-1]
+            )
+        )
+        self.ROI_regions_3.append(
+            self.ax_relax_I0_whole_fit.axvspan(
+                self.x_data[0], self.x_data[0], alpha=0.2, color=self.ROI_color[-1]
+            )
+        )
+
+        self.UpdateRelaxFrame()
+        
+
+        self.ROI_regions[-1].set_x(xmin)
+        self.ROI_regions[-1].set_width(xmax - xmin)
+        self.ROI_regions_2[-1].set_x(xmin)
+        self.ROI_regions_2[-1].set_width(xmax - xmin)
+        self.ROI_regions_3[-1].set_x(xmin)
+        self.ROI_regions_3[-1].set_width(xmax - xmin)
+        # self.ROI_regions[-1].set_xy([[xmin,0],[xmin,1],[xmax,1],[xmax,0]])
+        # self.ROI_regions_2[-1].set_xy([[xmin,0],[xmin,1],[xmax,1],[xmax,0]])
+        # self.ROI_regions_3[-1].set_xy([[xmin,0],[xmin,1],[xmax,1],[xmax,0]])
+        # Check that the number of points in the selected region of interest is greater than 2
+        check_ROI = self.check_ROI(xmin, xmax)
+        if(check_ROI == True):
+            # Add the min and max ppm values to the array of selected regions of interest
+            self.selected_regions_of_interest.append([xmin, xmax])
+            self.UpdateRelaxFrame()
+            return True
+        else:
+            # Deleting this selected ROI because it contained less than 2 points
+            self.DeleteSmallROI()
+            self.UpdateRelaxFrame()
+            return False
 
     def OnAddROI(self, event):
         # Check that the full spectrum has been fitted first
@@ -1395,7 +1488,7 @@ class RelaxFit(wx.Frame):
         self.ax_relax.set_xlim([self.x_data[0], self.x_data[-1]])
 
         self.ax_relax.set_xlabel(self.main_frame.nmrdata.axislabels[1])
-        legend = self.ax_relax.legend(title="Slice Number", fontsize=8)
+        legend = self.ax_relax.legend(title="Slice Number", fontsize=8, ncol=math.ceil(len(self.slice_plots)/8))
         legend.get_title().set_color(self.titlecolor)
         self.ax_relax.set_ylabel("Intensity", fontsize=8)
         if self.R1_fit == True:

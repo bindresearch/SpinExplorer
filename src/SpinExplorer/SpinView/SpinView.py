@@ -135,10 +135,12 @@ class SpinView(wx.Frame):
         self.title = self.GetTitle()
 
         window_found=False
-        for window in wx.GetTopLevelWindows():
-            if isinstance(window, wx.Frame) and window.GetTitle() == self.title:
-                # A window is already open containing this data
-                window_found = True
+
+        if(session_file==''):
+            for window in wx.GetTopLevelWindows():
+                if isinstance(window, wx.Frame) and window.GetTitle() == self.title:
+                    # A window is already open containing this data
+                    window_found = True
         
 
         # Setup the dock/task bar with the logo
