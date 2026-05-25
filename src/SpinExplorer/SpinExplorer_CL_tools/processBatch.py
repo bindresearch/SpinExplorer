@@ -33,18 +33,18 @@ def filter_experiments(df: pd.DataFrame, experiment_prefix: str, protein: str) -
 
 def group_by_base_title(df: pd.DataFrame, protein: str) -> list[pd.DataFrame]:
     base_titles = df[~df["Title"].str.contains(" ")]["Title"].unique()
-    
     groups = []
     titles = []
     for base_title in base_titles:
         base_mask = df["Title"] == base_title
         compound_mask = (
-            df["Title"].str.contains(base_title, regex=False) &
+            df["Title"].str.split(r'[\s+]').apply(lambda parts: base_title in parts) &
             df["Title"].str.contains(protein, case=False)
         )
         group = df[base_mask | compound_mask]
         if len(group) > 1:
             groups.append(group)
+
         titles.append(base_title)
     
     return groups, titles
