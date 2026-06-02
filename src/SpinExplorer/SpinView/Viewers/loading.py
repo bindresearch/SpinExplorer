@@ -559,9 +559,9 @@ class ReadSession:
                     self.plot_overlaid_2D()
                     if(peaklists==True):
                         self.main_frame.viewer.OnReadPeaks(wx.EVT_BUTTON)
-                    for l in lines[peaklist_line+1:]:
-                        peaklist_file=l.split('\n')[0]
-                        self.main_frame.viewer.peaklist_frame.OnAddPeakList(wx.EVT_BUTTON, file=peaklist_file)
+                        for l in lines[peaklist_line+1:]:
+                            peaklist_file=l.split('\n')[0]
+                            self.main_frame.viewer.peaklist_frame.OnAddPeakList(wx.EVT_BUTTON, file=peaklist_file)
                     
                 else:
                     self.multiplot_mode = False
@@ -621,9 +621,9 @@ class ReadSession:
                             peaklist_line = i
                     if(peaklists==True):
                         self.main_frame.viewer.OnReadPeaks(wx.EVT_BUTTON)
-                    for l in lines[peaklist_line+1:]:
-                        peaklist_file=l.split('\n')[0]
-                        self.main_frame.viewer.peaklist_frame.OnAddPeakList(wx.EVT_BUTTON, file=peaklist_file)
+                        for l in lines[peaklist_line+1:]:
+                            peaklist_file=l.split('\n')[0]
+                            self.main_frame.viewer.peaklist_frame.OnAddPeakList(wx.EVT_BUTTON, file=peaklist_file)
 
 
             elif lines[0].split("\n")[0].split()[0] == "3D":
