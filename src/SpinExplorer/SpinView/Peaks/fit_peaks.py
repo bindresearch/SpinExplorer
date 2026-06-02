@@ -664,6 +664,7 @@ class fit_peaks_2D_window(wx.Frame):
 
         # Update the chemical shifts and intensities of these peaks in the current peaklist
 
+
         try:
             for j in range(len(self.selected_peak_indexes)):
                 selected_peak_index = self.selected_peak_indexes[j]
@@ -674,7 +675,7 @@ class fit_peaks_2D_window(wx.Frame):
 
                 self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['shift1'][selected_peak_index] = shift1
                 self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['shift2'][selected_peak_index] = shift2
-                self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['intensity'][selected_peak_index] = "{:e}".format(intensity)
+                self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['intensity'][selected_peak_index] = intensity
 
             self.peaklist_frame.AddToTable()
             self.peaklist_frame.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
