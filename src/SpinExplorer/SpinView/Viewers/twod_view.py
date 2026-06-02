@@ -748,7 +748,12 @@ class TwoDViewer(wx.Panel):
         
 
         self.OnMinContour2D(wx.EVT_BUTTON)
-        self.on_click_2d(wx.EVT_BUTTON, replot=True)
+
+        try:
+            # try to update the shown slices if they are present
+            self.on_click_2d(wx.EVT_BUTTON, replot=True)
+        except:
+            pass
 
     def OnHideButton(self, event):
         if self.show_bottom_sizer == True:
@@ -1767,6 +1772,13 @@ class TwoDViewer(wx.Panel):
         self.OnMoveX(wx.EVT_SCROLL)
         self.OnMoveY(wx.EVT_SCROLL)
         self.OnSliderScroll2D(wx.EVT_SCROLL)
+
+        # See if the selected spectrum was previously set to hidden or not
+        if(self.files.custom_labels[self.active_plot_index] in self.hidden_list):
+            self.hide_checkbox.SetValue(True)
+        else:
+            self.hide_checkbox.SetValue(False)
+
         self.OnMinContour2D(wx.EVT_SCROLL, textcontrol=True)
 
     def OnTransposeButton(self, event):

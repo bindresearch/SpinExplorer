@@ -1043,6 +1043,13 @@ class PeakListWindow2D(wx.Frame):
 
         self.AddToTable()
 
+        # Update the hide peaklist selection to match the last stored value
+        if(self.current_peaklist_box.GetValue() in self.hidden_peaklists):
+            self.hide_peaklist.SetValue(True)
+        else:
+            self.hide_peaklist.SetValue(False)
+
+
         self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
 
     def turn_off_togglebuttons(self):
