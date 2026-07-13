@@ -501,6 +501,11 @@ class PeakListWindow2D(wx.Frame):
         for i, name in enumerate(self.peak_list_dictionary[self.selected_peaklist1]['peak_name']):
             new_row = {}
             residue_number = self.extract_number(name)
+            try:
+                index2 = self.peak_list_dictionary[self.selected_peaklist2]['peak_name'].index(name)
+            except:
+                # The given peak name is not present in both peaklists
+                continue
             new_row['residue number'] = [residue_number]
             new_row['peak name'] = [name]
 
@@ -508,7 +513,7 @@ class PeakListWindow2D(wx.Frame):
             new_row['shift2 1 (ppm)'] = [self.peak_list_dictionary[self.selected_peaklist1]['shift2'][i]]
             new_row['intensity 1'] = [self.peak_list_dictionary[self.selected_peaklist1]['intensity'][i]]
             
-            index2 = self.peak_list_dictionary[self.selected_peaklist1]['peak_name'].index(name)
+            
 
             new_row['shift1 2 (ppm)'] = [self.peak_list_dictionary[self.selected_peaklist2]['shift1'][index2]]
             new_row['shift2 2 (ppm)'] = [self.peak_list_dictionary[self.selected_peaklist2]['shift2'][index2]]

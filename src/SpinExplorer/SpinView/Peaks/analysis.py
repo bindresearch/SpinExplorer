@@ -124,6 +124,7 @@ class analysis_frame(wx.Frame):
         self.df['CSP (ppm)'] = np.sqrt(factor1*(delta_shift1**2)+factor2*(delta_shift2)**2)
 
 
+
     def produce_plot(self):
         self.ax = self.fig.add_subplot(211)
         self.ax2 = self.fig.add_subplot(212)
