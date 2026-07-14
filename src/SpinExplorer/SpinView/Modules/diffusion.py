@@ -2,7 +2,9 @@ import wx # type: ignore
 import numpy as np 
 import nmrglue as ng # type: ignore
 import sys
+import os
 import math
+import json
 import matplotlib
 matplotlib.use("wxAgg")
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
@@ -36,6 +38,7 @@ class DiffusionFit(wx.Frame):
         self.display_index_current = self.display_index
         self.width = int(1.0 * sizes[self.display_index][0])
         self.height = int(0.875 * sizes[self.display_index][1])
+        self.title=title
         wx.Frame.__init__(
             self, parent=parent, title=title, size=(self.width, self.height)
         )
@@ -456,6 +459,11 @@ class DiffusionFit(wx.Frame):
             wx.EVT_BUTTON, self.OnBiexponentialFitting
         )
         self.fitting_sizer.Add(self.biexponential_fitting_button)
+        self.fitting_sizer.AddSpacer(5)
+
+        self.save_fitting_button = wx.Button(self, -1, "Save Fit")
+        self.save_fitting_button.Bind(wx.EVT_BUTTON, self.OnSaveFitting)
+        self.fitting_sizer.Add(self.save_fitting_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Have a box containing other functions such as a button to delete a slice from the plot and repeat the fitting
@@ -2468,6 +2476,167 @@ class DiffusionFit(wx.Frame):
             return fit[0]
         except:
             return ["Failed"]
+        
+
+
+    def OnSaveFitting(self, event):
+        """
+        Save each of the current fits along with the data to a csv file
+        (include ppm ranges used and the data title and path etc)
+
+        Metadata JSON 
+        - Data title
+        - Gmax (G/cm)
+        - Nucleus
+        - Gyromagnetic ratio
+        - Big Delta (s)
+        - Little Delta (ms)
+        - Global fit noise region (ppm)
+        - Global fit noise value
+        - Global fit minimum S/N
+        
+        Region of interest csv files 
+        - (ppm range), G/Gmax^2, Intensity, Intensity error, diffusion coefficient, diffusion coefficient error
+
+        """
+
+        # Make sure that there are regions of interest that have fits performed on them
+        check = self.check_regions()
+
+        if(check==True):
+            # Ask the user to provide a path of a directory to save the fit data and metadata to
+            self.ask_user_path()
+        else:
+            # Outputting error message saving that no regions of interest could be found
+            dlg = wx.MessageDialog(
+            self,
+            "No regions of interest (ROI) could be found. Please add a region of interest, perform a fit, and try again.",
+            "Error",
+            wx.OK,
+            )
+            self.Raise()
+            self.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
+        
+        return
+
+    def check_regions(self):
+        """
+        Check that regions of interest have been selected and that they have fits associated
+        with them
+
+        Returns
+        -------
+        True - check passed
+        False - check failed
+        """
+        if(len(self.selected_regions_of_interest)>0):
+            return True
+        else:
+            return False
+        
+    def ask_user_path(self):
+        """
+        Ask the user where they would like to save the folder which will contain the outputs
+        """
+
+        dlg = wx.FileDialog (self, "Input directory name to create and save output files to",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+        )
+        dlg.SetDirectory(os.getcwd())
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            os.makedirs(path, exist_ok=True)
+            self.save_metadata(path)
+            self.save_data(path)
+            dlg.Destroy()
+        else:
+            return
+
+    def save_metadata(self, path):
+        """
+        Saving the fit metadata to the path\metadata.json
+        """
+
+        noise_region_text = str(self.noise_x_initial) + '-' + str(self.noise_x_final)
+
+        metadata = {"Data title": self.title, "G_max (G/cm)": self.max_gradient, "Gradient integral factor":self.gradient_integral_factor,'Nucleus':self.nucleus_choices[self.nucleus_dropdown.GetSelection()], 'Gyromagnetic ratio (rad s^-1 G^-1)':self.gamma, 'Big Delta Δ (s)': self.big_delta, 'Little delta δ (ms)':self.little_delta, 'Global fitting noise region (ppm)': noise_region_text, 'Global fit minimum S/N': self.noise_factor}
+        
+        # Save the metadata
+        with open(os.path.join(path, 'metadata.json'), 'w') as f:
+            json.dump(metadata, f)
+
+
+    def save_data(self, path):
+        """
+        For each region of interest, saving the fit as a csv
+        """
+        
+        for i, region in enumerate(self.selected_regions_of_interest):
+            self.region_min = region[0]
+            self.region_max = region[1]
+            self.mean_fitted_D_ROI = self.mean_fitted_D_ROI_total[i]
+            self.mean_fitted_I0_ROI = self.mean_fitted_I0_ROI_total[i]
+
+
+            if (self.fitted_gaussian_parameters[i][2]) > 1.25 * np.std(
+                self.fitted_D_ROI
+            ):
+                d_error = np.abs(np.std(self.fitted_D_ROI))
+
+            else:
+                d_error = np.abs(self.fitted_gaussian_parameters[i][2])
+
+            I0_error = np.abs(np.std(self.fitted_I0_ROI))
+
+            self.average_y_data_in_ROI_above_noise = self.average_y_data_in_ROI_above_noise_total[i]
+            
+            self.error_y_data_in_ROI_above_noise = self.error_y_data_in_ROI_above_noise_total[i]
+
+            self.error_I_I0_in_ROI = self.error_I_I0_in_ROI_total[i]
+            self.I0_average_in_ROI = self.I0_average_in_ROI_total[i]
+
+            grad_percent = np.array(self.gradients_percent) / 100 * self.gradient_integral_factor
+            G_Gmax2 = (np.array(self.gradients_percent) / 100 * self.gradient_integral_factor)**2
+            grad_vals = grad_percent*self.max_gradient
+
+
+            # The data will be saved in the following manner
+
+            # Fit results
+            # region_min =
+            # region_max = 
+            # diffusion_coefficient (cm^2/s) =
+            # I0 =  
+
+            # G, (G/G_max)^2, I, I error, I/I0, I/I0 error
+
+
+            with open(os.path.join(path, 'Fit_ROI_'+str(i+1)+'.csv'), 'w') as file:
+                file.write('Region min (ppm),'+ str(self.region_min)+'\n')
+                file.write('Region max (ppm),'+ str(self.region_max)+'\n')
+                file.write('Diffusion coefficient (cm^2/s),{:.3e}\n'.format(self.mean_fitted_D_ROI))
+                file.write('Diffusion coefficient error (cm^2/s),{:.3e}\n'.format(d_error))
+                file.write('I0,{:.3e}\n'.format(self.mean_fitted_I0_ROI))
+                file.write('I0 error,{:.3e}\n'.format(I0_error))
+
+                file.write('\n\n')
+
+
+                file.write('G (G/cm), (G/G_max)^2, I, I error, I/I0, I/I0 error\n')
+                for j in range(len(grad_vals)):
+                    file.write('{:.3f},{:.3f},{:.3e},{:.3e},{:.3f},{:.3f}\n'.format(grad_vals[j], G_Gmax2[j], self.average_y_data_in_ROI_above_noise[j], self.error_y_data_in_ROI_above_noise[j], self.average_y_data_in_ROI_above_noise[j] / self.I0_average_in_ROI[j], self.error_I_I0_in_ROI[j]))
+
+
+
+
+            
+
+
+
+        
+
 
     def OnDeleteSlice(self, event):
 
