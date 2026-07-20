@@ -1970,9 +1970,9 @@ class RelaxFit(wx.Frame):
 
 
             if (self.fitted_gaussian_parameters[i][2]) > 1.25 * np.std(
-                self.fitted_relax_ROI
+                self.fitted_relax_ROI_total[i]
             ):
-                r_error = np.abs(np.std(self.fitted_relax_ROI))
+                r_error = np.abs(np.std(self.fitted_relax_ROI_total[i]))
 
             else:
                 r_error = np.abs(self.fitted_gaussian_parameters[i][2])

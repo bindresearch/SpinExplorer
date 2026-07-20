@@ -2581,14 +2581,14 @@ class DiffusionFit(wx.Frame):
 
 
             if (self.fitted_gaussian_parameters[i][2]) > 1.25 * np.std(
-                self.fitted_D_ROI
+                self.fitted_D_ROI_total[i]
             ):
-                d_error = np.abs(np.std(self.fitted_D_ROI))
+                d_error = np.abs(np.std(self.fitted_D_ROI_total[i]))
 
             else:
                 d_error = np.abs(self.fitted_gaussian_parameters[i][2])
 
-            I0_error = np.abs(np.std(self.fitted_I0_ROI))
+            I0_error = np.abs(np.std(self.fitted_I0_ROI_total[i]))
 
             self.average_y_data_in_ROI_above_noise = self.average_y_data_in_ROI_above_noise_total[i]
             
