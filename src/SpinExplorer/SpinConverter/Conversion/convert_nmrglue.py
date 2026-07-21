@@ -29,6 +29,8 @@ from typing import Dict
 from numpy.typing import NDArray
 import wx
 import traceback
+from SpinExplorer.SpinProcess.Processing.ist import inflate_spectra_nd_signal_ist
+from SpinExplorer.SpinProcess.Processing.ist import read_sched
 
 
 class Convert_nmrglue:
@@ -42,20 +44,36 @@ class Convert_nmrglue:
         self.nmrdata = nmrdata
 
         sizes = []
-        for i, box in enumerate(self.app.format.N_complex_boxes):
-            size = int(box.GetValue())
-            if i == 0:
-                size = int(size / 2)
-            sizes.append(size)
 
-        sizes.reverse()
+        if(len(self.app.format.N_complex_boxes)>1):
+            if(self.app.shared_format.NUS_tickbox.GetValue() == False):
+                for i, box in enumerate(self.app.format.N_complex_boxes):
+                    size = int(box.GetValue())
+                    if i == 0:
+                        size = int(size / 2)
+                    sizes.append(size)
+                sizes.reverse()
+
+            else:
+                sampling_schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
+                sizes = [len(sampling_schedule)*4, int(self.app.format.N_real_boxes[0].GetValue())]
+        else:
+            for i, box in enumerate(self.app.format.N_complex_boxes):
+                size = int(box.GetValue())
+                if i == 0:
+                    size = int(size / 2)
+                sizes.append(size)
+            sizes.reverse()
+
 
         C = ng.convert.converter()
         # Obtain first guesses of dictionary values
         if self.nmrdata.spectrometer == "Bruker":
             dic, data = ng.fileio.bruker.read("./", shape=tuple(sizes))
+            # dic, data = ng.fileio.bruker.read("./", cplex = True, read_acqus=False, big=False, isfloat=False)
         else:
             dic, data = ng.fileio.varian.read("./", shape=tuple(sizes))
+
 
         u = self.create_conversion_dictionary()
 
@@ -126,7 +144,7 @@ class Convert_nmrglue:
 
             if(nusbox == True):
                 if self.app.shared_format.NUS_tickbox.GetValue() == True:
-                    data = self.reshape_nus_data(data)
+                    dic, data = self.reshape_nus_data(dic, data)
 
         # Rance-Kay/Echo-Antiecho reshuffling
         if self.rance_kay == True:
@@ -324,28 +342,27 @@ class Convert_nmrglue:
             # Multiplication by scaling number did not work
             return pdata
 
-    def reshape_nus_data(self, data: NDArray) -> NDArray:
+    def reshape_nus_data(self, dic: Dict, data: NDArray) -> NDArray:
         """
         Reshaping the NUS FID to the correct order and inserting
         zeros into the missing gaps.
         """
-        # Need to reshape the data
-        shape = []
-        for k, value in enumerate(self.app.format.N_complex_boxes):
-            if k == 0:
-                # Taking the real size for the direct dimension
-                shape.append(int(self.app.format.N_real_boxes[0].GetValue()))
-            else:
-                shape.append(int(value.GetValue()))
-        shape.reverse()
-        shape = tuple(shape)
-        nuslist_tuple = ng.bruker.read_nuslist(
-            fname=self.app.shared_format.nusfile_input.GetValue()
-        )
-        data = ng.proc_base.expand_nus(data, shape, nuslist_tuple)
-        return data
-    
-    
+
+        schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
+
+        schedule = np.asarray(schedule)
+        schedule = schedule[:, ::-1]
+
+        # max points is an array of the maximum points in each dimension (equal to the value in the N real boxes)
+        if(len(self.app.format.N_complex_boxes)==2):
+            max_points = int(self.app.format.N_real_boxes[-1].GetValue())
+        else:
+            max_points = [int(self.app.format.N_real_boxes[-1].GetValue()), int(self.app.format.N_real_boxes[-2].GetValue())]
+
+        data, dic = inflate_spectra_nd_signal_ist(data, dic, sampling_schedule=schedule, max_points=max_points)
+
+        return dic, data
+            
     
     def find_bruker_initial_point(self, fid, start):
         """

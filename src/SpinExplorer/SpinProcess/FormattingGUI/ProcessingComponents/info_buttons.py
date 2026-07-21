@@ -806,7 +806,7 @@ class InfoButtons:
         """
         # Create a new frame
         self.linear_prediction_info_frame = wx.Frame(
-            self.app, -1, "Linear Prediction / SMILE Information", size=(500, 500)
+            self.app, -1, "Linear Prediction / NUS Information", size=(500, 600)
         )
 
         # Create a sizer to hold the box
@@ -820,12 +820,14 @@ class InfoButtons:
         # Create a text box with the information
         # Linear prediction information
         linear_prediction_information = """Linear prediction is a method 
-        used to increase the resolution of NMR spectra. It is used to predict 
-        the points of truncated FIDs (especially in indirect dimensions) and 
-        increase signal resolution.\n\n The linear prediction coefficients can 
-        be predicted using the forward FID data, backward data or an average of 
-        both directions. Then these can be used to add predicted points either 
-        before or after the current FID.\n\n Note that advanced options such as 
+        used to increase the resolution of NMR spectra. Linear prediction in SpinExplorer
+        is only currently available using NMRPipe processing. To perform NUS zero filling (an
+        alternative to linear prediction) in the indirect dimensions using NMRGlue, please use
+         SpinExplorer IST and ensure thelinear prediction only checkbox is applied. Linear prediction
+         is used to predict the points of truncated FIDs (especially in indirect dimensions) and 
+        increase signal resolution.\n\n The linear prediction coefficients can be predicted using 
+        the forward FID data, backward data or an average of both directions. Then these can be 
+        used to add predicted points either before or after the current FID.\n\n Note that advanced options such as 
           -pred (number of predicted points) and -ord (number of predicted 
           coefficients) can be implemented by manually added them to the 
           nmrproc.com file for nmrPipe processing."""
@@ -836,7 +838,7 @@ class InfoButtons:
             self.linear_prediction_info_frame,
             -1,
             linear_prediction_information,
-            size=(450, 200),
+            size=(450, 150),
             style=wx.ALIGN_CENTER_HORIZONTAL,
         )
 
@@ -879,9 +881,8 @@ class InfoButtons:
         \nThe number of CPU's (default=1) is the number of cores 
         that will be used to perform the reconstruction and the 
         number of iterations can be changed to improve the accuracy 
-        (default=800).\n Furthermore, in order for accurate SMILE 
-        reconstruction, the correct zero (p0) and first (p1) order 
-        phase correction values need to be inputted."""
+        (default=50).\n SMILE reconstruction is available only through
+        NMRPipe processing."""
 
         smile_nus_text = " ".join(smile_nus_text.split())
 
@@ -889,12 +890,37 @@ class InfoButtons:
             self.linear_prediction_info_frame,
             -1,
             smile_nus_text,
-            size=(450, 200),
+            size=(450, 150),
             style=wx.ALIGN_CENTER_HORIZONTAL,
         )
         self.linear_prediction_info_sizer_window.Add(
             self.smile_nus_text, 0, wx.ALIGN_CENTER_HORIZONTAL
         )
+
+
+        # Have text to explain SMILE NUS reconstruction
+        ist_nus_text = """SpinExplorer IST NUS reconstruction is a method 
+        used to reconstruct non-uniformly sampled data. The NUS 
+        file is a list of points that have been sampled in the FID.
+        \nThe maximum number of iterations can be changed
+        (default=2000) and points can be added onto the end of the FID (data extension)\n
+        to perform NUS zero filling (an alternative to linear prediction). If the data was
+        uniformly sampled but you wish to apply NUS zero filling, click the linear prediction
+        only checkbox.\nSpinExplorer IST reconstruction is available only through NMRGlue processing."""
+
+        ist_nus_text = " ".join(ist_nus_text.split())
+
+        self.ist_nus_text = wx.StaticText(
+            self.linear_prediction_info_frame,
+            -1,
+            ist_nus_text,
+            size=(450, 150),
+            style=wx.ALIGN_CENTER_HORIZONTAL,
+        )
+        self.linear_prediction_info_sizer_window.Add(
+            self.ist_nus_text, 0, wx.ALIGN_CENTER_HORIZONTAL
+        )
+
         self.linear_prediction_info_sizer_window.AddSpacer(10)
 
         # Add the window sizer to the frame

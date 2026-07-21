@@ -197,7 +197,7 @@ class SpinExplorer(wx.Frame):
         self.load_spectra_box_label = wx.StaticBox(self, -1, "Select data directory:")
         self.load_spectra_box = wx.StaticBoxSizer(self.load_spectra_box_label, wx.HORIZONTAL)
 
-        self.listbox = wx.ListBox(self, style=wx.LB_SINGLE, size=(300,100))
+        self.listbox = wx.ListBox(self, style=wx.LB_SINGLE, size=(300,125))
 
         self.listbox.Bind(wx.EVT_LISTBOX, self.OnListBoxPress)
 
@@ -227,14 +227,15 @@ class SpinExplorer(wx.Frame):
 
         self.rightbox.AddSpacer(10)
 
-        self.text3 = wx.StaticText(self, label="")
+        self.text3 = wx.StaticText(self, label="Title for selected experiment:")
+        
         
         self.rightbox.Add(self.text3)
 
-        self.title_text = wx.StaticText(self, label="")
+        self.title_text = wx.TextCtrl(self, id=-1, value="", style=wx.TE_MULTILINE | wx.CB_READONLY, size=(300,25))
 
         self.rightbox.AddSpacer(5)
-        self.rightbox.Add(self.title_text)
+        self.rightbox.Add(self.title_text, wx.ALIGN_CENTER_VERTICAL)
 
 
         self.load_spectra_box.Add(self.rightbox, 1, wx.ALIGN_CENTER_VERTICAL)
@@ -369,21 +370,22 @@ class SpinExplorer(wx.Frame):
             title = ''
 
             with open(title_file) as file:
-                line = file.readlines()[0]
+                lines = file.readlines()
                 title_extra = ''
-                line = line.split('\n')[0]
-                title_extra+= line 
+                for line in lines:
+                    line = line.split('\n')[0]
+                    title_extra+= line + '\n'
                 
             title = title + title_extra
 
-            self.title_text.SetLabel(title)
+            self.title_text.SetValue(title)
 
             # Update the text in text3
             self.text3.SetLabel('Title for selected experiment:')
 
         except:
             # Unable to read the title
-            self.title_text.SetLabel('No title found')
+            self.title_text.SetValue('No title found')
             self.text3.SetLabel('Title for selected experiment:')
             pass
 

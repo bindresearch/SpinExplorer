@@ -18,7 +18,7 @@ from SpinExplorer.SpinView.config import *
 
 # Frame for One-Dimensional NMR Spectra
 class OneDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata, uc0=None, fid_viewer=False):
+    def __init__(self, parent, nmrdata, uc0=None, fid_viewer=False, title=''):
         # Getting the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -31,6 +31,7 @@ class OneDViewer(wx.Panel):
         self.stack = False
         self.uc0 = uc0
         self.fid_viewer=fid_viewer
+        self.title=title
         wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
         self.nmrdata = nmrdata
         self.set_initial_variables_1D()
@@ -149,6 +150,9 @@ class OneDViewer(wx.Panel):
         # Initially have no baseline spline
         self.data_spline = [0]
 
+        # A list to host spectra which are currently hidden
+        self.hidden_list = []
+
         # # # Suppress complex warning from numpy
         import warnings
 
@@ -175,8 +179,17 @@ class OneDViewer(wx.Panel):
         self.select_plot_sizer.Add(self.plot_combobox, 0, wx.ALL, 5)
         # Checkbox where can select all plots to be edited at the same time
         self.select_all_checkbox = wx.CheckBox(self, label="Select All")
+        self.hide_select_row = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.hide_checkbox = wx.CheckBox(self, label="Hide")
+        self.hide_checkbox.Bind(wx.EVT_CHECKBOX, self.OnHideSpectrum)
+
+        self.hide_select_row.Add(self.hide_checkbox)
+        self.hide_select_row.AddSpacer(5)
+        self.hide_select_row.Add(self.select_all_checkbox)
+
         self.select_plot_sizer.Add(
-            self.select_all_checkbox, 0, wx.ALIGN_CENTER_HORIZONTAL, 5
+            self.hide_select_row, 0, wx.ALIGN_CENTER_HORIZONTAL, 5
         )
 
         # Creating the phasing 1D sizer
@@ -404,11 +417,11 @@ class OneDViewer(wx.Panel):
         self.vertical_sizer.Add(self.vertical_sizer2)
 
         # Creating a combobox to change the colour of the 1D spectrum
-        self.colour_label = wx.StaticBox(self, -1, "1D Line Colour")
+        self.colour_label = wx.StaticBox(self, -1, "Colour")
         self.colour_sizer = wx.StaticBoxSizer(self.colour_label, wx.VERTICAL)
         self.options = colour_options
         self.colour_chooser = wx.ComboBox(
-            self, value=self.options[0], choices=self.options, size=(100, height)
+            self, value=self.options[0], choices=self.options, size=(75, height)
         )
         self.colour_chooser.Bind(wx.EVT_COMBOBOX, self.OnColourChoice1D)
         self.colour_chooser.SetSelection(0)
@@ -418,10 +431,10 @@ class OneDViewer(wx.Panel):
         self.colour_sizer.AddSpacer(spacer)
 
         # Creating a slider to change the linewidth of the 1D spectrum
-        self.linewidth_label = wx.StaticBox(self, -1, "1D Line Width")
+        self.linewidth_label = wx.StaticBox(self, -1, "Linewidth")
         self.linewidth_sizer = wx.StaticBoxSizer(self.linewidth_label, wx.VERTICAL)
         self.linewidth_slider = FloatSlider(
-            self, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(100, height)
+            self, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(50, height)
         )
         self.linewidth_slider.Bind(wx.EVT_SLIDER, self.OnLinewidthScroll1D)
         spacer = 15
@@ -601,6 +614,53 @@ class OneDViewer(wx.Panel):
         self.show_button_sizer.Add(self.show_button, wx.ALIGN_CENTER, 5)
         self.show_button_sizer.AddSpacer(5)
 
+    def OnHideSpectrum(self, event):
+        if(self.multiplot_mode==False):
+            if(self.hide_checkbox.GetValue()==True):
+                self.hidden_list.append('Main Plot')
+            else:
+                self.hidden_list = []
+        else:
+            if(self.hide_checkbox.GetValue()==True):
+                if(self.active_plot_index==0):
+                    self.hidden_list.append(self.line1.get_label())
+                else:
+                    self.hidden_list.append(self.extra_plots[self.active_plot_index-1][0].get_label())
+            else:
+                if(self.active_plot_index==0):
+                    self.hidden_list.remove(self.line1.get_label())
+                else:
+                    self.hidden_list.remove(self.extra_plots[self.active_plot_index-1][0].get_label())
+                if(self.hidden_list==None):
+                    self.hidden_list=[]
+        
+        self.hide_spectra()
+
+
+    def hide_spectra(self):
+        if(self.multiplot_mode==False):
+            if(self.hide_checkbox.GetValue()==True):
+                self.line1.set_visible(False)
+            else:
+                self.line1.set_visible(True)
+        else:
+            visible_lines = []
+            if(self.line1.get_label() in self.hidden_list):
+                self.line1.set_visible(False)
+            else:
+                self.line1.set_visible(True)
+                visible_lines.append(self.line1)
+            
+            for i in range(len(self.extra_plots)):
+                if(self.extra_plots[i][0].get_label() in self.hidden_list):
+                    self.extra_plots[i][0].set_visible(False)
+                else:
+                    self.extra_plots[i][0].set_visible(True)
+                    visible_lines.append(self.extra_plots[i][0])
+            
+            self.ax.legend(visible_lines, [l.get_label() for l in visible_lines])
+        self.UpdateFrame()
+    
     def OnHideButton(self, event):
         if self.show_bottom_sizer == True:
             # Hide the panel
@@ -777,9 +837,21 @@ class OneDViewer(wx.Panel):
                 "p1 Fine"
             ] = self.P1_slider_fine.GetValue()
 
+
         # Function to change the active plot when a user selects a new plot from the combobox
         self.multiplot_mode = True
         self.active_plot_index = self.plot_combobox.GetSelection()
+
+        hidden=False
+        if(self.active_plot_index==0):
+            if(self.line1.get_label() in self.hidden_list):
+                hidden=True
+        elif(self.extra_plots[self.active_plot_index-1][0].get_label() in self.hidden_list):
+            hidden=True
+        else:
+            pass
+        self.hide_checkbox.SetValue(hidden)
+
 
         # Updating the values in the GUI to reflect the previously saved values for the active plot
         self.colour_chooser.SetSelection(
@@ -831,6 +903,8 @@ class OneDViewer(wx.Panel):
         self.OnVerticalScroll1D(wx.EVT_SCROLL)
         self.OnMultiplyScroll1D(wx.EVT_SCROLL)
         self.OnSliderScroll1D(wx.EVT_SCROLL)
+
+        self.hide_spectra()
 
     def OnSaveSessionButton(self, event):
         # Function to save the current session

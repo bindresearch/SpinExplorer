@@ -286,11 +286,11 @@ class Populate_dictionary_global:
                 options[value],
             ]
         else:
-            # Linear prediction choices (0 is none, 1 is linear prediction, 2 is NUS reconstruction)
+            # Linear prediction choices (0 is none, 1 is linear prediction, 2 is Smile NUS reconstruction, 3 is SpinExplorer IST)
             value = (
                 dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
             )
-            choices = ["None", "Linear Prediction", "NUS Reconstruction"]
+            choices = ["None", "Linear Prediction", "SMILE NUS Reconstruction", "SpinExplorer IST NUS Reconstruction"]
             dimension_dictionary["Linear Prediction"][choices[value]] = {}
             if value == 1:
                 # Add predicted points (0 is after FID, 1 is before FID)
@@ -328,6 +328,26 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS iterations"
                 ] = nus_iterations
+            elif(value==3):
+                nusfile = dimension_tab.linear_prediction.nuslist_name_indirect
+                nus_extension = (
+                    dimension_tab.linear_prediction.ist_data_extension_number_indirect
+                )
+                nus_iterations = dimension_tab.linear_prediction.ist_nus_iterations_indirect
+                lp_only = dimension_tab.linear_prediction.ist_linear_prediction_only_flag
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "NUS file"
+                ] = nusfile
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "NUS extension"
+                ] = nus_extension
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "NUS iterations"
+                ] = nus_iterations
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Linear prediction only"
+                ] = lp_only
+
 
         return dimension_dictionary
 

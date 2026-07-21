@@ -25,6 +25,7 @@ SOFTWARE."""
 
 import wx
 import os
+import json
 
 
 class NonUniformSampling:
@@ -68,6 +69,28 @@ class NonUniformSampling:
         self.smile_data_extension_number_indirect = (
             0  # int(self.nmr_data.number_of_points[1]*1.5)
         )
+        self.ist_data_extension_number_indirect = 0
+        self.ist_linear_prediction_only_flag = self.find_ist_linear_prediction_only_flag()
+        self.ist_nus_iterations_indirect = 2000
+
+    def find_ist_linear_prediction_only_flag(self):
+        """
+        Read through the parameters file and see if NUS reshuffling was performed
+        during the conversion process. If it was, then return False, otherwise
+        return True.
+        """
+
+        try:
+            with open("parameters.json", "r") as file:
+                parameter_dictionary = json.load(file)["conversion"]
+                nus_dic = parameter_dictionary["NUS information"]
+                if nus_dic == "N/A":
+                    return True
+                else:
+                    return False
+    
+        except:
+            return False
 
     def create_linear_prediction_sizer_indirect(self, parent):
         """
@@ -79,7 +102,7 @@ class NonUniformSampling:
         """
 
         self.linear_prediction_sizer_indirect_label = wx.StaticBox(
-            parent, -1, "Linear Prediction/SMILE NUS Reconstruction"
+            parent, -1, "Linear Prediction / NUS Reconstruction"
         )
         self.linear_prediction_sizer_indirect = wx.StaticBoxSizer(
             self.linear_prediction_sizer_indirect_label, wx.HORIZONTAL
@@ -91,7 +114,7 @@ class NonUniformSampling:
             parent,
             -1,
             "",
-            choices=["None", "Linear Prediction", "SMILE NUS Reconstruction"],
+            choices=["None", "Linear Prediction", "SMILE NUS Reconstruction", "SpinExplorer IST NUS Reconstruction"],
             style=wx.RA_SPECIFY_ROWS,
         )
         self.linear_prediction_radio_box_indirect.Bind(
@@ -183,23 +206,6 @@ class NonUniformSampling:
             )
             self.linear_prediction_sizer_indirect.AddSpacer(10)
 
-            # # Zero order phase correction
-            # self.smile_nus_p0_text = wx.StaticText(parent, -1, 'Zero Order Phase Correction (p0):')
-            # self.linear_prediction_sizer_indirect.Add(self.smile_nus_p0_text, 0, wx.ALIGN_CENTER_VERTICAL)
-            # self.linear_prediction_sizer_indirect.AddSpacer(5)
-            # self.smile_nus_p0_textcontrol_indirect = wx.TextCtrl(parent, -1, str(self.p0_total_indirect), size=(50, 20))
-            # self.smile_nus_p0_textcontrol_indirect.Bind(wx.EVT_TEXT, self.on_smile_nus_p0_textcontrol_indirect)
-            # self.linear_prediction_sizer_indirect.Add(self.smile_nus_p0_textcontrol_indirect, 0, wx.ALIGN_CENTER_VERTICAL)
-            # self.linear_prediction_sizer_indirect.AddSpacer(10)
-
-            # # First order phase correction
-            # self.smile_nus_p1_text = wx.StaticText(parent, -1, 'First Order Phase Correction (p1):')
-            # self.linear_prediction_sizer_indirect.Add(self.smile_nus_p1_text, 0, wx.ALIGN_CENTER_VERTICAL)
-            # self.linear_prediction_sizer_indirect.AddSpacer(5)
-            # self.smile_nus_p1_textcontrol_indirect = wx.TextCtrl(parent, -1, str(self.p1_total_indirect), size=(50, 20))
-            # self.smile_nus_p1_textcontrol_indirect.Bind(wx.EVT_TEXT, self.on_smile_nus_p1_textcontrol_indirect)
-            # self.linear_prediction_sizer_indirect.Add(self.smile_nus_p1_textcontrol_indirect, 0, wx.ALIGN_CENTER_VERTICAL)
-            # self.linear_prediction_sizer_indirect.AddSpacer(10)
 
             # Number of points to add to the data
             self.smile_nus_extension_text = wx.StaticText(parent, -1, "Data extension:")
@@ -211,10 +217,10 @@ class NonUniformSampling:
                 parent,
                 -1,
                 str(self.smile_data_extension_number_indirect),
-                size=(50, 20),
+                size=(50, 20), style=wx.TE_PROCESS_ENTER
             )
             self.smile_nus_extension_textcontrol_indirect.Bind(
-                wx.EVT_TEXT, self.on_smile_nus_extension_textcontrol_indirect
+                wx.EVT_TEXT_ENTER, self.on_smile_nus_extension_textcontrol_indirect
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_extension_textcontrol_indirect,
@@ -230,10 +236,10 @@ class NonUniformSampling:
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.smile_nus_cpu_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, str(self.number_of_nus_CPU_indirect), size=(30, 20)
+                parent, -1, str(self.number_of_nus_CPU_indirect), size=(30, 20), style=wx.TE_PROCESS_ENTER
             )
             self.smile_nus_cpu_textcontrol_indirect.Bind(
-                wx.EVT_TEXT, self.on_smile_nus_cpu_textcontrol_indirect
+                wx.EVT_TEXT_ENTER, self.on_smile_nus_cpu_textcontrol_indirect
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_cpu_textcontrol_indirect, 0, wx.ALIGN_CENTER_VERTICAL
@@ -249,16 +255,96 @@ class NonUniformSampling:
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.smile_nus_iterations_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, str(self.nus_iterations_indirect), size=(30, 20)
+                parent, -1, str(self.nus_iterations_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
             )
             self.smile_nus_iterations_textcontrol_indirect.Bind(
-                wx.EVT_TEXT, self.on_smile_nus_iterations_textcontrol_indirect
+                wx.EVT_TEXT_ENTER, self.on_smile_nus_iterations_textcontrol_indirect
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_iterations_textcontrol_indirect,
                 0,
                 wx.ALIGN_CENTER_VERTICAL,
             )
+
+        elif self.linear_prediction_radio_box_indirect.GetSelection() == 3:
+            # Have a set of options for IST NUS processing
+
+
+            # NUS file
+            self.ist_nus_file_text = wx.StaticText(parent, -1, "NUS File:")
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_nus_file_text, 0, wx.ALIGN_CENTER_VERTICAL
+            )
+            self.linear_prediction_sizer_indirect.AddSpacer(5)
+
+            self.ist_nus_file_textcontrol_indirect = wx.TextCtrl(
+                parent, -1, self.nuslist_name_indirect, size=(100, 20), style=wx.TE_PROCESS_ENTER
+            )
+            self.ist_nus_file_textcontrol_indirect.Bind(
+                wx.EVT_TEXT_ENTER, self.on_ist_nus_file_textcontrol_indirect
+            )
+
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_nus_file_textcontrol_indirect, 0, wx.ALIGN_CENTER_VERTICAL
+            )
+            self.linear_prediction_sizer_indirect.AddSpacer(10)
+
+
+            # Number of points to add to the data
+            self.ist_nus_extension_text = wx.StaticText(parent, -1, "Data extension:")
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_nus_extension_text, 0, wx.ALIGN_CENTER_VERTICAL
+            )
+            self.linear_prediction_sizer_indirect.AddSpacer(5)
+            self.ist_nus_extension_textcontrol_indirect = wx.TextCtrl(
+                parent,
+                -1,
+                str(self.ist_data_extension_number_indirect),
+                size=(50, 20), style=wx.TE_PROCESS_ENTER
+            )
+            self.ist_nus_extension_textcontrol_indirect.Bind(
+                wx.EVT_TEXT_ENTER, self.on_ist_nus_extension_textcontrol_indirect
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_nus_extension_textcontrol_indirect,
+                0,
+                wx.ALIGN_CENTER_VERTICAL,
+            )
+
+            self.linear_prediction_sizer_indirect.AddSpacer(10)
+
+            # Number of iterations
+            self.ist_nus_iterations_text = wx.StaticText(
+                parent, -1, "Number of Iterations:"
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_nus_iterations_text, 0, wx.ALIGN_CENTER_VERTICAL
+            )
+            self.linear_prediction_sizer_indirect.AddSpacer(5)
+
+
+            self.ist_nus_iterations_textcontrol_indirect = wx.TextCtrl(
+                parent, -1, str(self.ist_nus_iterations_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
+            )
+            self.ist_nus_iterations_textcontrol_indirect.Bind(
+                wx.EVT_TEXT_ENTER, self.on_ist_nus_iterations_textcontrol_indirect
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_nus_iterations_textcontrol_indirect,
+                0,
+                wx.ALIGN_CENTER_VERTICAL,
+            )
+
+
+            self.linear_prediction_sizer_indirect.AddSpacer(10)
+
+            # Checkbox to determine if NUS reconstruction is to be applied or if IST is to be used
+            # for only linear prediction
+            self.ist_linear_prediction_only = wx.CheckBox(parent, -1, label='Data extension only')
+            self.ist_linear_prediction_only.SetValue(self.ist_linear_prediction_only_flag)
+            self.linear_prediction_sizer_indirect.Add(self.ist_linear_prediction_only, 0, wx.ALIGN_CENTER_VERTICAL)
+            self.linear_prediction_sizer_indirect.AddSpacer(5)
+            self.ist_linear_prediction_only.Bind(wx.EVT_CHECKBOX, self.OnIST_LP_Only)
 
         # Have a button showing information on linear prediction
         self.linear_prediction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
@@ -272,6 +358,7 @@ class NonUniformSampling:
         parent.sizer_1.Add(self.linear_prediction_sizer_indirect)
         parent.sizer_1.AddSpacer(10)
 
+    
     def on_linear_prediction_combobox_indirect(self, event):
         """
         When the linear prediction combobox is changed, update the
@@ -296,23 +383,48 @@ class NonUniformSampling:
         """
         self.nuslist_name_indirect = self.smile_nus_file_textcontrol_indirect.GetValue()
 
-    # def on_smile_nus_p0_textcontrol_indirect(self, event):
-    #     self.p0_total_indirect = self.smile_nus_p0_textcontrol_indirect.GetValue()
-    #     self.phasing_from_smile = True
-    #     # Update the phasing values in the phasing section too
-    #     self.phase_correction_p0_textcontrol_indirect.SetValue(
-    #         str(self.p0_total_indirect)
-    #     )
-    #     self.phasing_from_smile = False
+        if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+            # If IST linear prediction only is selected and there are more than 1 complex indirect dimensions, change the selection to the same for both indirect dimensions
+            if(self.parent.parent.tabDim2!=self):
+                self.parent.parent.tabDim2.linear_prediction.nuslist_name_indirect = self.nuslist_name_indirect
+                self.parent.parent.tabDim2.smile_nus_file_textcontrol_indirect.SetValue(self.nuslist_name_indirect)
+            if(self.parent.parent.tabDim3!=self):
+                self.parent.parent.tabDim3.linear_prediction.nuslist_name_indirect = self.nuslist_name_indirect
+                self.parent.parent.tabDim3.linear_prediction.smile_nus_file_textcontrol_indirect.SetValue(self.nuslist_name_indirect)
 
-    # def on_smile_nus_p1_textcontrol_indirect(self, event):
-    #     self.p1_total_indirect = self.smile_nus_p1_textcontrol_indirect.GetValue()
-    #     self.phasing_from_smile = True
-    #     # Update the phasing values in the phasing section too
-    #     self.phase_correction_p1_textcontrol_indirect.SetValue(
-    #         str(self.p1_total_indirect)
-    #     )
-    #     self.phasing_from_smile = False
+
+    def OnIST_LP_Only(self, event):
+        """
+        Update the parameter from the checkbox current value
+        """
+        self.ist_linear_prediction_only_flag = self.ist_linear_prediction_only.GetValue()
+
+        if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+            # If IST linear prediction only is selected and there are more than 1 complex indirect dimensions, change the selection to the same for both indirect dimensions
+            if(self.parent.parent.tabDim2!=self):
+                self.parent.parent.tabDim2.linear_prediction.ist_linear_prediction_only_flag = self.ist_linear_prediction_only_flag
+                self.parent.parent.tabDim2.linear_prediction.ist_linear_prediction_only.SetValue(self.ist_linear_prediction_only_flag)
+            if(self.parent.parent.tabDim3!=self):
+                self.parent.parent.tabDim3.linear_prediction.ist_linear_prediction_only_flag = self.ist_linear_prediction_only_flag
+                self.parent.parent.tabDim3.linear_prediction.ist_linear_prediction_only.SetValue(self.ist_linear_prediction_only_flag)
+
+
+    
+    def on_ist_nus_file_textcontrol_indirect(self, event):
+        """
+        Get the value from the textcontrol
+        """
+        self.nuslist_name_indirect = self.ist_nus_file_textcontrol_indirect.GetValue()
+
+        if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+            # If IST linear prediction only is selected and there are more than 1 complex indirect dimensions, change the selection to the same for both indirect dimensions
+            if(self.parent.parent.tabDim2!=self):
+                self.parent.parent.tabDim2.linear_prediction.nuslist_name_indirect = self.nuslist_name_indirect
+                self.parent.parent.tabDim2.linear_prediction.ist_nus_file_textcontrol_indirect.SetValue(self.nuslist_name_indirect)
+            if(self.parent.parent.tabDim3!=self):
+                self.parent.parent.tabDim3.linear_prediction.nuslist_name_indirect = self.nuslist_name_indirect
+                self.parent.parent.tabDim3.linear_prediction.ist_nus_file_textcontrol_indirect.SetValue(self.nuslist_name_indirect)
+
 
     def on_smile_nus_extension_textcontrol_indirect(self, event):
         """
@@ -343,6 +455,35 @@ class NonUniformSampling:
                 self.smile_nus_extension_textcontrol_indirect.GetValue()
             )
 
+    def on_ist_nus_extension_textcontrol_indirect(self, event):
+        """
+        When changing the nus extension number, this function checks
+        the parameter validity (must be an integer) and updates
+        the stored value.
+        """
+        if self.ist_nus_extension_textcontrol_indirect.GetValue() != "":
+            try:
+                self.ist_data_extension_number_indirect = int(
+                    self.ist_nus_extension_textcontrol_indirect.GetValue()
+                )
+            except:
+                msg = wx.MessageDialog(
+                    self.parent,
+                    "The value entered for NUS data extension not a valid integer",
+                    "Error",
+                    wx.OK | wx.ICON_ERROR,
+                )
+                msg.ShowModal()
+                msg.Destroy()
+                self.ist_nus_extension_textcontrol_indirect.SetValue(
+                    str(self.ist_data_extension_number_indirect)
+                )
+                return
+        else:
+            self.ist_data_extension_number_indirect = (
+                self.ist_nus_extension_textcontrol_indirect.GetValue()
+            )
+
     def on_smile_nus_cpu_textcontrol_indirect(self, event):
         """
         When changing the nus CPU number, this function checks
@@ -354,6 +495,15 @@ class NonUniformSampling:
                 self.number_of_nus_CPU_indirect = int(
                     self.smile_nus_cpu_textcontrol_indirect.GetValue()
                 )
+
+                if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+                    # If SMILE NUS is selected and there are more than 1 complex indirect dimensions, change the number of CPU's to the same for both indirect dimensions
+                    if(self.parent.parent.tabDim2!=self):
+                        self.parent.parent.tabDim2.linear_prediction.number_of_nus_CPU_indirect = self.number_of_nus_CPU_indirect
+                        self.parent.parent.tabDim2.linear_prediction.smile_nus_cpu_textcontrol_indirect.SetValue(str(self.number_of_nus_CPU_indirect))
+                    if(self.parent.parent.tabDim3!=self):
+                        self.parent.parent.tabDim3.linear_prediction.number_of_nus_CPU_indirect = self.number_of_nus_CPU_indirect
+                        self.parent.parent.tabDim3.linear_prediction.smile_nus_cpu_textcontrol_indirect.SetValue(str(self.number_of_nus_CPU_indirect))
             except:
                 msg = wx.MessageDialog(
                     self.parent,
@@ -379,6 +529,15 @@ class NonUniformSampling:
                 self.nus_iterations_indirect = int(
                     self.smile_nus_iterations_textcontrol_indirect.GetValue()
                 )
+
+                if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+                    # If SMILE NUS is selected and there are more than 1 complex indirect dimensions, change the number of iterations to the same for both indirect dimensions
+                    if(self.parent.parent.tabDim2!=self):
+                        self.parent.parent.tabDim2.linear_prediction.nus_iterations_indirect = self.nus_iterations_indirect
+                        self.parent.parent.tabDim2.linear_prediction.smile_nus_iterations_textcontrol_indirect.SetValue(str(self.nus_iterations_indirect))
+                    if(self.parent.parent.tabDim3!=self):
+                        self.parent.parent.tabDim3.linear_prediction.nus_iterations_indirect = self.nus_iterations_indirect
+                        self.parent.parent.tabDim3.linear_prediction.smile_nus_iterations_textcontrol_indirect.SetValue(str(self.nus_iterations_indirect))
             except:
                 msg = wx.MessageDialog(
                     self.parent,
@@ -392,8 +551,44 @@ class NonUniformSampling:
                     str(self.nus_iterations_indirect)
                 )
                 return
+            
 
-    def on_linear_prediction_radio_box_indirect(self, event):
+
+    def on_ist_nus_iterations_textcontrol_indirect(self, event):
+        """
+        When changing the nus iteration number, this function checks
+        the parameter validity (must be an integer) and updates
+        the stored value.
+        """
+        if self.ist_nus_iterations_textcontrol_indirect.GetValue() != "":
+            try:
+                self.ist_nus_iterations_indirect = int(
+                    self.ist_nus_iterations_textcontrol_indirect.GetValue()
+                )
+
+                if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+                    # If SMILE NUS is selected and there are more than 1 complex indirect dimensions, change the number of iterations to the same for both indirect dimensions
+                    if(self.parent.parent.tabDim2!=self):
+                        self.parent.parent.tabDim2.linear_prediction.ist_nus_iterations_indirect = self.ist_nus_iterations_indirect
+                        self.parent.parent.tabDim2.linear_prediction.ist_nus_iterations_textcontrol_indirect.SetValue(str(self.ist_nus_iterations_indirect))
+                    if(self.parent.parent.tabDim3!=self):
+                        self.parent.parent.tabDim3.linear_prediction.nus_iterations_indirect = self.ist_nus_iterations_indirect
+                        self.parent.parent.tabDim3.linear_prediction.ist_nus_iterations_textcontrol_indirect.SetValue(str(self.ist_nus_iterations_indirect))
+            except:
+                msg = wx.MessageDialog(
+                    self.parent,
+                    "The value entered for number of iterations is not a valid integer",
+                    "Error",
+                    wx.OK | wx.ICON_ERROR,
+                )
+                msg.ShowModal()
+                msg.Destroy()
+                self.ist_nus_iterations_textcontrol_indirect.SetValue(
+                    str(self.nus_iterations_indirect)
+                )
+                return
+
+    def on_linear_prediction_radio_box_indirect(self, event, match_dimensions=False):
         """
         Get the selection from the radio box and update the
         linear prediction options.
@@ -401,6 +596,19 @@ class NonUniformSampling:
         self.linear_prediction_radio_box_indirect_selection = (
             self.linear_prediction_radio_box_indirect.GetSelection()
         )
+
+        if(match_dimensions == False):
+            if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+                if(self.linear_prediction_radio_box_indirect_selection == 2 or self.linear_prediction_radio_box_indirect_selection == 3):
+                    # If SMILE or IST is selected and there are more than 1 complex indirect dimensions, change the selection to te same for both indirect dimensions
+                    if(self.parent.parent.tabDim2!=self):
+                        self.parent.parent.tabDim2.linear_prediction.linear_prediction_radio_box_indirect_selection = self.linear_prediction_radio_box_indirect_selection
+                        self.parent.parent.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(self.linear_prediction_radio_box_indirect_selection)
+                        self.parent.parent.tabDim2.linear_prediction.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX, match_dimensions=True)
+                    if(self.parent.parent.tabDim3!=self):
+                        self.parent.parent.tabDim3.linear_prediction.linear_prediction_radio_box_indirect_selection = self.linear_prediction_radio_box_indirect_selection
+                        self.parent.parent.tabDim3.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(self.linear_prediction_radio_box_indirect_selection)
+                        self.parent.parent.tabDim3.linear_prediction.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX, match_dimensions=True)
 
         # Remove all the old sizers and replot
 
@@ -416,3 +624,6 @@ class NonUniformSampling:
         self.parent.Refresh()
         self.parent.Update()
         self.parent.Layout()
+
+        
+

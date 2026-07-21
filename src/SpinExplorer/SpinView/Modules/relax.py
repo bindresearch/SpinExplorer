@@ -1,6 +1,9 @@
 import wx # type: ignore
 import numpy as np
 import sys
+import os
+import json
+import math
 import matplotlib 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigCanvas
@@ -12,7 +15,7 @@ from scipy.optimize import leastsq # type: ignore
 
 from SpinExplorer.SpinView.UI_objects.UI_tools import FloatSlider
 from SpinExplorer.SpinView.Viewers.overlays import DeleteSliceDialog
-from SpinExplorer.SpinView.Viewers.module_utils import DelaysManualInput
+from SpinExplorer.SpinView.Viewers.module_utils import DelaysManualInput, InputROI
 
 if sys.platform == "linux":
     platform = "linux"
@@ -35,6 +38,7 @@ class RelaxFit(wx.Frame):
         self.display_index_current = self.display_index
         self.width = int(1.0 * sizes[self.display_index][0])
         self.height = int(0.875 * sizes[self.display_index][1])
+        self.title = title
         wx.Frame.__init__(
             self, parent=parent, title=title, size=(self.width, self.height)
         )
@@ -140,8 +144,10 @@ class RelaxFit(wx.Frame):
         )  # Array to hold the indexes of the slices which have been deleted
 
     def make_relax_sizer(self):
-        self.relax_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        # Check box for Varian/Bruker data (default to Bruker)
+        self.relax_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        self.row1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row2 = wx.BoxSizer(wx.HORIZONTAL)
 
         # Create a button that opens a file for a user to input the delay times
         self.delays_label = wx.StaticBox(self, -1, "Delay Times")
@@ -152,11 +158,11 @@ class RelaxFit(wx.Frame):
         self.delays_sizer.AddSpacer(5)
         self.delays_sizer.Add(self.delay_times_button)
         self.delays_sizer.AddSpacer(5)
-        self.relax_sizer.AddSpacer(5)
+        
         self.delays_sizer_total.AddSpacer(4)
         self.delays_sizer_total.Add(self.delays_sizer)
         self.delays_sizer_total.AddSpacer(3)
-        self.relax_sizer.Add(self.delays_sizer_total)
+
 
         # Then have button which will allow a user to drag over a section where they wish to estimate the noise level
         # This can then be plotted as a shaded region on the plot
@@ -228,6 +234,11 @@ class RelaxFit(wx.Frame):
         self.fitting_sizer.Add(self.add_region_button)
         self.fitting_sizer.AddSpacer(5)
 
+        self.input_region_button = wx.Button(self, -1, "Input ROI")
+        self.input_region_button.Bind(wx.EVT_BUTTON, self.OnInputROI)
+        self.fitting_sizer.Add(self.input_region_button)
+        self.fitting_sizer.AddSpacer(5)
+
         # Have a button to delete a region of interest
         self.delete_region_button = wx.Button(self, -1, "Delete ROI")
         self.delete_region_button.Bind(wx.EVT_BUTTON, self.OnDeleteROI)
@@ -248,15 +259,20 @@ class RelaxFit(wx.Frame):
         self.fitting_sizer.Add(self.biexponential_fitting_button)
         self.fitting_sizer.AddSpacer(5)
 
+        self.save_fitting_button = wx.Button(self, -1, "Save Fit")
+        self.save_fitting_button.Bind(wx.EVT_BUTTON, self.OnSaveFitting)
+        self.fitting_sizer.Add(self.save_fitting_button)
+        self.fitting_sizer.AddSpacer(5)
+
         self.fitting_sizer_total.AddSpacer(4)
         self.fitting_sizer_total.Add(self.fitting_sizer)
         self.fitting_sizer_total.AddSpacer(4)
 
-        # Have a button for printing fitted values
-        self.print_fitted_values_button = wx.Button(self, -1, "Print Fit")
-        self.print_fitted_values_button.Bind(wx.EVT_BUTTON, self.OnPrintFittedValues)
-        self.fitting_sizer.Add(self.print_fitted_values_button)
-        self.fitting_sizer.AddSpacer(5)
+        # # Have a button for printing fitted values
+        # self.print_fitted_values_button = wx.Button(self, -1, "Print Fit")
+        # self.print_fitted_values_button.Bind(wx.EVT_BUTTON, self.OnPrintFittedValues)
+        # self.fitting_sizer.Add(self.print_fitted_values_button)
+        # self.fitting_sizer.AddSpacer(5)
 
         # Have a box containing other functions such as a button to delete a slice from the plot and repeat the fitting
         self.other_functions_label = wx.StaticBox(self, -1, "Other Functions")
@@ -280,20 +296,27 @@ class RelaxFit(wx.Frame):
         self.intensity_sizer.AddSpacer(5)
         self.intensity_sizer.Add(self.intensity_slider)
 
-        self.relax_sizer.AddSpacer(5)
+        
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.delays_sizer_total)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.noise_sizer_total)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.fitting_type_sizer)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.other_functions_sizer)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.intensity_sizer)
 
-        self.relax_sizer.Add(self.noise_sizer_total)
+        self.row2.Add(self.fitting_sizer_total)
+        
+        self.relax_sizer.Add(self.row1, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.relax_sizer.AddSpacer(5)
-        self.relax_sizer.Add(self.fitting_type_sizer)
-        self.relax_sizer.AddSpacer(5)
-        self.relax_sizer.Add(self.fitting_sizer_total)
-        self.relax_sizer.AddSpacer(5)
-        self.relax_sizer.Add(self.other_functions_sizer)
-        self.relax_sizer.AddSpacer(5)
-        self.relax_sizer.Add(self.intensity_sizer)
+        self.relax_sizer.Add(self.row2, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
 
         self.main_relax_sizer.AddSpacer(5)
-        self.main_relax_sizer.Add(self.relax_sizer)
+        self.main_relax_sizer.Add(self.relax_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.main_relax_sizer.AddSpacer(5)
 
         # See if delays.txt file containing delays exists
@@ -313,6 +336,9 @@ class RelaxFit(wx.Frame):
             self.R2_fit = True
 
     def OnPrintFittedValues(self, event):
+        """
+        Replaced by save fit button
+        """
         if self.whole_plot == False:
             # Give a message saying please perform whole spectrum and ROI fitting first
             msg = wx.MessageDialog(
@@ -367,7 +393,7 @@ class RelaxFit(wx.Frame):
         self.ax_relax.set_xlim([self.x_data[0], self.x_data[-1]])
 
         self.ax_relax.set_xlabel(self.main_frame.nmrdata.axislabels[1])
-        legend = self.ax_relax.legend(title="Slice Number")
+        legend = self.ax_relax.legend(title="Slice Number", ncol=math.ceil(len(self.slice_plots)/8))
         legend.get_title().set_color(self.titlecolor)
         self.ax_relax.set_ylabel("Intensity")
 
@@ -681,7 +707,7 @@ class RelaxFit(wx.Frame):
         self.ax_relax.set_xlim([self.x_data[0], self.x_data[-1]])
 
         self.ax_relax.set_xlabel(self.main_frame.nmrdata.axislabels[1])
-        legend = self.ax_relax.legend(title="Slice Number")
+        legend = self.ax_relax.legend(title="Slice Number", ncol=math.ceil(len(self.slice_plots)/8))
         legend.get_title().set_color(self.titlecolor)
         self.ax_relax.set_ylabel("Intensity")
         if self.R1_fit == True:
@@ -827,6 +853,93 @@ class RelaxFit(wx.Frame):
     def leastsq_global(self, p0):
         fit = leastsq(self.chi_global, p0)
         return fit[0]
+    
+    def OnInputROI(self, event):
+        # Check that the full spectrum has been fitted first
+        if self.whole_plot != True:
+            # Give an error message saying full spectrum has not been fitted
+            msg = wx.MessageDialog(
+                self,
+                "Please fit the whole spectrum before selecting a region of interest",
+                "Error",
+                wx.OK | wx.ICON_ERROR,
+            )
+            msg.ShowModal()
+            msg.Destroy()
+            return
+        
+
+
+        # Getting the user to input the new ROI values
+        self.user_input_region()
+
+
+    def user_input_region(self):
+        """
+        Have a poput mini window where a user can insert their desired chemical shift range
+        for the region of interest
+        """
+
+        input_roi = InputROI(title='Input ROI', parent=self)
+
+
+    def add_user_input_region(self, xmin, xmax):
+        # Adding an ROI region
+
+        if self.AddROI == True:
+            if self.ROI_regions[-1].get_xy()[0][0] == self.x_data[0]:
+                del self.ROI_regions[-1]
+                del self.ROI_regions_2[-1]
+                del self.ROI_regions_3[-1]
+
+        self.AddROI == True
+
+        # Add new region plots with the default values (min ppm values)
+        self.ROI_color.append(
+            self.main_frame.colours[
+                len(self.selected_regions_of_interest) + self.deleted_ROI_number
+            ]
+        )
+        self.ROI_regions.append(
+            self.ax_relax.axvspan(
+                self.x_data[0], self.x_data[0], alpha=0.2, color=self.ROI_color[-1]
+            )
+        )
+        self.ROI_regions_2.append(
+            self.ax_relax_whole_fit.axvspan(
+                self.x_data[0], self.x_data[0], alpha=0.2, color=self.ROI_color[-1]
+            )
+        )
+        self.ROI_regions_3.append(
+            self.ax_relax_I0_whole_fit.axvspan(
+                self.x_data[0], self.x_data[0], alpha=0.2, color=self.ROI_color[-1]
+            )
+        )
+
+        self.UpdateRelaxFrame()
+        
+
+        self.ROI_regions[-1].set_x(xmin)
+        self.ROI_regions[-1].set_width(xmax - xmin)
+        self.ROI_regions_2[-1].set_x(xmin)
+        self.ROI_regions_2[-1].set_width(xmax - xmin)
+        self.ROI_regions_3[-1].set_x(xmin)
+        self.ROI_regions_3[-1].set_width(xmax - xmin)
+        # self.ROI_regions[-1].set_xy([[xmin,0],[xmin,1],[xmax,1],[xmax,0]])
+        # self.ROI_regions_2[-1].set_xy([[xmin,0],[xmin,1],[xmax,1],[xmax,0]])
+        # self.ROI_regions_3[-1].set_xy([[xmin,0],[xmin,1],[xmax,1],[xmax,0]])
+        # Check that the number of points in the selected region of interest is greater than 2
+        check_ROI = self.check_ROI(xmin, xmax)
+        if(check_ROI == True):
+            # Add the min and max ppm values to the array of selected regions of interest
+            self.selected_regions_of_interest.append([xmin, xmax])
+            self.UpdateRelaxFrame()
+            return True
+        else:
+            # Deleting this selected ROI because it contained less than 2 points
+            self.DeleteSmallROI()
+            self.UpdateRelaxFrame()
+            return False
 
     def OnAddROI(self, event):
         # Check that the full spectrum has been fitted first
@@ -1395,7 +1508,7 @@ class RelaxFit(wx.Frame):
         self.ax_relax.set_xlim([self.x_data[0], self.x_data[-1]])
 
         self.ax_relax.set_xlabel(self.main_frame.nmrdata.axislabels[1])
-        legend = self.ax_relax.legend(title="Slice Number", fontsize=8)
+        legend = self.ax_relax.legend(title="Slice Number", fontsize=8, ncol=math.ceil(len(self.slice_plots)/8))
         legend.get_title().set_color(self.titlecolor)
         self.ax_relax.set_ylabel("Intensity", fontsize=8)
         if self.R1_fit == True:
@@ -1754,6 +1867,158 @@ class RelaxFit(wx.Frame):
             return fit[0]
         except:
             return ["Failed"]
+        
+
+
+    def OnSaveFitting(self, event):
+        """
+        Save each of the current fits along with the data to a csv file
+        (include ppm ranges used and the data title and path etc)
+
+        Metadata JSON 
+        - Data title
+        - Global fit noise region (ppm)
+        - Global fit noise value
+        - Global fit minimum S/N
+        
+        Region of interest csv files 
+        - Delays, Intensity, Intensity error, relaxation rates
+
+        """
+
+        # Make sure that there are regions of interest that have fits performed on them
+        check = self.check_regions()
+
+        if(check==True):
+            # Ask the user to provide a path of a directory to save the fit data and metadata to
+            self.ask_user_path()
+        else:
+            # Outputting error message saving that no regions of interest could be found
+            dlg = wx.MessageDialog(
+            self,
+            "No regions of interest (ROI) could be found. Please add a region of interest, perform a fit, and try again.",
+            "Error",
+            wx.OK,
+            )
+            self.Raise()
+            self.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
+        
+        return
+
+    def check_regions(self):
+        """
+        Check that regions of interest have been selected and that they have fits associated
+        with them
+
+        Returns
+        -------
+        True - check passed
+        False - check failed
+        """
+        if(len(self.selected_regions_of_interest)>0):
+            return True
+        else:
+            return False
+        
+    def ask_user_path(self):
+        """
+        Ask the user where they would like to save the folder which will contain the outputs
+        """
+
+        dlg = wx.FileDialog (self, "Input directory name to create and save output files to",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+        )
+        dlg.SetDirectory(os.getcwd())
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            os.makedirs(path, exist_ok=True)
+            self.save_metadata(path)
+            self.save_data(path)
+            dlg.Destroy()
+        else:
+            return
+
+    def save_metadata(self, path):
+        """
+        Saving the fit metadata to the path\metadata.json
+        """
+
+        noise_region_text = str(self.noise_x_initial) + '-' + str(self.noise_x_final)
+
+        metadata = {"Data title": self.title, 'Global fitting noise region (ppm)': noise_region_text, 'Global fit minimum S/N': self.noise_factor}
+        
+        # Save the metadata
+        with open(os.path.join(path, 'metadata.json'), 'w') as f:
+            json.dump(metadata, f)
+
+
+    def save_data(self, path):
+        """
+        For each region of interest, saving the fit as a csv
+        """
+        
+        for i, region in enumerate(self.selected_regions_of_interest):
+            self.region_min = region[0]
+            self.region_max = region[1]
+            self.mean_fitted_relax_ROI = self.mean_fitted_relax_ROI_total[i]
+            self.mean_fitted_I0_ROI = self.mean_fitted_I0_ROI_total[i]
+
+
+            self.mean_fitted_I0_ROI, self.mean_fitted_relax_ROI
+
+
+            if (self.fitted_gaussian_parameters[i][2]) > 1.25 * np.std(
+                self.fitted_relax_ROI
+            ):
+                r_error = np.abs(np.std(self.fitted_relax_ROI))
+
+            else:
+                r_error = np.abs(self.fitted_gaussian_parameters[i][2])
+
+            I0_error = np.abs(np.std(self.fitted_I0_ROI))
+
+            self.average_y_data_in_ROI_above_noise = self.average_y_data_in_ROI_above_noise_total[i]
+            
+            self.error_y_data_in_ROI_above_noise = self.error_y_data_in_ROI_above_noise_total[i]
+
+            self.error_I_I0_in_ROI = self.error_I_I0_in_ROI_total[i]
+            self.I0_average_in_ROI = self.I0_average_in_ROI_total[i]
+
+
+
+            # The data will be saved in the following manner
+
+            # Fit results
+            # region_min =
+            # region_max = 
+            # R2/R1 (s^-1) =
+            # I0 =  
+
+            # Delay (ms), I, I error, I/I0, I/I0 error
+
+
+            with open(os.path.join(path, 'Fit_ROI_'+str(i+1)+'.csv'), 'w') as file:
+                file.write('Region min (ppm),'+ str(self.region_min)+'\n')
+                file.write('Region max (ppm),'+ str(self.region_max)+'\n')
+                if(self.R1_fit==True):
+                    relax_name = 'R1'
+                else:
+                    relax_name = 'R2'
+                file.write(relax_name+' (s^-1),{:.3e}\n'.format(self.mean_fitted_relax_ROI))
+                file.write(relax_name+' error (s^-1),{:.3e}\n'.format(r_error))
+                file.write('I0,{:.3e}\n'.format(self.mean_fitted_I0_ROI))
+                file.write('I0 error,{:.3e}\n'.format(I0_error))
+
+                file.write('\n\n')
+
+
+                file.write('Delay (s), I, I error, I/I0, I/I0 error\n')
+                for j in range(len(self.delays)):
+                    file.write('{:.3f},{:.3f},{:.3e},{:.3e},{:.3f}\n'.format(self.delays[j], self.average_y_data_in_ROI_above_noise[j], self.error_y_data_in_ROI_above_noise[j], self.average_y_data_in_ROI_above_noise[j] / self.I0_average_in_ROI[j], self.error_I_I0_in_ROI[j]))
+
+
 
     def OnDeleteSlice(self, event):
 

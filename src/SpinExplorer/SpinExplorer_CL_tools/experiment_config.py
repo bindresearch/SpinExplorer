@@ -1249,6 +1249,51 @@ class DimensionConfig:
         defaults.update(overrides)
         return cls(**defaults)
     
+
+    @classmethod
+    def standard_fluorine(cls, **overrides) -> "DimensionConfig":
+        """Create a standard 19F processing configuration."""
+        defaults = {
+            "solvent_suppression_flag": False,
+            "solvent_suppression_filter_length": 0,
+            "solvent_suppression_choice": SolventSuppressionFilter.LOW_PASS,
+            "solvent_suppression_low_pass": LowpassChoices.BOXCAR,
+            "lp_flag": False,
+            "lp_choice": LPChoices.LINEAR_PREDICTION,
+            "lp_predicted_point": LPPredictedPoints.AFTER_FID,
+            "lp_predicted_coefficient": LPPredictedCoefficients.FORWARD,
+            "nus_file": "",
+            "nus_extension": 0,
+            "nus_cpu": 0,
+            "nus_iterations": 0,
+            "apod_flag": True,
+            "apod_type": ApodTypes.EXPONENTIAL,
+            "apod_correction": 0.5,
+            "apod_lb": 1.0,
+            "zf_flag": True,
+            "zf_type": ZFTypes.DOUBLING_SPECTRUM_SIZE,
+            "zf_additional_param": ZFAdditionalParams.DOUBLING_NUMBER,
+            "zf_additional_value": 2,
+            "zf_filling_round": True,
+            "ft_flag": True,
+            "ft_option": FTOptions.STANDARD,
+            "ph_flag": True,
+            "ph_f1180_flag": False,
+            "ph_p0": 0.0,
+            "ph_p1": 0.0,
+            "ph_magnitude_mode": False,
+            "ex_flag": False,
+            "ex_start_ppm": -1.0,
+            "ex_end_ppm": 13.0,
+            "bl_flag": False,
+            "bl_method": BaselineOptions.LINEAR,
+            "bl_params_node_width": 2,
+            "bl_params_node_list": [0, 5, 95, 100],
+            "bl_params_polynomial_order": 2,
+        }
+        defaults.update(overrides)
+        return cls(**defaults)
+
     @classmethod
     def standard_nitrogen(cls, **overrides) -> "DimensionConfig":
         """Create a standard 15N processing configuration."""
@@ -1555,7 +1600,7 @@ class ExperimentConfigStore:
             print(f"Processing dimension {i} ({label})...")
             
             # Apply processing for this dimension
-            dic, data = config.apply_processing(dic, data, i, filter_removal=False)
+            dic, data = config.apply_processing(dic, data, i, filter_removal=filter_removal)
 
             # Transpose if not the last dimension
             if i < len(self.dim_configs) - 1:

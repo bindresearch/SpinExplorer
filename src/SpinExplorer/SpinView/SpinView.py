@@ -122,7 +122,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 # This class creates the GUI main frame
 class SpinView(wx.Frame):
-    def __init__(self, explorer=False, session_file='', fid_data=[]):
+    def __init__(self, explorer=False, session_file='', fid_data=[], reprocess=False):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -133,6 +133,15 @@ class SpinView(wx.Frame):
 
         # Get the title for the panels
         self.title = self.GetTitle()
+
+        window_found=False
+
+        if(session_file==''):
+            for window in wx.GetTopLevelWindows():
+                if isinstance(window, wx.Frame) and window.GetTitle() == self.title:
+                    # A window is already open containing this data
+                    window_found = True
+        
 
         # Setup the dock/task bar with the logo
         if(explorer==False):
@@ -149,6 +158,22 @@ class SpinView(wx.Frame):
             wx.DefaultPosition,
             size=(int(self.width), int(self.height)),
         )
+
+        if(reprocess==False):
+
+            if(window_found==True):
+                    dlg = wx.MessageDialog(
+                            None,
+                            "A window containing data of the selected data is already open, would you like to continue? Data source: {}".format(self.title),
+                            "Data Selection",
+                            wx.YES_NO | wx.ICON_INFORMATION,
+                    )
+                    self.Raise()
+                    self.SetFocus()
+                    result = dlg.ShowModal()
+                    if(result==wx.ID_NO):
+                        self.Destroy()
+                        return
 
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -170,13 +195,13 @@ class SpinView(wx.Frame):
 
         nmrdata = fid_data[0]
         if nmrdata.dim == 1:
-            self.viewer = OneDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True)
+            self.viewer = OneDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True, title=self.title)
             self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
         elif nmrdata.dim == 2:
-            self.viewer = TwoDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True)
+            self.viewer = TwoDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True, title=self.title)
             self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
         elif nmrdata.dim == 3:
-            self.viewer = ThreeDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True)
+            self.viewer = ThreeDViewer(parent=self, nmrdata=nmrdata, fid_viewer=True, title=self.title)
             self.main_sizer.Add(self.viewer, 1, wx.EXPAND)
 
 
@@ -228,6 +253,11 @@ class SpinView(wx.Frame):
         if(self.session_file!=''):
             self.title += ' Session: ' + pathlib.Path(self.session_file).name
             self.SetTitle(self.title)
+            self.viewer.title=self.title
+            try:
+                self.viewer.peaklist_frame.SetTitle('Peak Lists - ' + self.title)
+            except:
+                pass
 
         self.SetSizer(self.main_sizer)
 

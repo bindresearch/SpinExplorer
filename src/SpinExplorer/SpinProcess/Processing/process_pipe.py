@@ -75,6 +75,10 @@ class ProcessNMRPipe:
         # Checking whether processing is required for second/third dimensions
         include_dim2, include_dim3 = self.checking_dimensions()
 
+        check = self.check_parameters()
+        if(check==False):
+            return
+
 
         # Create the nmrproc.com file
         nmrproc_com = open("nmrproc.com", "w")
@@ -147,6 +151,39 @@ class ProcessNMRPipe:
 
         self.subprocess_frame = nmrPipeSubprocess(self)
 
+    def check_parameters(self):
+        """
+        Check to see whether SpinExplorer IST is selected as
+        this is not compatible with NMRPipe processing
+        """
+
+        if(self.dimension_tabs[
+                1
+            ].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
+            == 3):
+            self.report_error('SpinExplorer IST not compatible with NMRPipe processing. Please select another option and try again.')
+            return False
+        if(self.dimension_tabs[
+                1
+            ].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
+            == 1):
+                if(len(self.dimension_tabs)==3):
+                    self.report_error('Indirect dimension linear prediction is not currently implemented for 3D spectra. Please use the data extension features of SpinExplorer IST if required.')
+                    return False
+        
+        return True
+
+    def report_error(self, message):
+        dlg = wx.MessageDialog(
+            self.notebook,
+            message,
+            "Error",
+            wx.OK,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def update_comment(self):
         # Set the comment to pipe so that the fact nmrpipe processing was used is noted in the processed spectrum header

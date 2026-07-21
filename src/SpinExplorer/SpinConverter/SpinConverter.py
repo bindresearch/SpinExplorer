@@ -288,6 +288,8 @@ class SpinConverter(wx.Frame):
             self.format.get_carrier_frequencies_bruker()
             if len(self.format.N_complex_boxes) > 1:
                 self.shared_format.acquisition_2D_mode_combo_box()
+            if(len(self.format.N_complex_boxes) > 2):
+                self.format.add_change_aqseq_box()
             self.shared_format.create_temperature_box()
             self.format.create_bruker_digital_filter_box()
             self.shared_format.create_conversion_box()

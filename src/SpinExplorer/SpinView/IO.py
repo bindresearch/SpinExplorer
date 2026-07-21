@@ -87,8 +87,13 @@ class GetData:
 
                 params = parameter_write_cl(nmr_glue_conv, config)
                 params.write_out_dict(params.dictionary)
+
+                if(nmr_glue_conv.params.remove_filter_before_processing==True):
+                    remove_filter=False
+                else:
+                    remove_filter=True
         
-                config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag)
+                config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag, filter_removal=remove_filter)
                 self.file = config.ft_name
             except:
                 dlg = wx.MessageDialog(
@@ -303,9 +308,9 @@ class ChooseFile(wx.Dialog):
         self.Show()
 
     def OnOK(self, event):
-        file_selection = self.file_combobox.GetSelection()
-        self.parent.file = self.spectrum_file[file_selection]
-        self.parent.session_file = self.spectrum_file[file_selection]
+        file_selection = self.file_combobox.GetValue()
+        self.parent.file = file_selection
+        self.parent.session_file = file_selection
         self.Close()
         if self.session_choice == False:
             self.parent.read_data()

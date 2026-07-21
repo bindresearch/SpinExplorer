@@ -297,7 +297,7 @@ class InputParameters:
                     wx.EVT_COMBOBOX
                 )
 
-            elif key == "NUS Reconstruction":
+            elif key == "SMILE NUS Reconstruction":
                 dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(
                     2
                 )
@@ -323,9 +323,49 @@ class InputParameters:
                 dimension_tab.linear_prediction.smile_nus_iterations_textcontrol_indirect = (
                     nus_iterations
                 )
+
+                try:
+                    lp_only = int(
+                    dictionary["Linear Prediction"][key]["Linear prediction only"]
+                    )
+                except:
+                    lp_only = False
+                
+                dimension_tab.linear_prediction.smile_linear_prediction_only_flag = lp_only
                 dimension_tab.linear_prediction.on_linear_prediction_radio_box_indirect(
                     wx.EVT_RADIOBOX
                 )
+            elif key == "SpinExplorer IST NUS Reconstruction":
+                dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(
+                    3
+                )
+                dimension_tab.linear_prediction.linear_prediction_radio_box_indirect_selection = (
+                    3
+                )
+
+                nusfile = dictionary["Linear Prediction"][key]["NUS file"]
+                nus_extension = int(
+                    dictionary["Linear Prediction"][key]["NUS extension"]
+                )
+                nus_iterations = int(
+                    dictionary["Linear Prediction"][key]["NUS iterations"]
+                )
+                lp_only = dictionary["Linear Prediction"][key]["Linear prediction only"]
+
+                dimension_tab.linear_prediction.nuslist_name_indirect = nusfile
+                dimension_tab.linear_prediction.ist_data_extension_number_indirect = (
+                    nus_extension
+                )
+
+                dimension_tab.linear_prediction.ist_nus_iterations_indirect = nus_iterations
+                dimension_tab.linear_prediction.ist_nus_iterations_textcontrol_indirect = (
+                    nus_iterations
+                )
+                dimension_tab.linear_prediction.ist_linear_prediction_only_flag = lp_only
+                dimension_tab.linear_prediction.on_linear_prediction_radio_box_indirect(
+                    wx.EVT_RADIOBOX
+                )
+
 
     def load_apodization(self, dimension, dimension_tab, dictionary):
         """

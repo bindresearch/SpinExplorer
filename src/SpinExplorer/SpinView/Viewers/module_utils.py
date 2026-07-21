@@ -1,6 +1,94 @@
 import wx # type: ignore
 import numpy as np
 
+class InputROI(wx.Frame):
+    def __init__(self, title, parent):
+        self.main_frame = parent
+        self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
+        width = 400
+        height = 200
+        wx.Frame.__init__(self, parent=parent, title=title, size=(width, height))
+        self.panel_ROI_input = wx.Panel(self, -1)
+        self.main_ROI_input = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(self.main_ROI_input)
+
+
+        self.make_manual_ROI_input_sizer()
+        self.Show()
+
+    def make_manual_ROI_input_sizer(self):
+        self.input_ROI_label = wx.StaticBox(
+            self, -1, "Input region of interest chemical shift range (ppm):"
+        )
+        self.input_ROI_sizer = wx.StaticBoxSizer(
+            self.input_ROI_label, wx.VERTICAL
+        )
+
+        self.row = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.min_text = wx.StaticText(self,-1,'Min:')
+
+        self.min_box = wx.TextCtrl(
+            self, -1, value='', size=(100,20), 
+        )
+
+        self.max_text = wx.StaticText(self,-1,'Max:')
+
+        self.max_box = wx.TextCtrl(
+            self, -1, value='', size=(100,20), 
+        )
+
+        self.row.AddSpacer(10)
+        self.row.Add(self.min_text)
+        self.row.AddSpacer(5)
+        self.row.Add(self.min_box)
+        self.row.AddSpacer(10)
+        self.row.Add(self.max_text)
+        self.row.AddSpacer(5)
+        self.row.Add(self.max_box)
+        self.row.AddSpacer(10)
+
+        self.input_ROI_sizer.AddSpacer(10)
+        self.input_ROI_sizer.Add(self.row, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.save_region_button = wx.Button(self, -1, "Add ROI")
+
+        self.save_region_button.Bind(wx.EVT_BUTTON, self.OnSaveRegion)
+
+        self.input_ROI_sizer.AddSpacer(10)
+        self.input_ROI_sizer.Add(self.save_region_button, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.main_ROI_input.AddSpacer(10)
+        self.main_ROI_input.Add(self.input_ROI_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+    def OnSaveRegion(self, event):
+
+        # check validity of values inputed
+        try:
+            float(self.min_box.GetValue())
+            float(self.max_box.GetValue())
+        except:
+            # The inputed values are not numbers - changing this now
+            message = "The inputed values are not numbers, please change these to numbers and try again."
+            dlg = wx.MessageDialog(self, message, "Warning", wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        
+        if(float(self.min_box.GetValue()) > float(self.max_box.GetValue())):
+            # The inputed values are not numbers - changing this now
+            message = "The minimum value is not less than the maximum value. Please ensure the minimum value is less than the maximum value and try again."
+            dlg = wx.MessageDialog(self, message, "Warning", wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        input_success = self.main_frame.add_user_input_region(float(self.min_box.GetValue()), float(self.max_box.GetValue()))
+
+        # close the window
+        if(input_success):
+            self.Destroy()
+
 class DelaysManualInput(wx.Frame):
     def __init__(self, title, parent):
         self.main_frame = parent

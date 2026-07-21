@@ -20,7 +20,7 @@ from SpinExplorer.SpinView.config import *
 
 
 class ThreeDViewer(wx.Panel):
-    def __init__(self, parent, nmrdata, fid_viewer=False):
+    def __init__(self, parent, nmrdata, fid_viewer=False, title=''):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -33,6 +33,7 @@ class ThreeDViewer(wx.Panel):
         self.mouse_wheel_mode = ScrollMode.ZOOM
 
         self.fid_viewer = fid_viewer
+        self.title=title
         self.set_initial_variables_3D()
         self.create_button_panel_3D()
         self.create_hidden_button_panel_3D()
@@ -2392,6 +2393,7 @@ class SpinBore(wx.Frame):
         self.display_index_current = self.display_index
         self.width = int(1.0 * sizes[self.display_index][0])
         self.height = int(0.875 * sizes[self.display_index][1])
+        self.title = 'SpinBore - ' + title
         wx.Frame.__init__(
             self, parent=parent, title=title, size=(self.width, self.height)
         )
@@ -2637,8 +2639,10 @@ class SpinBore(wx.Frame):
         Open up the Peak Lists 3D frame
         """
 
+        self.title = 'SpinBore - ' + self.main_frame.parent.title
+
         self.peak_lists3D = PeakListWindow3D(
-            title="3D Peak List - " + self.main_frame.parent.title, parent=self
+            title="3D Peak List - " + self.title, parent=self
         )
         self.peak_lists3D.Show()
 
@@ -2949,8 +2953,7 @@ class SpinBore(wx.Frame):
                 # for window in wx.GetTopLevelWindows():
                 #     if (
                 #         isinstance(window, wx.Frame)
-                #         and window.GetTitle().split()[0] == "3D"
-                #         and window.GetTitle().split()[1] == "Peak"
+                #         and window.GetTitle() == "3D Peak List - " + self.title
                 #     ):
                 #         if(self.selected_bore_peaks!=[]):
                 #             # Plot these bore peaks
@@ -3090,8 +3093,7 @@ class SpinBore(wx.Frame):
         for window in wx.GetTopLevelWindows():
             if (
                 isinstance(window, wx.Frame)
-                and window.GetTitle().split()[0] == "3D"
-                and window.GetTitle().split()[1] == "Peak"
+                and window.GetTitle() == "3D Peak List - " + self.title
             ):
                 if len(self.selected_bore_peaks) > 0:
                     # Plot these bore peaks
@@ -3316,8 +3318,7 @@ class SpinBore(wx.Frame):
         for window in wx.GetTopLevelWindows():
             if (
                 isinstance(window, wx.Frame)
-                and window.GetTitle().split()[0] == "3D"
-                and window.GetTitle().split()[1] == "Peak"
+                and window.GetTitle() == "3D Peak List - " + self.title
             ):
                 for (
                     peaklist_name,
@@ -3356,8 +3357,7 @@ class SpinBore(wx.Frame):
             ]
             if (
                 isinstance(window, wx.Frame)
-                and window.GetTitle().split()[0] == "3D"
-                and window.GetTitle().split()[1] == "Peak"
+                and window.GetTitle() == "3D Peak List - " + self.title
             ):
                 # Plot Peaklists
                 count = 0
