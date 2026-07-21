@@ -25,11 +25,22 @@ def filter_experiments(df: pd.DataFrame, experiment_prefix: str, protein: str) -
     
     Returns:
         Filtered dataframe
+
+    Raises:
+        ValueError: If no rows match the given prefix and protein.
     """
     exp_mask = df["Experiment"].str.startswith(experiment_prefix)
     
-    return df[exp_mask]
+    filtered_df = df[exp_mask]
 
+    if filtered_df.empty:
+        raise ValueError(
+            f"No experiments found matching prefix '{experiment_prefix}' "
+            f"and protein '{protein}'. Please check that the experiment "
+            f"names are correct in the config.yaml file."
+        )
+
+    return filtered_df
 
 def group_by_base_title(df: pd.DataFrame, protein: str) -> list[pd.DataFrame]:
     base_titles = df[~df["Title"].str.contains(" ")]["Title"].unique()
@@ -54,19 +65,31 @@ def process_from_config(config_path: str, organise_by: str | None = None) -> Non
         config_data = yaml.safe_load(f)
 
     base_dir = Path(config_data.get("output_dir", Path.cwd()))
+    print('oi wannker')
+    print(base_dir)
+
     df = pd.read_csv(config_data["csv_path"])
 
     for exp in config_data["experiments"]:
+        print('we have an experiment')
+        print(exp)
         if('_icon' in exp):
             exp_name = exp.split('_icon')[0]
             suffix = exp.split('.')[-1]
             register_exp = exp_name + '.' + suffix
         config = registry._registry[register_exp]
         for prot in config_data["proteins"]:
+            print('we have a protein')
+            print(prot)
             filtered_exps = filter_experiments(df, exp, prot)
             groups, titles = group_by_base_title(filtered_exps, prot)
+            print(groups)
+            print(titles)
             for i, group in enumerate(groups):
+                print('we have a group')
+                print(group)
                 output_dir = _resolve_output_dir(base_dir, organise_by, prot, exp, titles[i])
+                print(output_dir)
                 write_1d_multi_session(group, exp, prot, config, output_dir=output_dir)
 
 
@@ -78,7 +101,8 @@ def write_1d_multi_session(df, exp, protein_name, config, outy_name=None, outy_f
         resolved_folder = outy_folder
     else:
         resolved_folder = Path('./')
-
+    print('this is the reolved folder')
+    print(resolved_folder)
     if outy_name is None:
         titles = df["Title"]
         base = [t for t in titles if " " not in t][0]
@@ -87,6 +111,7 @@ def write_1d_multi_session(df, exp, protein_name, config, outy_name=None, outy_f
     with open(resolved_folder / Path(outy_name), 'w') as outy:
         outy.write('1D\n')
         outy.write('MultiplotMode:True\n')
+        print('writing something now....')
 
         for i, (_, row) in enumerate(df.iterrows()):
             outy.write(f'file_path:{str(Path.cwd())+'/'+str(int(row['Expno']))+'/test.ft'}\n')
