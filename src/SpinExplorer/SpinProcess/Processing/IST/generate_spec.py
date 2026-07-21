@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import truncnorm # type: ignore
@@ -430,7 +430,7 @@ def generate_2d_spec_with_vals(num_signals: int, amp_vals1: NDArray, freq_vals1:
                                sw1: float, num_points1: int, 
                                amp_vals2: NDArray, freq_vals2: NDArray, r2_vals2: NDArray,
                                sw2: float, num_points2: int, 
-                               neg_signs: NDArray = None):
+                               neg_signs: Optional[NDArray] = None):
     
         if neg_signs is not None:
             amp_vals1*=neg_signs
@@ -463,7 +463,7 @@ def generate_2d_spec_from_ranges(num_signals:int, amp_dist1: DistributionParam, 
                                  sw1:float, num_points1: int,
                                  amp_dist2: DistributionParam, freq_dist2: DistributionParam, r2_dist2: DistributionParam,
                                  sw2:float, num_points2: int,
-                                 neg_signs: NDArray = None):
+                                 neg_signs: Optional[NDArray] = None):
                                  
     
     amp_vals1,freq_vals1,r2_vals1 = [d.draw(num_signals) for d in (amp_dist1,freq_dist1,r2_dist1)]
@@ -502,7 +502,7 @@ def generate_3d_spec_from_ranges(num_signals: int,
                                  sw2: float, num_points2: int,
                                  amp_dist3: DistributionParam, freq_dist3: DistributionParam, r2_dist3: DistributionParam,
                                  sw3: float, num_points3: int,
-                                 neg_signs: NDArray = None):
+                                 neg_signs: Optional[NDArray] = None):
 
     amp_vals1, freq_vals1, r2_vals1 = [d.draw(num_signals) for d in (amp_dist1, freq_dist1, r2_dist1)]
     amp_vals2, freq_vals2, r2_vals2 = [d.draw(num_signals) for d in (amp_dist2, freq_dist2, r2_dist2)]

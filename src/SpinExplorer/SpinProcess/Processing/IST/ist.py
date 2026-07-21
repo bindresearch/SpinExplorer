@@ -1,11 +1,11 @@
 import numpy as np
-import nmrglue as ng
+import nmrglue as ng # type: ignore
 from numpy.typing import NDArray
 from typing import Union, Optional
-import pyfftw
-import pyfftw.interfaces.numpy_fft as fft
+import pyfftw # type: ignore
+import pyfftw.interfaces.numpy_fft as fft # type: ignore
 from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import apply_sampling_schedule_nd, apply_sampling_schedule_to_2D_signal
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed # type: ignore
 
 
 pyfftw.interfaces.cache.enable()
@@ -200,7 +200,7 @@ def ist_3d(input_spec: NDArray,
         converged = False
 
         for iteration in range(1, max_iter + 1):
-            nus_fid, threshold_signal_real, threshold_signal_imag, l2_norm = ist_iteration_3d(nus_fid, threshold, sampling_schedule)
+            nus_fid, threshold_signal_real, threshold_signal_imag, l2_norm = ist_iteration_3d(nus_fid, threshold, sampling_schedule, window_dim2, window_dim3)
             reconstructed += (threshold_signal_real+1j*threshold_signal_imag)
             if l2_norm <= terminate:
                 if verb:
