@@ -49,17 +49,17 @@ class SharedFormatting:
         self.temperature_box = wx.StaticBoxSizer(
             self.temperature_box_label, wx.VERTICAL
         )
-        self.text = wx.StaticText(self.app, label="Temp (K):")
+        self.text = wx.StaticText(self.temperature_box_label, label="Temp (K):")
         self.temperature_value = str(self.params.temperature)
         self.row_1 = wx.BoxSizer(wx.HORIZONTAL)
         self.temperature_parameter = wx.StaticText(
-            self.app, label=self.temperature_value
+            self.temperature_box_label, label=self.temperature_value
         )
         self.row_1.AddSpacer(5)
         self.row_1.Add(self.text)
         self.row_1.AddSpacer(5)
         self.row_1.Add(self.temperature_parameter)
-        self.temperature_input_button = wx.Button(self.app, label="Change Temperature")
+        self.temperature_input_button = wx.Button(self.temperature_box_label, label="Change Temperature")
         self.temperature_input_button.Bind(
             wx.EVT_BUTTON, self.on_temperature_change_button
         )
@@ -200,13 +200,13 @@ class SharedFormatting:
             self.scaling_box_sizer_total.AddSpacer(13)
         # Create tick boxes for intensity scaling
         self.scaling_NS_checkbox = wx.CheckBox(
-            self.app, -1, label="1/NS"
+            self.scaling_box, -1, label="1/NS"
         )  # Normalise by number of scans
         if self.nmrdata.spectrometer == "Bruker":
             self.scaling_NC = wx.CheckBox(
-                self.app, -1, label="2^NC"
+                self.scaling_box, -1, label="2^NC"
             )  # Normalise by bruker normalisation constant
-        self.scaling_by_number = wx.CheckBox(self.app, -1, label="x1000")
+        self.scaling_by_number = wx.CheckBox(self.scaling_box, -1, label="x1000")
         self.scaling_NS_checkbox.Bind(wx.EVT_CHECKBOX, self.on_scaling_checkbox)
         if self.nmrdata.spectrometer == "Bruker":
             self.scaling_NC.Bind(wx.EVT_CHECKBOX, self.on_scaling_checkbox)
@@ -223,16 +223,16 @@ class SharedFormatting:
             )
         else:
             self.params.scaling_factor = (1 / self.params.NS) * 1000
-        self.scaling_text = wx.StaticText(self.app, label="Scaling Factor:")
+        self.scaling_text = wx.StaticText(self.scaling_box, label="Scaling Factor:")
         if self.nmrdata.spectrometer == "Bruker":
             self.scaling_number = wx.TextCtrl(
-                self.app,
+                self.scaling_box,
                 value="{:.2E}".format(self.params.scaling_factor),
                 size=(50, 20),
             )
         else:
             self.scaling_number = wx.TextCtrl(
-                self.app,
+                self.scaling_box,
                 value="{:.2E}".format(self.params.scaling_factor),
                 size=(80, 20),
             )
@@ -517,7 +517,7 @@ class SharedFormatting:
         self.NUS_box_2 = wx.BoxSizer(wx.VERTICAL)
 
         # Tick box to see if user wants to perform NUS reconstruction
-        self.NUS_tickbox = wx.CheckBox(self.app, -1, label="Include NUS Reconstruction")
+        self.NUS_tickbox = wx.CheckBox(self.NUS_label, -1, label="Include NUS Reconstruction")
         self.NUS_tickbox.Bind(wx.EVT_CHECKBOX, self.On_NUS_CheckBox)
         self.NUS_box.Add(self.NUS_tickbox)
         self.NUS_box_2 = wx.BoxSizer(wx.VERTICAL)
@@ -550,9 +550,9 @@ class SharedFormatting:
 
     def nus_details_box(self):
         self.NUS_sample_count_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.NUS_sample_count_txt = wx.StaticText(self.app, label="NUS Sample Count:")
+        self.NUS_sample_count_txt = wx.StaticText(self.NUS_label, label="NUS Sample Count:")
         self.NUS_sample_count_box = wx.TextCtrl(
-            self.app, value=str(self.NUS_sample_count), size=(50, 20)
+            self.NUS_label, value=str(self.NUS_sample_count), size=(50, 20)
         )
         self.NUS_sample_count_sizer.AddSpacer(5)
         self.NUS_sample_count_sizer.Add(self.NUS_sample_count_txt)
@@ -562,18 +562,18 @@ class SharedFormatting:
         self.NUS_box_2.AddSpacer(10)
         self.NUS_box_2.Add(self.NUS_sample_count_sizer)
 
-        self.nusfile_label = wx.StaticText(self.app, label="NUS schedule:")
-        self.nusfile_input = wx.TextCtrl(self.app, value=self.nusfile, size=(120, 20))
-        self.find_nus_file = wx.Button(self.app, label="...", size=(25, 20))
+        self.nusfile_label = wx.StaticText(self.NUS_label, label="NUS schedule:")
+        self.nusfile_input = wx.TextCtrl(self.NUS_label, value=self.nusfile, size=(120, 20))
+        self.find_nus_file = wx.Button(self.NUS_label, label="...", size=(25, 20))
         self.find_nus_file.Bind(
             wx.EVT_BUTTON, lambda evt: self.on_find_nus_file(evt, self.nusfile)
         )
         self.nusfile_input.SetValue(self.nusfile)
 
         self.nus_extras_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.nus_offset_label = wx.StaticText(self.app, label="NUS Offset:")
+        self.nus_offset_label = wx.StaticText(self.NUS_label, label="NUS Offset:")
         self.nus_offset_box = wx.TextCtrl(
-            self.app, value=str(self.NUS_offset), size=(30, 20)
+            self.NUS_label, value=str(self.NUS_offset), size=(30, 20)
         )
         self.nus_extras_box.AddSpacer(5)
         self.nus_extras_box.Add(self.nus_offset_label)
@@ -581,7 +581,7 @@ class SharedFormatting:
         self.nus_extras_box.Add(self.nus_offset_box)
 
         self.reverse_NUS_tickbox = wx.CheckBox(
-            self.app, -1, label="Reverse NUS Schedule"
+            self.NUS_label, -1, label="Reverse NUS Schedule"
         )
         self.reverse_NUS_tickbox.SetValue(False)
         self.nus_extras_box.AddSpacer(10)

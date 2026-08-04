@@ -94,7 +94,7 @@ class Apodization:
         """
         self.apodization_box = wx.StaticBox(parent, -1, "Apodization")
         self.apodization_sizer = wx.StaticBoxSizer(self.apodization_box, wx.HORIZONTAL)
-        self.apodization_checkbox = wx.CheckBox(parent, -1, "Apply apodization")
+        self.apodization_checkbox = wx.CheckBox(self.apodization_box, -1, "Apply apodization")
         self.apodization_checkbox.SetValue(self.apodization_checkbox_value)
         self.apodization_checkbox.Bind(wx.EVT_CHECKBOX, self.on_apodization_checkbox)
         self.apodization_sizer.Add(
@@ -112,7 +112,7 @@ class Apodization:
             "Triangle",
         ]
         self.apodization_combobox = wx.ComboBox(
-            parent, -1, choices=self.apodization_options, style=wx.CB_READONLY
+            self.apodization_box, -1, choices=self.apodization_options, style=wx.CB_READONLY
         )
         self.apodization_combobox.SetSelection(self.apodization_combobox_selection)
         self.apodization_combobox.Bind(wx.EVT_COMBOBOX, self.on_apodization_combobox)
@@ -123,13 +123,13 @@ class Apodization:
         if self.apodization_combobox_selection == 1:
             # Have a textcontrol for the line broadening
             self.apodization_line_broadening_label = wx.StaticText(
-                parent, -1, "Line Broadening (Hz):"
+                self.apodization_box, -1, "Line Broadening (Hz):"
             )
             self.apodization_sizer.Add(
                 self.apodization_line_broadening_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_line_broadening_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.exponential_line_broadening), size=(30, 20)
+                self.apodization_box, -1, str(self.exponential_line_broadening), size=(30, 20)
             )
             self.apodization_line_broadening_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -142,13 +142,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the first point scaling
             self.apodization_first_point_label = wx.StaticText(
-                parent, -1, "First Point Scaling:"
+                self.apodization_box, -1, "First Point Scaling:"
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.apodization_first_point_scaling), size=(30, 20)
+                self.apodization_box, -1, str(self.apodization_first_point_scaling), size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -157,13 +157,13 @@ class Apodization:
         elif self.apodization_combobox_selection == 2:
             # Have a textcontrol for the g1 value
             self.apodization_g1_label = wx.StaticText(
-                parent, -1, "Inverse Lorentzian (Hz):"
+                self.apodization_box, -1, "Inverse Lorentzian (Hz):"
             )
             self.apodization_sizer.Add(
                 self.apodization_g1_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_g1_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.g1), size=(40, 20)
+                self.apodization_box, -1, str(self.g1), size=(40, 20)
             )
             self.apodization_g1_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -174,13 +174,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the g2 value
             self.apodization_g2_label = wx.StaticText(
-                parent, -1, "Gaussian Broadening (Hz):"
+                self.apodization_box, -1, "Gaussian Broadening (Hz):"
             )
             self.apodization_sizer.Add(
                 self.apodization_g2_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_g2_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.g2), size=(40, 20)
+                self.apodization_box, -1, str(self.g2), size=(40, 20)
             )
             self.apodization_g2_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -190,12 +190,12 @@ class Apodization:
             )
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the g3 value
-            self.apodization_g3_label = wx.StaticText(parent, -1, "Gaussian Shift:")
+            self.apodization_g3_label = wx.StaticText(self.apodization_box, -1, "Gaussian Shift:")
             self.apodization_sizer.Add(
                 self.apodization_g3_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_g3_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.g3), size=(40, 20)
+                self.apodization_box, -1, str(self.g3), size=(40, 20)
             )
             self.apodization_g3_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -206,13 +206,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the first point scaling
             self.apodization_first_point_label = wx.StaticText(
-                parent, -1, "First Point Scaling:"
+                self.apodization_box, -1, "First Point Scaling:"
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.apodization_first_point_scaling), size=(30, 20)
+                self.apodization_box, -1, str(self.apodization_first_point_scaling), size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -221,13 +221,13 @@ class Apodization:
         elif self.apodization_combobox_selection == 3:
             # Have a textcontrol for the offset value
             self.apodization_offset_label = wx.StaticText(
-                parent, -1, "Offset (\u03c0):"
+                self.apodization_box, -1, "Offset (\u03c0):"
             )
             self.apodization_sizer.Add(
                 self.apodization_offset_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_offset_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.offset), size=(40, 20)
+                self.apodization_box, -1, str(self.offset), size=(40, 20)
             )
             self.apodization_offset_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -237,12 +237,12 @@ class Apodization:
             )
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the end value
-            self.apodization_end_label = wx.StaticText(parent, -1, "End (\u03c0):")
+            self.apodization_end_label = wx.StaticText(self.apodization_box, -1, "End (\u03c0):")
             self.apodization_sizer.Add(
                 self.apodization_end_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_end_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.end), size=(40, 20)
+                self.apodization_box, -1, str(self.end), size=(40, 20)
             )
             self.apodization_end_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -252,12 +252,12 @@ class Apodization:
             )
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the power value
-            self.apodization_power_label = wx.StaticText(parent, -1, "Power:")
+            self.apodization_power_label = wx.StaticText(self.apodization_box, -1, "Power:")
             self.apodization_sizer.Add(
                 self.apodization_power_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_power_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.power), size=(30, 20)
+                self.apodization_box, -1, str(self.power), size=(30, 20)
             )
             self.apodization_power_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -268,13 +268,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the first point scaling
             self.apodization_first_point_label = wx.StaticText(
-                parent, -1, "First Point Scaling:"
+                self.apodization_box, -1, "First Point Scaling:"
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.apodization_first_point_scaling), size=(30, 20)
+                self.apodization_box, -1, str(self.apodization_first_point_scaling), size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -283,13 +283,13 @@ class Apodization:
         elif self.apodization_combobox_selection == 4:
             # Have a textcontrol for the a value
             self.apodization_a_label = wx.StaticText(
-                parent, -1, "Line Broadening (Hz):"
+                self.apodization_box, -1, "Line Broadening (Hz):"
             )
             self.apodization_sizer.Add(
                 self.apodization_a_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_a_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.a), size=(40, 20)
+                self.apodization_box, -1, str(self.a), size=(40, 20)
             )
             self.apodization_a_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -300,13 +300,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the b value
             self.apodization_b_label = wx.StaticText(
-                parent, -1, "GB factor (0.0-1.0):"
+                self.apodization_box, -1, "GB factor (0.0-1.0):"
             )
             self.apodization_sizer.Add(
                 self.apodization_b_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_b_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.b), size=(40, 20)
+                self.apodization_box, -1, str(self.b), size=(40, 20)
             )
             self.apodization_b_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -317,13 +317,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the first point scaling
             self.apodization_first_point_label = wx.StaticText(
-                parent, -1, "First Point Scaling:"
+                self.apodization_box, -1, "First Point Scaling:"
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.apodization_first_point_scaling), size=(30, 20)
+                self.apodization_box, -1, str(self.apodization_first_point_scaling), size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -331,12 +331,12 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
         elif self.apodization_combobox_selection == 5:
             # Have a textcontrol for the t1 value
-            self.apodization_t1_label = wx.StaticText(parent, -1, "Ramp up points:")
+            self.apodization_t1_label = wx.StaticText(self.apodization_box, -1, "Ramp up points:")
             self.apodization_sizer.Add(
                 self.apodization_t1_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_t1_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.t1), size=(50, 20)
+                self.apodization_box, -1, str(self.t1), size=(50, 20)
             )
             self.apodization_t1_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -346,12 +346,12 @@ class Apodization:
             )
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the t2 value
-            self.apodization_t2_label = wx.StaticText(parent, -1, "Ramp down points:")
+            self.apodization_t2_label = wx.StaticText(self.apodization_box, -1, "Ramp down points:")
             self.apodization_sizer.Add(
                 self.apodization_t2_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_t2_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.t2), size=(50, 20)
+                self.apodization_box, -1, str(self.t2), size=(50, 20)
             )
             self.apodization_t2_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -362,13 +362,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the first point scaling
             self.apodization_first_point_label = wx.StaticText(
-                parent, -1, "First Point Scaling:"
+                self.apodization_box, -1, "First Point Scaling:"
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.apodization_first_point_scaling), size=(30, 20)
+                self.apodization_box, -1, str(self.apodization_first_point_scaling), size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -377,13 +377,13 @@ class Apodization:
         elif self.apodization_combobox_selection == 6:
             # Have a textcontrol for the loc value
             self.apodization_loc_label = wx.StaticText(
-                parent, -1, "Location of maximum:"
+                self.apodization_box, -1, "Location of maximum:"
             )
             self.apodization_sizer.Add(
                 self.apodization_loc_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_loc_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.loc), size=(40, 20)
+                self.apodization_box, -1, str(self.loc), size=(40, 20)
             )
             self.apodization_loc_textcontrol.Bind(
                 wx.EVT_CHAR_HOOK, self.on_apodization_textcontrol
@@ -394,13 +394,13 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
             # Have a textcontrol for the first point scaling
             self.apodization_first_point_label = wx.StaticText(
-                parent, -1, "First Point Scaling:"
+                self.apodization_box, -1, "First Point Scaling:"
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                parent, -1, "0.5", size=(30, 20)
+                self.apodization_box, -1, "0.5", size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -408,7 +408,7 @@ class Apodization:
             self.apodization_sizer.AddSpacer(10)
 
         # Have a button for information on currently selected apodization containing unicode i in a circle
-        self.apodization_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.apodization_info = wx.Button(self.apodization_box, -1, "\u24d8", size=(25, 32))
         self.apodization_info.Bind(wx.EVT_BUTTON, self.info_buttons.on_apodization_info)
         self.apodization_sizer.Add(self.apodization_info, 0, wx.ALIGN_CENTER_VERTICAL)
 
@@ -627,7 +627,7 @@ class Apodization:
 
     def OnPressWindow(self, event):
         # Create a matplotlib popout of the plot
-        fig = plt.figure(facecolor="white")
+        fig = plt.figure(facecolor="white", figsize=(5,5))
         ax = fig.add_subplot(111)
         ax.set_facecolor("white")
         ax.spines["bottom"].set_color("k")
@@ -661,7 +661,7 @@ class Apodization:
         self.apodization_plot_sizer = wx.BoxSizer(wx.VERTICAL)
         self.apodization_plot = Figure(figsize=(1, 0.5), facecolor="#e5e6e7")
         self.apodization_plot_ax = self.apodization_plot.add_subplot(111)
-        self.apodization_plot_canvas = FigCanvas(self.parent, -1, self.apodization_plot)
+        self.apodization_plot_canvas = FigCanvas(self.apodization_box, -1, self.apodization_plot)
         self.apodization_plot_canvas.mpl_connect(
             "button_press_event", self.OnPressWindow
         )

@@ -98,13 +98,13 @@ class PhasingSliderRange(wx.Frame):
         self.P0_label = wx.StaticBox(self, -1, "P0 range:")
         self.P0_sizer = wx.StaticBoxSizer(self.P0_label, wx.VERTICAL)
         
-        self.coarse_label_p0 = wx.StaticText(self, -1, "Coarse (+/-):")
+        self.coarse_label_p0 = wx.StaticText(self.P0_label, -1, "Coarse (+/-):")
         coarse_range_p0 = self.main_frame.P0_slider.GetMax()
-        self.coarse_box = wx.TextCtrl(self, -1, str(coarse_range_p0))
+        self.coarse_box = wx.TextCtrl(self.P0_label, -1, str(coarse_range_p0))
 
-        self.fine_label_p0 = wx.StaticText(self, -1, "Fine (+/-):")
+        self.fine_label_p0 = wx.StaticText(self.P0_label, -1, "Fine (+/-):")
         fine_range_p0 = self.main_frame.P0_slider_fine.GetMax()
-        self.fine_box = wx.TextCtrl(self, -1, str(fine_range_p0))
+        self.fine_box = wx.TextCtrl(self.P0_label, -1, str(fine_range_p0))
 
         self.p0_row1 = wx.BoxSizer(wx.HORIZONTAL)
         self.p0_row1.Add(self.coarse_label_p0)
@@ -123,13 +123,13 @@ class PhasingSliderRange(wx.Frame):
         self.P1_label = wx.StaticBox(self, -1, "P1 range:")
         self.P1_sizer = wx.StaticBoxSizer(self.P1_label, wx.VERTICAL)
         
-        self.coarse_label_p1 = wx.StaticText(self, -1, "Coarse (+/-):")
+        self.coarse_label_p1 = wx.StaticText(self.P1_label, -1, "Coarse (+/-):")
         coarse_range_p1 = self.main_frame.P1_slider.GetMax()
-        self.coarse_box_p1 = wx.TextCtrl(self, -1, str(coarse_range_p1))
+        self.coarse_box_p1 = wx.TextCtrl(self.P1_label, -1, str(coarse_range_p1))
 
-        self.fine_label_p1 = wx.StaticText(self, -1, "Fine (+/-):")
+        self.fine_label_p1 = wx.StaticText(self.P1_label, -1, "Fine (+/-):")
         fine_range_p1 = self.main_frame.P1_slider_fine.GetMax()
-        self.fine_box_p1 = wx.TextCtrl(self, -1, str(fine_range_p1))
+        self.fine_box_p1 = wx.TextCtrl(self.P1_label, -1, str(fine_range_p1))
 
         self.p1_row1 = wx.BoxSizer(wx.HORIZONTAL)
         self.p1_row1.Add(self.coarse_label_p1)

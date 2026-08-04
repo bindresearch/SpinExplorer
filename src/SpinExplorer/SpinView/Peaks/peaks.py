@@ -87,60 +87,75 @@ class PeakListWindow2D(wx.Frame):
         - buttons to toggle add peak(s), select peak, select region, remove peak(s), move peak(s), find peak
         """
 
-        self.add_peaklist_button = wx.Button(self, label="Add peaklist")
+        self.row1_label = wx.StaticBox(self, -1, "Loading Peaklists:")
+        self.row1 = wx.StaticBoxSizer(self.row1_label, wx.HORIZONTAL)
+
+        self.add_peaklist_button = wx.Button(self.row1_label, label="Add peaklist")
         self.add_peaklist_button.Bind(wx.EVT_BUTTON, self.OnAddPeakList)
 
-        self.peaklist_selection_text = wx.StaticText(self, -1, "Selected Peaklist:")
+        self.peaklist_selection_text = wx.StaticText(self.row1_label, -1, "Selected Peaklist:")
 
         self.current_peaklist_box = wx.ComboBox(
-            self, choices=self.peak_list_choices, size=(250, 20)
+            self.row1_label, choices=self.peak_list_choices, size=(250, 20)
         )
         
         self.current_peaklist_box.Bind(wx.EVT_COMBOBOX, self.OnPeakListSelection)
 
-        self.add_peaks_button = wx.ToggleButton(self, label="Add Peaks (a)")
+
+
+        self.row2_label = wx.StaticBox(
+            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key in brackets)"
+        )
+        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.VERTICAL)
+
+        self.other_box_label = wx.StaticBox(
+            self, -1, "Other options:"
+        )
+        self.other_sizer = wx.StaticBoxSizer(self.other_box_label, wx.HORIZONTAL)
+
+        self.add_peaks_button = wx.ToggleButton(self.row2_label, label="Add Peaks (a)")
         self.add_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddPeaks)
         ID_BUTTON_a = wx.NewIdRef()
 
-        self.select_peak_button = wx.ToggleButton(self, label="Select Peak (s)")
+        self.select_peak_button = wx.ToggleButton(self.row2_label, label="Select Peak (s)")
         self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
         ID_BUTTON_s = wx.NewIdRef()
 
-        self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
+        self.select_peaks_button = wx.ToggleButton(self.row2_label, label="Select Peak Group (g)")
         self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
         ID_BUTTON_g = wx.NewIdRef()
 
-        self.remove_peaks_button = wx.Button(self, label="Remove Peaks (r)")
+        self.remove_peaks_button = wx.Button(self.row2_label, label="Remove Peaks (r)")
         self.remove_peaks_button.Bind(wx.EVT_BUTTON, self.OnRemovePeaks)
         ID_BUTTON_r = wx.NewIdRef()
 
-        self.find_peak_button = wx.Button(self, label="Find Peak (f)")
+        self.find_peak_button = wx.Button(self.row2_label, label="Find Peak (f)")
         self.find_peak_button.Bind(wx.EVT_BUTTON, self.OnFindPeaks)
         ID_BUTTON_f = wx.NewIdRef()
 
-        self.move_peaks_button = wx.ToggleButton(self, label="Move Peaks (m)")
+        self.move_peaks_button = wx.ToggleButton(self.row2_label, label="Move Peaks (m)")
         self.move_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnMovePeaks)
         ID_BUTTON_m = wx.NewIdRef()
 
-        self.include_helper_box = wx.CheckBox(self, -1, 'Show helper dialogs')
+        self.include_helper_box = wx.CheckBox(self.other_box_label, -1, 'Show helper dialogs')
         self.include_helper_box.SetValue(True)
 
 
-        self.hide_peaklist = wx.CheckBox(self, -1, 'Hide Peaklist')
+        self.hide_peaklist = wx.CheckBox(self.other_box_label, -1, 'Hide Peaklist')
         self.hide_peaklist.SetValue(False)
         self.hide_peaklist.Bind(wx.EVT_CHECKBOX, self.OnHidePeaklist)
 
-        self.undo_button = wx.Button(self, label='Undo (u)')
+        self.undo_button = wx.Button(self.other_box_label, label='Undo (u)')
         self.undo_button.Bind(wx.EVT_BUTTON, self.OnUndo)
         ID_BUTTON_u = wx.NewIdRef()
 
 
-        self.move_to_local_max = wx.Button(self, label='Move to local max (k)')
+        self.move_to_local_max = wx.Button(self.row2_label, label='Move to local max (k)')
         self.move_to_local_max.Bind(wx.EVT_BUTTON, self.OnFindLocalMaximum)
         ID_BUTTON_k = wx.NewIdRef()
 
 
-        self.fit_selected_peaks_button = wx.Button(self, label='Fit Selected Peaks (p)')
+        self.fit_selected_peaks_button = wx.Button(self.row2_label, label='Fit Selected Peaks (p)')
         self.fit_selected_peaks_button.Bind(wx.EVT_BUTTON, self.OnFitSelectedPeaks)
         ID_BUTTON_p = wx.NewIdRef()
 
@@ -183,35 +198,33 @@ class PeakListWindow2D(wx.Frame):
         self.main_frame.Bind(wx.EVT_MENU, self.OnUndo, id=ID_BUTTON_u)
         self.main_frame.Bind(wx.EVT_MENU, self.OnFitSelectedPeaks, id=ID_BUTTON_p)
 
-        self.save_peaks_button = wx.Button(self, label="Save")
+        self.save_peaks_button = wx.Button(self.other_box_label, label="Save")
         self.save_peaks_button.Bind(wx.EVT_BUTTON, self.OnSave)
 
-        self.duplicate_peaklist_button = wx.Button(self, label="Duplicate Peaklist")
+        self.duplicate_peaklist_button = wx.Button(self.other_box_label, label="Duplicate Peaklist")
         self.duplicate_peaklist_button.Bind(wx.EVT_BUTTON, self.OnDuplicatePeaklist)
 
-        self.row1_label = wx.StaticBox(self, -1, "Loading Peaklists:")
-        self.row1 = wx.StaticBoxSizer(self.row1_label, wx.HORIZONTAL)
 
         self.row_pickpeaks_label = wx.StaticBox(self, -1, "Peak Picking (nmrglue) - performed on the current selected dataset:")
         self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.VERTICAL)
 
-        self.peak_picking_threshold_text = wx.StaticText(self,-1,"Threshold (% of maximum):")
-        self.peak_picking_threshold_box = wx.TextCtrl(self,value='10.0',
+        self.peak_picking_threshold_text = wx.StaticText(self.row_pickpeaks_label,-1,"Threshold (% of maximum):")
+        self.peak_picking_threshold_box = wx.TextCtrl(self.row_pickpeaks_label,value='10.0',
                 size=(50, 20))
         
-        self.peak_picking_type_text = wx.StaticText(self,-1,"Option:")
+        self.peak_picking_type_text = wx.StaticText(self.row_pickpeaks_label,-1,"Option:")
         types = ['Positive Peaks', 'Negative Peaks', 'Positive + Negative Peaks']
-        self.peak_picking_type = wx.ComboBox(self, choices = types, style=wx.CB_READONLY)
+        self.peak_picking_type = wx.ComboBox(self.row_pickpeaks_label, choices = types, style=wx.CB_READONLY)
         
-        self.peak_picking_algorithm_text = wx.StaticText(self,-1,"Algorithm:")
+        self.peak_picking_algorithm_text = wx.StaticText(self.row_pickpeaks_label,-1,"Algorithm:")
         algorithms = ['thres', 'thres-fast', 'downward', 'connected']
-        self.peak_picking_algorithm_box = wx.ComboBox(self, choices=algorithms, style=wx.CB_READONLY)
+        self.peak_picking_algorithm_box = wx.ComboBox(self.row_pickpeaks_label, choices=algorithms, style=wx.CB_READONLY)
 
-        self.peaklist_name_text = wx.StaticText(self,-1,"Peaklist name:")
-        self.peaklist_name_box = wx.TextCtrl(self,value='peaks_nmrglue.list',
+        self.peaklist_name_text = wx.StaticText(self.row_pickpeaks_label,-1,"Peaklist name:")
+        self.peaklist_name_box = wx.TextCtrl(self.row_pickpeaks_label,value='peaks_nmrglue.list',
                 size=(200, 20))
 
-        self.peak_pick_button = wx.Button(self, label='Peak Pick')
+        self.peak_pick_button = wx.Button(self.row_pickpeaks_label, label='Peak Pick')
         self.peak_pick_button.Bind(wx.EVT_BUTTON, self.OnPickPeaks)
 
         self.row_pickpeaks1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -247,10 +260,6 @@ class PeakListWindow2D(wx.Frame):
         self.row1.AddSpacer(5)
         self.row1.Add(self.current_peaklist_box)
 
-        self.row2_label = wx.StaticBox(
-            self, -1, "Manipulate Peaklists: (shorcuts for Mac - Command+key in brackets)"
-        )
-        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.VERTICAL)
         self.row2_1 = wx.BoxSizer(wx.HORIZONTAL)
 
         self.row2_1.AddSpacer(5)
@@ -280,10 +289,6 @@ class PeakListWindow2D(wx.Frame):
         self.row2.Add(self.row2_2, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
 
 
-        self.other_box_label = wx.StaticBox(
-            self, -1, "Other options:"
-        )
-        self.other_sizer = wx.StaticBoxSizer(self.other_box_label, wx.HORIZONTAL)
 
         self.other_sizer.Add(self.include_helper_box)
         self.other_sizer.AddSpacer(10)
@@ -300,12 +305,12 @@ class PeakListWindow2D(wx.Frame):
         )
         self.analysis_sizer = wx.StaticBoxSizer(self.analysis_sizer_label, wx.HORIZONTAL)
 
-        self.peaklist1_text = wx.StaticText(self, -1, label = 'Peaklist 1:')
-        self.select_peaklist1 = wx.ComboBox(self, choices=self.peak_list_choices, size=(250, 20))
-        self.peaklist2_text = wx.StaticText(self, -1, label = 'Peaklist 2:')
-        self.select_peaklist2 = wx.ComboBox(self, choices=self.peak_list_choices, size=(250, 20))
+        self.peaklist1_text = wx.StaticText(self.analysis_sizer_label, -1, label = 'Peaklist 1:')
+        self.select_peaklist1 = wx.ComboBox(self.analysis_sizer_label, choices=self.peak_list_choices, size=(250, 20))
+        self.peaklist2_text = wx.StaticText(self.analysis_sizer_label, -1, label = 'Peaklist 2:')
+        self.select_peaklist2 = wx.ComboBox(self.analysis_sizer_label, choices=self.peak_list_choices, size=(250, 20))
 
-        self.analyse_button = wx.Button(self, label="Plot CSPs + Intensities")
+        self.analyse_button = wx.Button(self.analysis_sizer_label, label="Plot CSPs + Intensities")
         self.analyse_button.Bind(wx.EVT_BUTTON, self.OnAnalyse)
 
         self.analysis_sizer.AddSpacer(5)
@@ -344,7 +349,10 @@ class PeakListWindow2D(wx.Frame):
 
         # Then have a table of the currently loaded peaklist (originally blank)
 
-        self.grid = gridlib.Grid(self)
+        self.row3_label = wx.StaticBox(self, -1, "Peaklist Table:")
+        self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
+
+        self.grid = gridlib.Grid(self.row3_label)
         self.grid.CreateGrid(5, 4)
 
         self.grid.SetColLabelValue(0, "Peak name")
@@ -356,8 +364,7 @@ class PeakListWindow2D(wx.Frame):
         self.grid.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.on_begin_edit)
         self.grid.Bind(gridlib.EVT_GRID_CELL_CHANGED, self.on_cell_changed)
 
-        self.row3_label = wx.StaticBox(self, -1, "Peaklist Table:")
-        self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
+        
         self.row3.Add(self.grid, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
         self.main_peaklist_sizer.AddSpacer(10)
         self.main_peaklist_sizer.Add(self.row3, 1, wx.EXPAND | wx.ALL, 5)
@@ -2357,15 +2364,23 @@ class PeakListWindow3D(wx.Frame):
             self, -1, value='', size=(250, 20), style = wx.TE_READONLY
         )
 
-        self.add_peaks_button = wx.ToggleButton(self, label="Add Peaks (a)")
+
+        self.row2_label = wx.StaticBox(
+            self,
+            -1,
+            "Manipulate Peaklists: (shorcuts for Mac - cmd+key)",
+        )
+        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
+
+        self.add_peaks_button = wx.ToggleButton(self.row2_label, label="Add Peaks (a)")
         self.add_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddPeaks)
         ID_BUTTON_a = wx.NewIdRef()
 
-        self.select_peak_button = wx.ToggleButton(self, label="Select Peak (s)")
+        self.select_peak_button = wx.ToggleButton(self.row2_label, label="Select Peak (s)")
         self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
         ID_BUTTON_s = wx.NewIdRef()
 
-        self.add_borepeak_button = wx.ToggleButton(self, label="Add Bore Peak (b)")
+        self.add_borepeak_button = wx.ToggleButton(self.row2_label, label="Add Bore Peak (b)")
         self.add_borepeak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddBorePeak)
         ID_BUTTON_b = wx.NewIdRef()
 
@@ -2373,19 +2388,19 @@ class PeakListWindow3D(wx.Frame):
         # self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
         # ID_BUTTON_g = wx.NewIdRef()
 
-        self.remove_peaks_button = wx.Button(self, label="Remove Peaks (r)")
+        self.remove_peaks_button = wx.Button(self.row2_label, label="Remove Peaks (r)")
         self.remove_peaks_button.Bind(wx.EVT_BUTTON, self.OnRemovePeaks)
         ID_BUTTON_r = wx.NewIdRef()
 
-        self.find_peak_button = wx.Button(self, label="Find Peak (f)")
+        self.find_peak_button = wx.Button(self.row2_label, label="Find Peak (f)")
         self.find_peak_button.Bind(wx.EVT_BUTTON, self.OnFindPeaks)
         ID_BUTTON_f = wx.NewIdRef()
 
-        self.move_peaks_button = wx.ToggleButton(self, label="Move Peak x/y (m)")
+        self.move_peaks_button = wx.ToggleButton(self.row2_label, label="Move Peak x/y (m)")
         self.move_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnMovePeak)
         ID_BUTTON_m = wx.NewIdRef()
 
-        self.move_peaks_bore_button = wx.ToggleButton(self, label="Move Peak z (z)")
+        self.move_peaks_bore_button = wx.ToggleButton(self.row2_label, label="Move Peak z (z)")
         self.move_peaks_bore_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnMovePeakz)
         ID_BUTTON_z = wx.NewIdRef()
 
@@ -2419,15 +2434,9 @@ class PeakListWindow3D(wx.Frame):
         self.main_frame.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
         self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
 
-        self.save_peaks_button = wx.Button(self, label="Save")
+        self.save_peaks_button = wx.Button(self.row2_label, label="Save")
         self.save_peaks_button.Bind(wx.EVT_BUTTON, self.OnSave)
 
-        self.row2_label = wx.StaticBox(
-            self,
-            -1,
-            "Manipulate Peaklists: (shorcuts for Mac - cmd+key)",
-        )
-        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
 
         self.row2.AddSpacer(5)
         self.row2.Add(self.add_peaks_button)
@@ -2450,26 +2459,26 @@ class PeakListWindow3D(wx.Frame):
         self.row_pickpeaks_label = wx.StaticBox(self, -1, "Peak Picking (nmrglue):")
         self.row_pickpeaks = wx.StaticBoxSizer(self.row_pickpeaks_label, wx.VERTICAL)
 
-        self.peak_picking_threshold_text = wx.StaticText(self,-1,"Threshold (% of maximum):")
-        self.peak_picking_threshold_box = wx.TextCtrl(self,value='10.0',
+        self.peak_picking_threshold_text = wx.StaticText(self.row_pickpeaks_label,-1,"Threshold (% of maximum):")
+        self.peak_picking_threshold_box = wx.TextCtrl(self.row_pickpeaks_label,value='10.0',
                 size=(30, 20))
         
-        self.peak_picking_type_text = wx.StaticText(self,-1,"Option:")
+        self.peak_picking_type_text = wx.StaticText(self.row_pickpeaks_label,-1,"Option:")
         types = ['Positive Peaks', 'Negative Peaks', 'Positive + Negative Peaks']
-        self.peak_picking_type = wx.ComboBox(self, choices = types, style=wx.CB_READONLY)
+        self.peak_picking_type = wx.ComboBox(self.row_pickpeaks_label, choices = types, style=wx.CB_READONLY)
         
-        self.peak_picking_algorithm_text = wx.StaticText(self,-1,"Algorithm:")
+        self.peak_picking_algorithm_text = wx.StaticText(self.row_pickpeaks_label,-1,"Algorithm:")
         algorithms = ['thres', 'thres-fast', 'downward', 'connected']
-        self.peak_picking_algorithm_box = wx.ComboBox(self, choices=algorithms, style=wx.CB_READONLY)
+        self.peak_picking_algorithm_box = wx.ComboBox(self.row_pickpeaks_label, choices=algorithms, style=wx.CB_READONLY)
 
-        self.reference_plane_button = wx.ToggleButton(self,-1,"Load reference plane (optional)")
+        self.reference_plane_button = wx.ToggleButton(self.row_pickpeaks_label,-1,"Load reference plane (optional)")
         self.reference_plane_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnLoadReferencePlane)
 
-        self.peaklist_name_text = wx.StaticText(self,-1,"Peaklist name:")
-        self.peaklist_name_box = wx.TextCtrl(self,value='peaks_nmrglue.list',
+        self.peaklist_name_text = wx.StaticText(self.row_pickpeaks_label,-1,"Peaklist name:")
+        self.peaklist_name_box = wx.TextCtrl(self.row_pickpeaks_label,value='peaks_nmrglue.list',
                 size=(200, 20))
 
-        self.peak_pick_button = wx.Button(self, label='Peak Pick')
+        self.peak_pick_button = wx.Button(self.row_pickpeaks_label, label='Peak Pick')
         self.peak_pick_button.Bind(wx.EVT_BUTTON, self.OnPickPeaks)
 
 
@@ -2527,7 +2536,10 @@ class PeakListWindow3D(wx.Frame):
 
         # Then have a table of the currently loaded peaklist (originally blank)
 
-        self.grid = gridlib.Grid(self)
+        self.row3_label = wx.StaticBox(self, -1, "Peaklist Table:")
+        self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
+
+        self.grid = gridlib.Grid(self.row3_label)
         self.grid.CreateGrid(5, 5)
 
         self.grid.SetColLabelValue(0, "Peak name")
@@ -2540,8 +2552,7 @@ class PeakListWindow3D(wx.Frame):
         self.grid.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.on_begin_edit)
         self.grid.Bind(gridlib.EVT_GRID_CELL_CHANGED, self.on_cell_changed)
 
-        self.row3_label = wx.StaticBox(self, -1, "Peaklist Table:")
-        self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
+        
         self.row3.Add(self.grid, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
         self.main_peaklist_sizer.AddSpacer(10)
         self.main_peaklist_sizer.Add(self.row3, 1, wx.EXPAND | wx.ALL, 5)

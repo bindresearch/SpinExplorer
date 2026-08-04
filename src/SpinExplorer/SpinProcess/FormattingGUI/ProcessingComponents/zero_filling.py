@@ -70,7 +70,7 @@ class ZeroFilling:
         self.zero_filling_sizer = wx.StaticBoxSizer(
             self.zero_filling_box, wx.HORIZONTAL
         )
-        self.zero_filling_checkbox = wx.CheckBox(parent, -1, "Apply zero filling")
+        self.zero_filling_checkbox = wx.CheckBox(self.zero_filling_box, -1, "Apply zero filling")
         self.zero_filling_checkbox.SetValue(self.zero_filling_checkbox_value)
         self.zero_filling_checkbox.Bind(wx.EVT_CHECKBOX, self.on_zero_filling_checkbox)
         self.zero_filling_sizer.Add(
@@ -78,7 +78,7 @@ class ZeroFilling:
         )
         self.zero_filling_sizer.AddSpacer(10)
         # Have a combobox for zero filling options
-        self.zf_options_label = wx.StaticText(parent, -1, "Options:")
+        self.zf_options_label = wx.StaticText(self.zero_filling_box, -1, "Options:")
         self.zero_filling_sizer.Add(self.zf_options_label, 0, wx.ALIGN_CENTER_VERTICAL)
         self.zero_filling_sizer.AddSpacer(5)
         self.zero_filling_options = [
@@ -87,7 +87,7 @@ class ZeroFilling:
             "Final data size",
         ]
         self.zero_filling_combobox = wx.ComboBox(
-            parent, -1, choices=self.zero_filling_options, style=wx.CB_READONLY
+            self.zero_filling_box, -1, choices=self.zero_filling_options, style=wx.CB_READONLY
         )
         self.zero_filling_combobox.Bind(wx.EVT_COMBOBOX, self.on_zero_filling_combobox)
         self.zero_filling_combobox.SetSelection(self.zero_filling_combobox_selection)
@@ -97,13 +97,13 @@ class ZeroFilling:
         self.zero_filling_sizer.AddSpacer(10)
         if self.zero_filling_combobox_selection == 0:
             # Have a textcontrol for the doubling number/number of zeros/final data size
-            self.zf_value_label = wx.StaticText(parent, -1, "Doubling number:")
+            self.zf_value_label = wx.StaticText(self.zero_filling_box, -1, "Doubling number:")
             self.zero_filling_sizer.Add(
                 self.zf_value_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
 
             self.zero_filling_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.zero_filling_value_doubling_times), size=(40, 20)
+                self.zero_filling_box, -1, str(self.zero_filling_value_doubling_times), size=(40, 20)
             )
             self.zero_filling_textcontrol.Bind(
                 wx.EVT_TEXT, self.on_zero_filling_textcontrol_doubling_times
@@ -115,13 +115,13 @@ class ZeroFilling:
             self.zero_filling_sizer.AddSpacer(20)
         elif self.zero_filling_combobox_selection == 1:
             # Have a textcontrol for the doubling number/number of zeros/final data size
-            self.zf_value_label = wx.StaticText(parent, -1, "Number of zeros to add:")
+            self.zf_value_label = wx.StaticText(self.zero_filling_box, -1, "Number of zeros to add:")
             self.zero_filling_sizer.Add(
                 self.zf_value_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
 
             self.zero_filling_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.zero_filling_value_zeros_to_add), size=(40, 20)
+                self.zero_filling_box, -1, str(self.zero_filling_value_zeros_to_add), size=(40, 20)
             )
             self.zero_filling_textcontrol.Bind(
                 wx.EVT_TEXT, self.on_zero_filling_textcontrol_zeros_to_add
@@ -133,13 +133,13 @@ class ZeroFilling:
             self.zero_filling_sizer.AddSpacer(20)
         elif self.zero_filling_combobox_selection == 2:
             # Have a textcontrol for the doubling number/number of zeros/final data size
-            self.zf_value_label = wx.StaticText(parent, -1, "Final data size:")
+            self.zf_value_label = wx.StaticText(self.zero_filling_box, -1, "Final data size:")
             self.zero_filling_sizer.Add(
                 self.zf_value_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
 
             self.zero_filling_textcontrol = wx.TextCtrl(
-                parent, -1, str(self.zero_filling_value_final_data_size), size=(40, 20)
+                self.zero_filling_box, -1, str(self.zero_filling_value_final_data_size), size=(40, 20)
             )
             self.zero_filling_textcontrol.Bind(
                 wx.EVT_TEXT, self.on_zero_filling_textcontrol_final_size
@@ -152,7 +152,7 @@ class ZeroFilling:
 
         # Have a checkbox for rounding to the nearest power of 2
         self.zero_filling_round_checkbox = wx.CheckBox(
-            parent, -1, "Round to nearest power of 2"
+            self.zero_filling_box, -1, "Round to nearest power of 2"
         )
         self.zero_filling_round_checkbox.SetValue(True)
         self.zero_filling_sizer.Add(
@@ -161,7 +161,7 @@ class ZeroFilling:
         self.zero_filling_sizer.AddSpacer(10)
 
         # Have a button showing information on zero filling
-        self.zero_filling_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.zero_filling_info = wx.Button(self.zero_filling_box, -1, "\u24d8", size=(25, 32))
         self.zero_filling_info.Bind(wx.EVT_BUTTON, self.info_buttons.on_zero_fill_info)
         self.zero_filling_sizer.Add(self.zero_filling_info, 0, wx.ALIGN_CENTER_VERTICAL)
         self.zero_filling_sizer.AddSpacer(10)

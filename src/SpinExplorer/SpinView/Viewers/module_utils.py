@@ -26,16 +26,16 @@ class InputROI(wx.Frame):
 
         self.row = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.min_text = wx.StaticText(self,-1,'Min:')
+        self.min_text = wx.StaticText(self.input_ROI_label,-1,'Min:')
 
         self.min_box = wx.TextCtrl(
-            self, -1, value='', size=(100,20), 
+            self.input_ROI_label, -1, value='', size=(100,20), 
         )
 
-        self.max_text = wx.StaticText(self,-1,'Max:')
+        self.max_text = wx.StaticText(self.input_ROI_label,-1,'Max:')
 
         self.max_box = wx.TextCtrl(
-            self, -1, value='', size=(100,20), 
+            self.input_ROI_label, -1, value='', size=(100,20), 
         )
 
         self.row.AddSpacer(10)
@@ -51,7 +51,7 @@ class InputROI(wx.Frame):
         self.input_ROI_sizer.AddSpacer(10)
         self.input_ROI_sizer.Add(self.row, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
-        self.save_region_button = wx.Button(self, -1, "Add ROI")
+        self.save_region_button = wx.Button(self.input_ROI_label, -1, "Add ROI")
 
         self.save_region_button.Bind(wx.EVT_BUTTON, self.OnSaveRegion)
 
@@ -127,13 +127,13 @@ class DelaysManualInput(wx.Frame):
             label = ""
 
         self.delay_box = wx.TextCtrl(
-            self, -1, value=label, size=(250, 400), style=wx.TE_MULTILINE
+            self.input_delays_label, -1, value=label, size=(250, 400), style=wx.TE_MULTILINE
         )
         self.input_delays_sizer.AddSpacer(3)
         self.input_delays_sizer.Add(self.delay_box)
         self.input_delays_sizer.AddSpacer(10)
 
-        self.save_delays_button = wx.Button(self, -1, "Save delays")
+        self.save_delays_button = wx.Button(self.input_delays_label, -1, "Save delays")
 
         self.save_delays_button.Bind(wx.EVT_BUTTON, self.OnSaveDelays)
 
@@ -252,13 +252,13 @@ class GradientsManualTextInput(wx.Frame):
             label = ""
 
         self.gradient_box = wx.TextCtrl(
-            self, -1, value=label, size=(250, 400), style=wx.TE_MULTILINE
+            self.input_gradient_text_label, -1, value=label, size=(250, 400), style=wx.TE_MULTILINE
         )
         self.input_gradient_text_sizer.AddSpacer(3)
         self.input_gradient_text_sizer.Add(self.gradient_box)
         self.input_gradient_text_sizer.AddSpacer(10)
 
-        self.save_gradients_button = wx.Button(self, -1, "Save gradients")
+        self.save_gradients_button = wx.Button(self.input_gradient_text_label, -1, "Save gradients")
 
         self.save_gradients_button.Bind(wx.EVT_BUTTON, self.OnSaveGradients)
 
@@ -470,71 +470,71 @@ class DiffusionGradientManualInput(wx.Frame):
         )
         self.gradient_input_sizer.AddSpacer(5)
         # TextCtrl for number of gradient values used
-        self.number_of_gradients_label = wx.StaticText(self, -1, "Number of Gradients:")
+        self.number_of_gradients_label = wx.StaticText(self.gradient_input_sizer_label, -1, "Number of Gradients:")
         self.gradient_input_sizer.Add(self.number_of_gradients_label)
         self.gradient_input_sizer.AddSpacer(5)
         self.number_of_gradients = int(len(self.main_frame.y_data))
         self.number_of_gradients_box = wx.TextCtrl(
-            self, -1, str(self.number_of_gradients), size=(50, -1)
+            self.gradient_input_sizer_label, -1, str(self.number_of_gradients), size=(50, -1)
         )
         self.gradient_input_sizer.Add(self.number_of_gradients_box)
         self.gradient_input_sizer.AddSpacer(5)
 
         if self.spectrometer == "Bruker":
             # TextCtrl for minimum gradient percentage
-            self.min_gradient_label = wx.StaticText(self, -1, "Min Gradient (%):")
+            self.min_gradient_label = wx.StaticText(self.gradient_input_sizer_label, -1, "Min Gradient (%):")
             self.gradient_input_sizer.Add(self.min_gradient_label)
             self.gradient_input_sizer.AddSpacer(5)
             self.min_gradient_box = wx.TextCtrl(
-                self, -1, str(self.min_gradient_percent), size=(50, -1)
+                self.gradient_input_sizer_label, -1, str(self.min_gradient_percent), size=(50, -1)
             )
             self.gradient_input_sizer.Add(self.min_gradient_box)
             self.gradient_input_sizer.AddSpacer(5)
 
             # TextCtrl for maximum gradient percentage
-            self.max_gradient_label = wx.StaticText(self, -1, "Max Gradient (%):")
+            self.max_gradient_label = wx.StaticText(self.gradient_input_sizer_label, -1, "Max Gradient (%):")
             self.gradient_input_sizer.Add(self.max_gradient_label)
             self.gradient_input_sizer.AddSpacer(5)
             self.max_gradient_box = wx.TextCtrl(
-                self, -1, str(self.max_gradient_percent), size=(50, -1)
+                self.gradient_input_sizer_label, -1, str(self.max_gradient_percent), size=(50, -1)
             )
             self.gradient_input_sizer.Add(self.max_gradient_box)
             self.gradient_input_sizer.AddSpacer(5)
         else:
             # TextCtrl for minimum gradient DAC value
-            self.min_gradient_label = wx.StaticText(self, -1, "Min Gradient (DAC):")
+            self.min_gradient_label = wx.StaticText(self.gradient_input_sizer_label, -1, "Min Gradient (DAC):")
             self.gradient_input_sizer.Add(self.min_gradient_label)
             self.gradient_input_sizer.AddSpacer(5)
             self.min_gradient_box = wx.TextCtrl(
-                self, -1, str(self.min_gradient_DAC), size=(50, -1)
+                self.gradient_input_sizer_label, -1, str(self.min_gradient_DAC), size=(50, -1)
             )
             self.gradient_input_sizer.Add(self.min_gradient_box)
             self.gradient_input_sizer.AddSpacer(5)
 
             # TextCtrl for maximum gradient DAC value
-            self.max_gradient_label = wx.StaticText(self, -1, "Max Gradient (DAC):")
+            self.max_gradient_label = wx.StaticText(self.gradient_input_sizer_label, -1, "Max Gradient (DAC):")
             self.gradient_input_sizer.Add(self.max_gradient_label)
             self.gradient_input_sizer.AddSpacer(5)
             self.max_gradient_box = wx.TextCtrl(
-                self, -1, str(self.max_gradient_DAC), size=(50, -1)
+                self.gradient_input_sizer_label, -1, str(self.max_gradient_DAC), size=(50, -1)
             )
             self.gradient_input_sizer.Add(self.max_gradient_box)
             self.gradient_input_sizer.AddSpacer(5)
 
         # RadioBox for gradient distribution
-        self.gradient_distribution_label = wx.StaticText(self, -1, "Gradient Spacing:")
+        self.gradient_distribution_label = wx.StaticText(self.gradient_input_sizer_label, -1, "Gradient Spacing:")
         self.gradient_input_sizer.Add(self.gradient_distribution_label)
         self.gradient_input_sizer.AddSpacer(5)
         self.gradient_distribution_choices = ["linear", "squared", "exponential"]
         self.gradient_distribution_radiobox = wx.RadioBox(
-            self, -1, choices=self.gradient_distribution_choices, style=wx.RA_VERTICAL
+            self.gradient_input_sizer_label, -1, choices=self.gradient_distribution_choices, style=wx.RA_VERTICAL
         )
         self.gradient_distribution_radiobox.SetSelection(1)
         self.gradient_input_sizer.Add(self.gradient_distribution_radiobox)
         self.gradient_input_sizer.AddSpacer(5)
 
         # Button to confirm input
-        self.confirm_button = wx.Button(self, -1, "Calculate")
+        self.confirm_button = wx.Button(self.gradient_input_sizer_label, -1, "Calculate")
         if self.spectrometer == "Bruker":
             self.confirm_button.Bind(wx.EVT_BUTTON, self.OnCalculateGradientsBruker)
         else:
@@ -854,13 +854,13 @@ class DiffusionGradientManualInput(wx.Frame):
             label = ""
 
         self.gradient_box = wx.TextCtrl(
-            self, -1, value=label, size=(250, 235), style=wx.TE_MULTILINE
+            self.input_gradient_text_label, -1, value=label, size=(250, 235), style=wx.TE_MULTILINE
         )
         self.input_gradient_text_sizer.AddSpacer(3)
         self.input_gradient_text_sizer.Add(self.gradient_box)
         self.input_gradient_text_sizer.AddSpacer(10)
 
-        self.save_gradients_button = wx.Button(self, -1, "Save gradients")
+        self.save_gradients_button = wx.Button(self.input_gradient_text_label, -1, "Save gradients")
 
         self.save_gradients_button.Bind(wx.EVT_BUTTON, self.OnSaveGradients)
 

@@ -227,10 +227,10 @@ class CESTFrame(wx.Frame):
         self.CEST_ppm_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # ppm min value
-        self.CEST_ppm_min_label = wx.StaticText(self, -1, "Min ppm:")
+        self.CEST_ppm_min_label = wx.StaticText(self.CEST_ppm_range_label, -1, "Min ppm:")
         self.min_val = min(self.main_frame.ppms_1)
         self.CEST_ppm_min_text = wx.TextCtrl(
-            self, -1, str(self.min_val), style=wx.TE_PROCESS_ENTER
+            self.CEST_ppm_range_label, -1, str(self.min_val), style=wx.TE_PROCESS_ENTER
         )
         self.CEST_ppm_min_text.Bind(wx.EVT_TEXT_ENTER, self.OnCEST_ppm_change)
         self.CEST_ppm_sizer.Add(self.CEST_ppm_min_label, wx.ALIGN_CENTER)
@@ -238,10 +238,10 @@ class CESTFrame(wx.Frame):
         self.CEST_ppm_sizer.Add(self.CEST_ppm_min_text)
 
         # ppm max value
-        self.CEST_ppm_max_label = wx.StaticText(self, -1, "Max ppm:")
+        self.CEST_ppm_max_label = wx.StaticText(self.CEST_ppm_range_label, -1, "Max ppm:")
         self.max_val = max(self.main_frame.ppms_1)
         self.CEST_ppm_max_text = wx.TextCtrl(
-            self, -1, str(self.max_val), style=wx.TE_PROCESS_ENTER
+            self.CEST_ppm_range_label, -1, str(self.max_val), style=wx.TE_PROCESS_ENTER
         )
         self.CEST_ppm_max_text.Bind(wx.EVT_TEXT_ENTER, self.OnCEST_ppm_change)
         self.CEST_ppm_sizer.AddSpacer(10)

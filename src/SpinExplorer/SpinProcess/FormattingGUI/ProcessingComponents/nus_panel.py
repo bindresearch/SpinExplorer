@@ -111,7 +111,7 @@ class NonUniformSampling:
 
         # Have a radiobox for None, Linear Prediction and SMILE NUS Reconstruction
         self.linear_prediction_radio_box_indirect = wx.RadioBox(
-            parent,
+            self.linear_prediction_sizer_indirect_label,
             -1,
             "",
             choices=["None", "Linear Prediction", "SMILE NUS Reconstruction", "SpinExplorer IST NUS Reconstruction"],
@@ -132,7 +132,7 @@ class NonUniformSampling:
         if self.linear_prediction_radio_box_indirect.GetSelection() == 1:
             # Have a combobox for linear prediction options
             self.linear_prediction_options_text = wx.StaticText(
-                parent, -1, "Add Predicted Points:"
+                self.linear_prediction_sizer_indirect_label, -1, "Add Predicted Points:"
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.linear_prediction_options_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -140,7 +140,7 @@ class NonUniformSampling:
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.linear_prediction_options = ["After FID", "Before FID"]
             self.linear_prediction_combobox_indirect = wx.ComboBox(
-                parent, -1, choices=self.linear_prediction_options, style=wx.CB_READONLY
+                self.linear_prediction_sizer_indirect_label, -1, choices=self.linear_prediction_options, style=wx.CB_READONLY
             )
             self.linear_prediction_combobox_indirect.SetSelection(
                 self.linear_prediction_indirect_options_selection
@@ -154,7 +154,7 @@ class NonUniformSampling:
             self.linear_prediction_sizer_indirect.AddSpacer(10)
             # Have a combobox of predicted coefficient options
             self.linear_prediction_coefficients_text = wx.StaticText(
-                parent, -1, "Predicted Coefficients:"
+                self.linear_prediction_sizer_indirect_label, -1, "Predicted Coefficients:"
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.linear_prediction_coefficients_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -166,7 +166,7 @@ class NonUniformSampling:
                 "Both",
             ]
             self.linear_prediction_coefficients_combobox_indirect = wx.ComboBox(
-                parent,
+                self.linear_prediction_sizer_indirect_label,
                 -1,
                 choices=self.linear_prediction_coefficients_options,
                 style=wx.CB_READONLY,
@@ -188,14 +188,14 @@ class NonUniformSampling:
             # Have a set of options for SMILE NUS processing
 
             # NUS file
-            self.smile_nus_file_text = wx.StaticText(parent, -1, "NUS File:")
+            self.smile_nus_file_text = wx.StaticText(self.linear_prediction_sizer_indirect_label, -1, "NUS File:")
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_file_text, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
 
             self.smile_nus_file_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, self.nuslist_name_indirect, size=(100, 20)
+                self.linear_prediction_sizer_indirect_label, -1, self.nuslist_name_indirect, size=(100, 20)
             )
             self.smile_nus_file_textcontrol_indirect.Bind(
                 wx.EVT_TEXT, self.on_smile_nus_file_textcontrol_indirect
@@ -208,13 +208,13 @@ class NonUniformSampling:
 
 
             # Number of points to add to the data
-            self.smile_nus_extension_text = wx.StaticText(parent, -1, "Data extension:")
+            self.smile_nus_extension_text = wx.StaticText(self.linear_prediction_sizer_indirect_label, -1, "Data extension:")
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_extension_text, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.smile_nus_extension_textcontrol_indirect = wx.TextCtrl(
-                parent,
+                self.linear_prediction_sizer_indirect_label,
                 -1,
                 str(self.smile_data_extension_number_indirect),
                 size=(50, 20), style=wx.TE_PROCESS_ENTER
@@ -230,13 +230,13 @@ class NonUniformSampling:
             self.linear_prediction_sizer_indirect.AddSpacer(10)
 
             # Number of CPU's
-            self.smile_nus_cpu_text = wx.StaticText(parent, -1, "Number of CPU's:")
+            self.smile_nus_cpu_text = wx.StaticText(self.linear_prediction_sizer_indirect_label, -1, "Number of CPU's:")
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_cpu_text, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.smile_nus_cpu_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, str(self.number_of_nus_CPU_indirect), size=(30, 20), style=wx.TE_PROCESS_ENTER
+                self.linear_prediction_sizer_indirect_label, -1, str(self.number_of_nus_CPU_indirect), size=(30, 20), style=wx.TE_PROCESS_ENTER
             )
             self.smile_nus_cpu_textcontrol_indirect.Bind(
                 wx.EVT_TEXT_ENTER, self.on_smile_nus_cpu_textcontrol_indirect
@@ -248,14 +248,14 @@ class NonUniformSampling:
 
             # Number of iterations
             self.smile_nus_iterations_text = wx.StaticText(
-                parent, -1, "Number of Iterations:"
+                self.linear_prediction_sizer_indirect_label, -1, "Number of Iterations:"
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_iterations_text, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.smile_nus_iterations_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, str(self.nus_iterations_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
+                self.linear_prediction_sizer_indirect_label, -1, str(self.nus_iterations_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
             )
             self.smile_nus_iterations_textcontrol_indirect.Bind(
                 wx.EVT_TEXT_ENTER, self.on_smile_nus_iterations_textcontrol_indirect
@@ -271,14 +271,14 @@ class NonUniformSampling:
 
 
             # NUS file
-            self.ist_nus_file_text = wx.StaticText(parent, -1, "NUS File:")
+            self.ist_nus_file_text = wx.StaticText(self.linear_prediction_sizer_indirect_label, -1, "NUS File:")
             self.linear_prediction_sizer_indirect.Add(
                 self.ist_nus_file_text, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
 
             self.ist_nus_file_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, self.nuslist_name_indirect, size=(100, 20), style=wx.TE_PROCESS_ENTER
+                self.linear_prediction_sizer_indirect_label, -1, self.nuslist_name_indirect, size=(100, 20), style=wx.TE_PROCESS_ENTER
             )
             self.ist_nus_file_textcontrol_indirect.Bind(
                 wx.EVT_TEXT_ENTER, self.on_ist_nus_file_textcontrol_indirect
@@ -291,13 +291,13 @@ class NonUniformSampling:
 
 
             # Number of points to add to the data
-            self.ist_nus_extension_text = wx.StaticText(parent, -1, "Data extension:")
+            self.ist_nus_extension_text = wx.StaticText(self.linear_prediction_sizer_indirect_label, -1, "Data extension:")
             self.linear_prediction_sizer_indirect.Add(
                 self.ist_nus_extension_text, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.ist_nus_extension_textcontrol_indirect = wx.TextCtrl(
-                parent,
+                self.linear_prediction_sizer_indirect_label,
                 -1,
                 str(self.ist_data_extension_number_indirect),
                 size=(50, 20), style=wx.TE_PROCESS_ENTER
@@ -315,7 +315,7 @@ class NonUniformSampling:
 
             # Number of iterations
             self.ist_nus_iterations_text = wx.StaticText(
-                parent, -1, "Number of Iterations:"
+                self.linear_prediction_sizer_indirect_label, -1, "Number of Iterations:"
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.ist_nus_iterations_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -324,7 +324,7 @@ class NonUniformSampling:
 
 
             self.ist_nus_iterations_textcontrol_indirect = wx.TextCtrl(
-                parent, -1, str(self.ist_nus_iterations_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
+                self.linear_prediction_sizer_indirect_label, -1, str(self.ist_nus_iterations_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
             )
             self.ist_nus_iterations_textcontrol_indirect.Bind(
                 wx.EVT_TEXT_ENTER, self.on_ist_nus_iterations_textcontrol_indirect
@@ -340,14 +340,14 @@ class NonUniformSampling:
 
             # Checkbox to determine if NUS reconstruction is to be applied or if IST is to be used
             # for only linear prediction
-            self.ist_linear_prediction_only = wx.CheckBox(parent, -1, label='Data extension only')
+            self.ist_linear_prediction_only = wx.CheckBox(self.linear_prediction_sizer_indirect_label, -1, label='Data extension only')
             self.ist_linear_prediction_only.SetValue(self.ist_linear_prediction_only_flag)
             self.linear_prediction_sizer_indirect.Add(self.ist_linear_prediction_only, 0, wx.ALIGN_CENTER_VERTICAL)
             self.linear_prediction_sizer_indirect.AddSpacer(5)
             self.ist_linear_prediction_only.Bind(wx.EVT_CHECKBOX, self.OnIST_LP_Only)
 
         # Have a button showing information on linear prediction
-        self.linear_prediction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.linear_prediction_info = wx.Button(self.linear_prediction_sizer_indirect_label, -1, "\u24d8", size=(25, 32))
         self.linear_prediction_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_linear_prediction_info_indirect
         )

@@ -228,7 +228,7 @@ class DiffusionFit(wx.Frame):
 
         # Make a radio button
         self.diffusion_data_type_radio = wx.RadioBox(
-            self, -1, choices=["Bruker", "Varian"], style=wx.RA_HORIZONTAL
+            self.diffusion_data_type_label, -1, choices=["Bruker", "Varian"], style=wx.RA_HORIZONTAL
         )
         self.diffusion_data_type_radio.Bind(wx.EVT_RADIOBOX, self.OnDiffusionDataType)
         if self.spectrometer == "Bruker":
@@ -252,25 +252,25 @@ class DiffusionFit(wx.Frame):
         # Can then have a TextCtrl for the little delta, big delta with a button which can search for these values in the acqus/procpar file and fill them in automatically
         # If that fails the user can enter them manually
         # Checkbox for whether bipolar gradients were used in the experiment or not (default to no)
-        self.bipolar_gradients_checkbox = wx.CheckBox(self, label="Bipolar Gradients")
+        self.bipolar_gradients_checkbox = wx.CheckBox(self.experimental_parameters_label, label="Bipolar Gradients")
         self.bipolar_gradients_checkbox.SetValue(self.bipolar_gradients)
         self.bipolar_gradients_checkbox.Bind(wx.EVT_CHECKBOX, self.OnBipolarGradients)
         self.experimental_parameters_sizer.Add(self.bipolar_gradients_checkbox)
-        self.little_delta_label = wx.StaticText(self, -1, "δ (μs):")
+        self.little_delta_label = wx.StaticText(self.experimental_parameters_label, -1, "δ (μs):")
         self.experimental_parameters_sizer.AddSpacer(5)
         self.experimental_parameters_sizer.Add(self.little_delta_label)
         self.experimental_parameters_sizer.AddSpacer(5)
         self.little_delta_box = wx.TextCtrl(
-            self, -1, str(self.little_delta), size=(50, -1)
+            self.experimental_parameters_label, -1, str(self.little_delta), size=(50, -1)
         )
         self.experimental_parameters_sizer.Add(self.little_delta_box)
-        self.big_delta_label = wx.StaticText(self, -1, "Δ (s):")
+        self.big_delta_label = wx.StaticText(self.experimental_parameters_label, -1, "Δ (s):")
         self.experimental_parameters_sizer.AddSpacer(5)
         self.experimental_parameters_sizer.Add(self.big_delta_label)
         self.experimental_parameters_sizer.AddSpacer(5)
-        self.big_delta_box = wx.TextCtrl(self, -1, str(self.big_delta), size=(50, -1))
+        self.big_delta_box = wx.TextCtrl(self.experimental_parameters_label, -1, str(self.big_delta), size=(50, -1))
         self.experimental_parameters_sizer.Add(self.big_delta_box)
-        self.find_parameters_button = wx.Button(self, -1, "Find Parameters")
+        self.find_parameters_button = wx.Button(self.experimental_parameters_label, -1, "Find Parameters")
         self.find_parameters_button.Bind(wx.EVT_BUTTON, self.find_parameters)
         self.experimental_parameters_sizer.AddSpacer(5)
         self.experimental_parameters_sizer.Add(self.find_parameters_button)
@@ -286,28 +286,28 @@ class DiffusionFit(wx.Frame):
         if self.spectrometer == "Bruker":
             # Have a box to put in the gradient integral factor (default to 1)
             self.integral_factor_label = wx.StaticText(
-                self, -1, "Gradient Integral Factor:"
+                self.gradient_parameters_label, -1, "Gradient Integral Factor:"
             )
             self.gradient_parameters_sizer.Add(self.integral_factor_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.integral_factor_box = wx.TextCtrl(
-                self, -1, str(self.gradient_integral_factor), size=(30, -1)
+                self.gradient_parameters_label, -1, str(self.gradient_integral_factor), size=(30, -1)
             )
             self.gradient_parameters_sizer.Add(self.integral_factor_box)
             self.gradient_parameters_sizer.AddSpacer(5)
 
             # Have a box where the user can insert the max spectrometer gradient (default to 53G/cm for Bruker)
-            self.max_gradient_label = wx.StaticText(self, -1, "Max Gradient (G/cm):")
+            self.max_gradient_label = wx.StaticText(self.gradient_parameters_label, -1, "Max Gradient (G/cm):")
             self.gradient_parameters_sizer.Add(self.max_gradient_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.max_gradient_box = wx.TextCtrl(
-                self, -1, str(self.max_gradient), size=(30, -1)
+                self.gradient_parameters_label, -1, str(self.max_gradient), size=(30, -1)
             )
             self.gradient_parameters_sizer.Add(self.max_gradient_box)
             self.gradient_parameters_sizer.AddSpacer(5)
 
             self.find_gradient_percentages_button = wx.Button(
-                self, -1, "Find Gradient Percentages"
+                self.gradient_parameters_label, -1, "Find Gradient Percentages"
             )
             self.find_gradient_percentages_button.Bind(
                 wx.EVT_BUTTON, self.find_gradient_percentages
@@ -319,40 +319,40 @@ class DiffusionFit(wx.Frame):
             self.max_gradient = 60.0
             # Have a box to put in the gradient integral factor (default to 1)
             self.integral_factor_label = wx.StaticText(
-                self, -1, "Gradient Integral Factor:"
+                self.gradient_parameters_label, -1, "Gradient Integral Factor:"
             )
             self.gradient_parameters_sizer.Add(self.integral_factor_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.integral_factor_box = wx.TextCtrl(
-                self, -1, str(self.gradient_integral_factor), size=(30, -1)
+                self.gradient_parameters_label, -1, str(self.gradient_integral_factor), size=(30, -1)
             )
             self.gradient_parameters_sizer.Add(self.integral_factor_box)
             self.gradient_parameters_sizer.AddSpacer(5)
 
             # Have a box where the user can insert the max spectrometer gradient (default to 53G/cm for Bruker)
-            self.max_gradient_label = wx.StaticText(self, -1, "Max Gradient (G/cm):")
+            self.max_gradient_label = wx.StaticText(self.gradient_parameters_label, -1, "Max Gradient (G/cm):")
             self.gradient_parameters_sizer.Add(self.max_gradient_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.max_gradient_box = wx.TextCtrl(
-                self, -1, str(self.max_gradient), size=(30, -1)
+                self.gradient_parameters_label, -1, str(self.max_gradient), size=(30, -1)
             )
             self.gradient_parameters_sizer.Add(self.max_gradient_box)
             self.gradient_parameters_sizer.AddSpacer(5)
 
             # Have a box for DAC-G/cm conversion (default = 0.002)
             self.dac_conversion_label = wx.StaticText(
-                self, -1, "DAC to G/cm Conversion:"
+                self.gradient_parameters_label, -1, "DAC to G/cm Conversion:"
             )
             self.gradient_parameters_sizer.Add(self.dac_conversion_label)
             self.gradient_parameters_sizer.AddSpacer(5)
             self.dac_conversion_box = wx.TextCtrl(
-                self, -1, str(self.DAC_conversion), size=(50, -1)
+                self.gradient_parameters_label, -1, str(self.DAC_conversion), size=(50, -1)
             )
             self.gradient_parameters_sizer.Add(self.dac_conversion_box)
             self.gradient_parameters_sizer.AddSpacer(5)
 
             self.find_gradient_percentages_button = wx.Button(
-                self, -1, "Find Gradients"
+                self.gradient_parameters_label, -1, "Find Gradients"
             )
             self.find_gradient_percentages_button.Bind(
                 wx.EVT_BUTTON, self.find_gradient_percentages
@@ -361,7 +361,7 @@ class DiffusionFit(wx.Frame):
             self.gradient_parameters_sizer.AddSpacer(5)
 
         # Create a button to open a textbox window where a user can input the gradient values manually
-        self.input_gradients_text = wx.Button(self, -1, "Input Manually")
+        self.input_gradients_text = wx.Button(self.gradient_parameters_label, -1, "Input Manually")
         self.input_gradients_text.Bind(wx.EVT_BUTTON, self.input_gradients_text_button)
         self.gradient_parameters_sizer.Add(self.input_gradients_text)
         self.gradient_parameters_sizer.AddSpacer(5)
@@ -383,7 +383,7 @@ class DiffusionFit(wx.Frame):
         self.nucleus_sizer = wx.StaticBoxSizer(self.nucleus_label, wx.HORIZONTAL)
         self.nucleus_sizer.AddSpacer(5)
         self.nucleus_choices = ["1H", "2H", "13C", "15N","19F", "23Na","31P"]
-        self.nucleus_dropdown = wx.Choice(self, -1, choices=self.nucleus_choices)
+        self.nucleus_dropdown = wx.Choice(self.nucleus_label, -1, choices=self.nucleus_choices)
         self.nucleus_dropdown.SetSelection(0)
         self.nucleus_sizer.Add(self.nucleus_dropdown)
         self.nucleus_sizer.AddSpacer(5)
@@ -393,7 +393,7 @@ class DiffusionFit(wx.Frame):
         # This can then be plotted as a shaded region on the plot
         self.noise_label = wx.StaticBox(self, -1, "Noise Region")
         self.noise_sizer = wx.StaticBoxSizer(self.noise_label, wx.HORIZONTAL)
-        self.select_noise_button = wx.Button(self, -1, "Select Noise Region")
+        self.select_noise_button = wx.Button(self.noise_label, -1, "Select Noise Region")
         self.select_noise_button.Bind(wx.EVT_BUTTON, self.OnSelectNoise)
         self.noise_sizer.AddSpacer(5)
         self.noise_sizer.Add(self.select_noise_button)
@@ -401,13 +401,13 @@ class DiffusionFit(wx.Frame):
 
         # Then have a TextCtrl for the minimum SNR for the diffusion coefficient to be estimated (default to 10)
         self.noise_factor = 10
-        self.noise_factor_label = wx.StaticText(self, -1, "Minimum SNR:")
+        self.noise_factor_label = wx.StaticText(self.noise_label, -1, "Minimum SNR:")
         self.noise_factor_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.noise_sizer.AddSpacer(10)
         self.noise_sizer.Add(self.noise_factor_label)
         self.noise_sizer.AddSpacer(5)
         self.noise_factor_box = wx.TextCtrl(
-            self, -1, str(self.noise_factor), size=(50, -1)
+            self.noise_label, -1, str(self.noise_factor), size=(50, -1)
         )
         self.noise_sizer.Add(self.noise_factor_box)
         self.noise_sizer.AddSpacer(5)
@@ -418,7 +418,7 @@ class DiffusionFit(wx.Frame):
         self.fitting_sizer.AddSpacer(5)
 
         # Can then have a button which will fit the Stejskal Tanner equation at all ppms across the whole spectrum that are higher than the noise level
-        self.whole_spectrum_fitting_button = wx.Button(self, -1, "Fit Whole Spectrum")
+        self.whole_spectrum_fitting_button = wx.Button(self.fitting_label, -1, "Fit Whole Spectrum")
         self.whole_spectrum_fitting_button.Bind(
             wx.EVT_BUTTON, self.OnWholeSpectrumFitting
         )
@@ -431,37 +431,37 @@ class DiffusionFit(wx.Frame):
         # Can plot this distribution of diffusion coefficients and it should resemble a Gaussian distribution
 
         # Have a button to add a new region of interest
-        self.add_region_button = wx.Button(self, -1, "Add ROI")
+        self.add_region_button = wx.Button(self.fitting_label, -1, "Add ROI")
         self.add_region_button.Bind(wx.EVT_BUTTON, self.OnAddROI)
         self.fitting_sizer.Add(self.add_region_button)
         self.fitting_sizer.AddSpacer(5)
 
-        self.input_region_button = wx.Button(self, -1, "Input ROI")
+        self.input_region_button = wx.Button(self.fitting_label, -1, "Input ROI")
         self.input_region_button.Bind(wx.EVT_BUTTON, self.OnInputROI)
         self.fitting_sizer.Add(self.input_region_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Have a button to delete a region of interest
-        self.delete_region_button = wx.Button(self, -1, "Delete ROI")
+        self.delete_region_button = wx.Button(self.fitting_label, -1, "Delete ROI")
         self.delete_region_button.Bind(wx.EVT_BUTTON, self.OnDeleteROI)
         self.fitting_sizer.Add(self.delete_region_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Can then have a button which will fit the Stejskal Tanner equation to the mean values of the points above the noise in the region of interest
-        self.region_fitting_button = wx.Button(self, -1, "Fit")
+        self.region_fitting_button = wx.Button(self.fitting_label, -1, "Fit")
         self.region_fitting_button.Bind(wx.EVT_BUTTON, self.OnRegionFitting)
         self.fitting_sizer.Add(self.region_fitting_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Have a button which will perform a biexponential fit on the data in the region of interest
-        self.biexponential_fitting_button = wx.Button(self, -1, "Biexponential Fit")
+        self.biexponential_fitting_button = wx.Button(self.fitting_label, -1, "Biexponential Fit")
         self.biexponential_fitting_button.Bind(
             wx.EVT_BUTTON, self.OnBiexponentialFitting
         )
         self.fitting_sizer.Add(self.biexponential_fitting_button)
         self.fitting_sizer.AddSpacer(5)
 
-        self.save_fitting_button = wx.Button(self, -1, "Save Fit")
+        self.save_fitting_button = wx.Button(self.fitting_label, -1, "Save Fit")
         self.save_fitting_button.Bind(wx.EVT_BUTTON, self.OnSaveFitting)
         self.fitting_sizer.Add(self.save_fitting_button)
         self.fitting_sizer.AddSpacer(5)
@@ -472,7 +472,7 @@ class DiffusionFit(wx.Frame):
             self.other_functions_label, wx.HORIZONTAL
         )
         self.other_functions_sizer.AddSpacer(5)
-        self.delete_slice_button = wx.Button(self, -1, "Delete Slice")
+        self.delete_slice_button = wx.Button(self.other_functions_label, -1, "Delete Slice")
         self.delete_slice_button.Bind(wx.EVT_BUTTON, self.OnDeleteSlice)
         self.other_functions_sizer.Add(self.delete_slice_button)
         self.other_functions_sizer.AddSpacer(5)
@@ -482,7 +482,7 @@ class DiffusionFit(wx.Frame):
         self.intensity_sizer = wx.StaticBoxSizer(self.intensity_label, wx.VERTICAL)
         width = 100
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(width, height)
+            self.intensity_label, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(width, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScrollDiffusion)
         self.intensity_sizer.AddSpacer(5)

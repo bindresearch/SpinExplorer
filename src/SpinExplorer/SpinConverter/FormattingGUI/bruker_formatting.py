@@ -620,7 +620,7 @@ class FormatParametersBruker:
         self.digital_filter_box_sizer_total.Add(self.digital_filter_box_sizer)
         self.digital_filter_box_sizer_total.AddSpacer(11)
         self.digital_filter_checkbox = wx.CheckBox(
-            self.app, -1, label="Remove Digital Filter"
+            self.digital_filter_box, -1, label="Remove Digital Filter"
         )
         self.digital_filter_checkbox.Bind(
             wx.EVT_CHECKBOX, self.on_digital_filter_checkbox
@@ -640,9 +640,9 @@ class FormatParametersBruker:
         Creating boxes for all the Bruker digital filter options
         """
         self.decim_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.decim_text = wx.StaticText(self.app, label="Decimation Rate:")
+        self.decim_text = wx.StaticText(self.digital_filter_box, label="Decimation Rate:")
         self.decim_value = str(self.params.decim)
-        self.decim_textbox = wx.TextCtrl(self.app, value=str(self.decim_value))
+        self.decim_textbox = wx.TextCtrl(self.digital_filter_box, value=str(self.decim_value))
         self.decim_box.AddSpacer(5)
         self.decim_box.Add(self.decim_text)
         self.decim_box.AddSpacer(5)
@@ -650,9 +650,9 @@ class FormatParametersBruker:
         self.digital_filter_box_sizer.Add(self.decim_box)
 
         self.dspfvs_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.dspfvs_text = wx.StaticText(self.app, label="DSP Firmware Version:")
+        self.dspfvs_text = wx.StaticText(self.digital_filter_box, label="DSP Firmware Version:")
         self.dspfvs_value = str(self.params.dspfvs)
-        self.dspfvs_textbox = wx.TextCtrl(self.app, value=str(self.dspfvs_value))
+        self.dspfvs_textbox = wx.TextCtrl(self.digital_filter_box, value=str(self.dspfvs_value))
         self.dspfvs_box.AddSpacer(5)
         self.dspfvs_box.Add(self.dspfvs_text)
         self.dspfvs_box.AddSpacer(5)
@@ -661,9 +661,9 @@ class FormatParametersBruker:
         self.digital_filter_box_sizer.Add(self.dspfvs_box)
 
         self.grpdly_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.grpdly_text = wx.StaticText(self.app, label="Group Delay:")
+        self.grpdly_text = wx.StaticText(self.digital_filter_box, label="Group Delay:")
         self.grpdly_value = str(self.params.grpdly)
-        self.grpdly_textbox = wx.TextCtrl(self.app, value=str(self.grpdly_value))
+        self.grpdly_textbox = wx.TextCtrl(self.digital_filter_box, value=str(self.grpdly_value))
         self.grpdly_box.AddSpacer(5)
         self.grpdly_box.Add(self.grpdly_text)
         self.grpdly_box.AddSpacer(5)
@@ -673,7 +673,7 @@ class FormatParametersBruker:
 
         # Have a radiobox to either remove the digital filter before processing or during processing
         self.digital_filter_radio_box = wx.RadioBox(
-            self.app,
+            self.digital_filter_box,
             choices=[
                 "Remove before fourier transform",
                 "Remove after fourier transform",
@@ -727,11 +727,11 @@ class FormatParametersBruker:
         self.bad_point_threshold_box = wx.BoxSizer(wx.HORIZONTAL)
         self.nmrdata.params.bad_point_threshold = 0.0
         self.bad_point_threshold_text = wx.StaticText(
-            self.app, label="Bad Point Threshold:"
+            self.app.other_options_box, label="Bad Point Threshold:"
         )
         self.bad_point_threshold_value = str(self.nmrdata.params.bad_point_threshold)
         self.bad_point_threshold_textbox = wx.TextCtrl(
-            self.app, value=str(self.bad_point_threshold_value)
+            self.app.other_options_box, value=str(self.bad_point_threshold_value)
         )
         self.bad_point_threshold_box.AddSpacer(5)
         self.bad_point_threshold_box.Add(self.bad_point_threshold_text)
@@ -743,7 +743,7 @@ class FormatParametersBruker:
         self.remove_acquisition_padding_box = wx.BoxSizer(wx.HORIZONTAL)
         self.nmrdata.params.remove_acquisition_padding = True
         self.remove_acquisition_padding_checkbox = wx.CheckBox(
-            self.app, label="Remove Acquisition Padding"
+            self.app.other_options_box, label="Remove Acquisition Padding"
         )
         self.remove_acquisition_padding_checkbox.Bind(
             wx.EVT_CHECKBOX, self.on_remove_acquisition_padding_checkbox

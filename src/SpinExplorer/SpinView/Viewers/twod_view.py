@@ -187,14 +187,14 @@ class TwoDViewer(wx.Panel):
         self.select_plot_sizer = wx.StaticBoxSizer(self.select_plot_label, wx.VERTICAL)
         self.select_plot_sizer.AddSpacer(5)
         # Create a checkbox to select all plots
-        self.select_all_checkbox = wx.CheckBox(self, label="Select All")
+        self.select_all_checkbox = wx.CheckBox(self.select_plot_label, label="Select All")
         self.select_all_checkbox.SetValue(False)
 
-        self.hide_checkbox = wx.CheckBox(self, label="Hide")
+        self.hide_checkbox = wx.CheckBox(self.select_plot_label, label="Hide")
         self.hide_checkbox.Bind(wx.EVT_CHECKBOX, self.OnHideSpectrum)
 
         self.plot_combobox = wx.ComboBox(
-            self, choices=["Main Plot"], style=wx.CB_READONLY
+            self.select_plot_label, choices=["Main Plot"], style=wx.CB_READONLY
         )
         self.plot_combobox.Bind(wx.EVT_COMBOBOX, self.OnSelectPlot2D)
         self.select_plot_sizer.Add(self.plot_combobox, 1, wx.ALIGN_CENTER_HORIZONTAL, 5)
@@ -330,10 +330,10 @@ class TwoDViewer(wx.Panel):
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
         self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
         self.phasing_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.P0_label = wx.StaticText(self, label="P0 (Coarse):")
-        self.P1_label = wx.StaticText(self, label="P1 (Coarse):")
+        self.P0_label = wx.StaticText(self.phasing_label, label="P0 (Coarse):")
+        self.P1_label = wx.StaticText(self.phasing_label, label="P1 (Coarse):")
         self.P0_slider = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-180,
@@ -342,7 +342,7 @@ class TwoDViewer(wx.Panel):
             size=(int(self.width / 6.5), height),
         )
         self.P1_slider = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-180,
@@ -352,10 +352,10 @@ class TwoDViewer(wx.Panel):
         )
         self.P0_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
         self.P1_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
-        self.P0_label_fine = wx.StaticText(self, label="P0 (Fine):")
-        self.P1_label_fine = wx.StaticText(self, label="P1 (Fine):")
+        self.P0_label_fine = wx.StaticText(self.phasing_label, label="P0 (Fine):")
+        self.P1_label_fine = wx.StaticText(self.phasing_label, label="P1 (Fine):")
         self.P0_slider_fine = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-10,
@@ -364,7 +364,7 @@ class TwoDViewer(wx.Panel):
             size=(int(self.width / 6.5), height),
         )
         self.P1_slider_fine = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-10,
@@ -374,17 +374,16 @@ class TwoDViewer(wx.Panel):
         )
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
-        self.P0_total = wx.StaticText(self, label="P0 (Total):")
+        self.P0_total = wx.StaticText(self.phasing_label, label="P0 (Total):")
 
 
         
-        self.P1_total = wx.StaticText(self, label="P1 (Total):")
-        self.P0_total_value = wx.StaticText(self, label="0")
-        self.P0_total_value = wx.TextCtrl(self, value = "0", 
+        self.P1_total = wx.StaticText(self.phasing_label, label="P1 (Total):")
+        self.P0_total_value = wx.TextCtrl(self.phasing_label, value = "0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.P0_total_value.Bind(wx.EVT_TEXT_ENTER, self.P0_text_change)
 
-        self.P1_total_value = wx.TextCtrl(self, value = "0", 
+        self.P1_total_value = wx.TextCtrl(self.phasing_label, value = "0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.P1_total_value.Bind(wx.EVT_TEXT_ENTER, self.P1_text_change)
 
@@ -418,11 +417,11 @@ class TwoDViewer(wx.Panel):
         self.P1_slider_sizer.AddSpacer(10)
 
         # Adding a button to change the range of the coarse and fine sliders (default to +/-180 and +/-10 degrees)
-        self.update_phasing_range = wx.Button(self, label="Change slider range")
+        self.update_phasing_range = wx.Button(self.phasing_label, label="Change slider range")
         self.update_phasing_range.Bind(wx.EVT_BUTTON, self.OnSliderRange2D)
 
         # Add a button to set the pivot point for phasing
-        self.pivot_button = wx.Button(self, label="Set Pivot Point")
+        self.pivot_button = wx.Button(self.phasing_label, label="Set Pivot Point")
         self.pivot_button.Bind(wx.EVT_BUTTON, self.OnPivotButton2D)
         self.pivot_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.pivot_sizer.Add(self.update_phasing_range)
@@ -430,7 +429,7 @@ class TwoDViewer(wx.Panel):
         self.pivot_sizer.Add(self.pivot_button)
 
         # Add a button to remove the pivot point
-        self.remove_pivot_button = wx.Button(self, label="Remove Pivot Point")
+        self.remove_pivot_button = wx.Button(self.phasing_label, label="Remove Pivot Point")
         self.remove_pivot_button.Bind(wx.EVT_BUTTON, self.OnRemovePivotButton2D)
         self.pivot_sizer.AddSpacer(20)
         self.pivot_sizer.Add(self.remove_pivot_button)
@@ -454,9 +453,9 @@ class TwoDViewer(wx.Panel):
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.csizer = wx.BoxSizer(wx.HORIZONTAL)
         self.x_val = 10.00
-        self.contour2_label = wx.StaticText(self, label="x:")
+        self.contour2_label = wx.StaticText(self.contour_label, label="x:")
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, height)
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, height)
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnMinContour2D)
         self.csizer.Add(self.contour2_label)
@@ -468,7 +467,7 @@ class TwoDViewer(wx.Panel):
         self.contour_value_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.contour_value_sizer.AddSpacer(75)
         self.contour_value_label = wx.TextCtrl(
-            self, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
+            self.contour_label, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
         )
         self.contour_value_label.Bind(wx.EVT_TEXT_ENTER, self.OnTextContour2D)
         self.contour_value_sizer.Add(self.contour_value_label)
@@ -478,7 +477,7 @@ class TwoDViewer(wx.Panel):
         self.intensity_label = wx.StaticBox(self, -1, "1D Y Axis Zoom (%):")
         self.intensity_sizer = wx.StaticBoxSizer(self.intensity_label, wx.VERTICAL)
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(250, height)
+            self.intensity_label, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(250, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScroll2D)
         self.intensity_sizer.AddSpacer(5)
@@ -491,7 +490,7 @@ class TwoDViewer(wx.Panel):
         self.multiply_inner_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.multiply_ranges = multiply_range_values
         self.multiply_slider = FloatSlider(
-            self,
+            self.multiply_label,
             id=-1,
             value=1.0,
             minval=0,
@@ -506,21 +505,21 @@ class TwoDViewer(wx.Panel):
         self.multiply_sizer.Add(self.multiply_inner_sizer)
         self.multiply_sizer.AddSpacer(5)
         self.multiply_value_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.multiply_value_n_label = wx.StaticText(self, label="n: ")
-        self.multiply_value_label = wx.TextCtrl(self, value = "1.0", 
+        self.multiply_value_n_label = wx.StaticText(self.multiply_label, label="n: ")
+        self.multiply_value_label = wx.TextCtrl(self.multiply_label, value = "1.0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.multiply_value_label.Bind(wx.EVT_TEXT_ENTER, self.multiply_text_change)
         self.multiply_value_sizer.Add(self.multiply_value_n_label)
         self.multiply_value_sizer.AddSpacer(5)
         self.multiply_value_sizer.Add(self.multiply_value_label)
 
-        self.multiply_value_range_label = wx.StaticText(self, label="Range:")
+        self.multiply_value_range_label = wx.StaticText(self.multiply_label, label="Range:")
         self.multiply_value_sizer.AddSpacer(30)
         self.multiply_value_sizer.Add(self.multiply_value_range_label)
 
         # Make a combobox to select the multiply range
         self.multiply_range_chooser2d = wx.ComboBox(
-            self, value=self.multiply_ranges[0], choices=self.multiply_ranges
+            self.multiply_label, value=self.multiply_ranges[0], choices=self.multiply_ranges
         )
         self.multiply_range_chooser2d.Bind(wx.EVT_COMBOBOX, self.OnMultiplyCombo2D)
         self.multiply_value_sizer.AddSpacer(5)
@@ -535,7 +534,7 @@ class TwoDViewer(wx.Panel):
         self.contour_levels = wx.StaticBoxSizer(self.contour_levels_label, wx.VERTICAL)
         self.contour_levels.AddSpacer(5)
         self.contour_levels_slider = FloatSlider(
-            self, id=-1, value=20, minval=1, maxval=30, res=1, size=(215, height)
+            self.contour_levels_label, id=-1, value=20, minval=1, maxval=30, res=1, size=(215, height)
         )
         self.contour_levels_slider.Bind(wx.EVT_SLIDER, self.OnContourLevels)
         self.contour_levels.Add(self.contour_levels_slider)
@@ -548,13 +547,13 @@ class TwoDViewer(wx.Panel):
         self.move_x = wx.BoxSizer(wx.HORIZONTAL)
         self.move_y = wx.BoxSizer(wx.HORIZONTAL)
         self.move_ranges = wx.BoxSizer(wx.VERTICAL)
-        self.move_x.Add(wx.StaticText(self, label="X:"))
-        self.move_y.Add(wx.StaticText(self, label="Y:"))
+        self.move_x.Add(wx.StaticText(self.move_label, label="X:"))
+        self.move_y.Add(wx.StaticText(self.move_label, label="Y:"))
         self.move_x.AddSpacer(5)
         self.move_y.AddSpacer(5)
 
         self.move_x_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeX,
@@ -563,7 +562,7 @@ class TwoDViewer(wx.Panel):
             size=(int(self.width / 3.5), height),
         )
         self.move_y_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeY,
@@ -574,13 +573,13 @@ class TwoDViewer(wx.Panel):
         self.move_x_slider.Bind(wx.EVT_SLIDER, self.OnMoveX)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY)
         self.reference_range_chooserX = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
         self.reference_range_chooserX.Bind(wx.EVT_COMBOBOX, self.OnReferenceComboX)
         self.reference_range_chooserY = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
@@ -602,7 +601,7 @@ class TwoDViewer(wx.Panel):
         )
         self.move_ranges.AddSpacer(5)
         self.move_ranges.Add(
-            wx.StaticText(self, label="Range (ppm)"), 0, wx.ALIGN_CENTER_HORIZONTAL
+            wx.StaticText(self.move_label, label="Range (ppm)"), 0, wx.ALIGN_CENTER_HORIZONTAL
         )
         self.move_sizer.Add(self.move_x)
         self.move_sizer.AddSpacer(10)
@@ -610,16 +609,16 @@ class TwoDViewer(wx.Panel):
         self.move_sizer.AddSpacer(5)
         self.move_values = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.move_values.Add(wx.StaticText(self, label="X Movement (ppm):"))
+        self.move_values.Add(wx.StaticText(self.move_label, label="X Movement (ppm):"))
         self.move_values.AddSpacer(10)
-        self.move_x_value_label = wx.TextCtrl(self, value = "0.0", 
+        self.move_x_value_label = wx.TextCtrl(self.move_label, value = "0.0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.move_x_value_label.Bind(wx.EVT_TEXT_ENTER, self.move_xtext_change)
         self.move_values.Add(self.move_x_value_label)
         self.move_values.AddSpacer(50)
-        self.move_values.Add(wx.StaticText(self, label="Y Movement (ppm):"))
+        self.move_values.Add(wx.StaticText(self.move_label, label="Y Movement (ppm):"))
         self.move_values.AddSpacer(10)
-        self.move_y_value_label = wx.TextCtrl(self, value = "0.0", 
+        self.move_y_value_label = wx.TextCtrl(self.move_label, value = "0.0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.move_y_value_label.Bind(wx.EVT_TEXT_ENTER, self.move_ytext_change)
         self.move_values.Add(self.move_y_value_label)
@@ -639,7 +638,7 @@ class TwoDViewer(wx.Panel):
         self.contour_width = wx.StaticBoxSizer(self.contour_width_label, wx.VERTICAL)
         self.contour_width.AddSpacer(5)
         self.contour_width_slider = FloatSlider(
-            self, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(215, height)
+            self.contour_width_label, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(215, height)
         )
         self.contour_width_slider.Bind(wx.EVT_SLIDER, self.OnContourWidth)
         self.contour_width.Add(self.contour_width_slider)
@@ -649,7 +648,7 @@ class TwoDViewer(wx.Panel):
         self.line_width = wx.StaticBoxSizer(self.linewidth_label, wx.VERTICAL)
         self.line_width.AddSpacer(5)
         self.line_width_slider = FloatSlider(
-            self, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(250, height)
+            self.linewidth_label, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(250, height)
         )
         self.line_width_slider.Bind(wx.EVT_SLIDER, self.On2DLinewidth)
         self.line_width.Add(self.line_width_slider)
@@ -1128,18 +1127,18 @@ class TwoDViewer(wx.Panel):
                 self.P1_slider.SetValue(0)
                 self.P0_slider_fine.SetValue(0)
                 self.P1_slider_fine.SetValue(0)
-                self.P0_total_value.SetLabel("0.00")
-                self.P1_total_value.SetLabel("0.00")
+                self.P0_total_value.SetValue("0.00")
+                self.P1_total_value.SetValue("0.00")
                 self.contour_width_slider.SetValue(1)
                 self.contour_slider.SetValue(1)
                 self.contour_value_label.SetValue("10")
                 self.contour_levels_slider.SetValue(20)
                 self.move_x_slider.SetValue(0)
                 self.move_y_slider.SetValue(0)
-                self.move_x_value_label.SetLabel("0.00")
-                self.move_y_value_label.SetLabel("0.00")
+                self.move_x_value_label.SetValue("0.00")
+                self.move_y_value_label.SetValue("0.00")
                 self.multiply_slider.SetValue(1.0)
-                self.multiply_value_label.SetLabel("1.0")
+                self.multiply_value_label.SetValue("1.0")
                 self.line_width_slider.SetValue(1)
                 # if(self.transposed2D==True):
                 #     self.OnTransposeButton(event)
@@ -2544,7 +2543,7 @@ class TwoDViewer(wx.Panel):
 
     def OnMultiplyScroll2D(self, event):
         self.multiply_factor = float(self.multiply_slider.GetValue())
-        self.multiply_value_label.SetLabel(
+        self.multiply_value_label.SetValue(
             "{:.2f}".format(float(self.multiply_slider.GetValue()))
         )
         self.ApplyMultiplication(event)
@@ -2622,7 +2621,7 @@ class TwoDViewer(wx.Panel):
     def OnMoveX(self, event):
         # update x-axis
         self.x_movement = float(self.move_x_slider.GetValue())
-        self.move_x_value_label.SetLabel("{:.4f}".format(self.x_movement))
+        self.move_x_value_label.SetValue("{:.4f}".format(self.x_movement))
         self.MoveX()
     
     def MoveX(self):
@@ -2704,7 +2703,7 @@ class TwoDViewer(wx.Panel):
     def OnMoveY(self, event):
         # update y-axis
         self.y_movement = float(self.move_y_slider.GetValue())
-        self.move_y_value_label.SetLabel("{:.4f}".format(self.y_movement))
+        self.move_y_value_label.SetValue("{:.4f}".format(self.y_movement))
         self.MoveY()
 
     def MoveY(self):
@@ -3220,8 +3219,8 @@ class TwoDViewer(wx.Panel):
         # Get all the slider values for P0 and P1 (coarse and fine), put the combined coarse and fine values on the screen
         self.total_P0 = self.P0_slider.GetValue() + self.P0_slider_fine.GetValue()
         self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
-        self.P0_total_value.SetLabel("{:.2f}".format(self.total_P0))
-        self.P1_total_value.SetLabel("{:.2f}".format(self.total_P1))
+        self.P0_total_value.SetValue("{:.2f}".format(self.total_P0))
+        self.P1_total_value.SetValue("{:.2f}".format(self.total_P1))
         self.phase2D()
     
     def P0_text_change(self, event):

@@ -169,24 +169,24 @@ class ThreeDViewer(wx.Panel):
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
         self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
 
-        self.P0_label = wx.StaticText(self, label="P0 (Coarse):")
-        self.P1_label = wx.StaticText(self, label="P1 (Coarse):")
+        self.P0_label = wx.StaticText(self.phasing_label, label="P0 (Coarse):")
+        self.P1_label = wx.StaticText(self.phasing_label, label="P1 (Coarse):")
         self.P0_slider = FloatSlider(
-            self, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
         )
         self.P1_slider = FloatSlider(
-            self, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
         )
         self.P0_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
         self.P1_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
 
-        self.P0_label_fine = wx.StaticText(self, label="P0 (Fine):     ")
-        self.P1_label_fine = wx.StaticText(self, label="P1 (Fine):     ")
+        self.P0_label_fine = wx.StaticText(self.phasing_label, label="P0 (Fine):     ")
+        self.P1_label_fine = wx.StaticText(self.phasing_label, label="P1 (Fine):     ")
         self.P0_slider_fine = FloatSlider(
-            self, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
         )
         self.P1_slider_fine = FloatSlider(
-            self, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
         )
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
@@ -210,10 +210,10 @@ class ThreeDViewer(wx.Panel):
         self.sizer_fine.Add(self.P1_slider_fine)
 
         self.phasing_combined = wx.BoxSizer(wx.HORIZONTAL)
-        self.P0_total = wx.StaticText(self, label="P0 (Total):")
-        self.P1_total = wx.StaticText(self, label="P1 (Total):")
-        self.P0_total_value = wx.StaticText(self, label="0")
-        self.P1_total_value = wx.StaticText(self, label="0")
+        self.P0_total = wx.StaticText(self.phasing_label, label="P0 (Total):")
+        self.P1_total = wx.StaticText(self.phasing_label, label="P1 (Total):")
+        self.P0_total_value = wx.StaticText(self.phasing_label, label="0")
+        self.P1_total_value = wx.StaticText(self.phasing_label, label="0")
         self.phasing_combined.Add(self.P0_total)
         self.phasing_combined.AddSpacer(135)
         self.phasing_combined.Add(self.P0_total_value)
@@ -238,12 +238,12 @@ class ThreeDViewer(wx.Panel):
         self.move_sizer = wx.StaticBoxSizer(self.move_label, wx.VERTICAL)
         self.move_x = wx.BoxSizer(wx.HORIZONTAL)
         self.move_y = wx.BoxSizer(wx.HORIZONTAL)
-        self.move_x.Add(wx.StaticText(self, label="X:"))
-        self.move_y.Add(wx.StaticText(self, label="Y:"))
+        self.move_x.Add(wx.StaticText(self.move_label, label="X:"))
+        self.move_y.Add(wx.StaticText(self.move_label, label="Y:"))
         self.move_x.AddSpacer(5)
         self.move_y.AddSpacer(5)
         self.move_x_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeX,
@@ -252,7 +252,7 @@ class ThreeDViewer(wx.Panel):
             size=(300, height),
         )
         self.move_y_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeY,
@@ -263,13 +263,13 @@ class ThreeDViewer(wx.Panel):
         self.move_x_slider.Bind(wx.EVT_SLIDER, self.OnMoveX_3D)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY_3D)
         self.reference_range_chooserX = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
         self.reference_range_chooserX.Bind(wx.EVT_COMBOBOX, self.OnReferenceComboX_3D)
         self.reference_range_chooserY = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
@@ -286,14 +286,14 @@ class ThreeDViewer(wx.Panel):
         self.move_sizer.AddSpacer(5)
         self.move_val_box = wx.BoxSizer(wx.HORIZONTAL)
         self.move_val_box.AddSpacer(20)
-        self.move_val_box.Add(wx.StaticText(self, label="Move X (ppm):"))
+        self.move_val_box.Add(wx.StaticText(self.move_label, label="Move X (ppm):"))
         self.move_val_box.AddSpacer(5)
-        self.move_val_x = wx.StaticText(self, label="0.00")
+        self.move_val_x = wx.StaticText(self.move_label, label="0.00")
         self.move_val_box.Add(self.move_val_x)
         self.move_val_box.AddSpacer(35)
-        self.move_val_box.Add(wx.StaticText(self, label="Move Y (ppm):"))
+        self.move_val_box.Add(wx.StaticText(self.move_label, label="Move Y (ppm):"))
         self.move_val_box.AddSpacer(5)
-        self.move_val_y = wx.StaticText(self, label="0.00")
+        self.move_val_y = wx.StaticText(self.move_label, label="0.00")
         self.move_val_box.Add(self.move_val_y)
         self.move_sizer.Add(self.move_val_box)
 
@@ -304,7 +304,7 @@ class ThreeDViewer(wx.Panel):
         self.linewidth_label = wx.StaticBox(self, -1, "Contour Line Width:")
         self.linewidth_sizer = wx.StaticBoxSizer(self.linewidth_label, wx.VERTICAL)
         self.linewidth_slider = FloatSlider(
-            self, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(265, height)
+            self.linewidth_label, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(265, height)
         )
         self.linewidth_slider.Bind(wx.EVT_SLIDER, self.OnLinewidthScroll3D)
         self.linewidth_sizer.AddSpacer(5)
@@ -319,8 +319,11 @@ class ThreeDViewer(wx.Panel):
         z_values = ng.pipe.make_uc(
             self.nmrdata.dic, self.nmrdata.data, dim=0
         ).ppm_scale()
+
+        self.z_sizer = wx.StaticBoxSizer(self.z_label, wx.VERTICAL)
+
         self.z_slider = FloatSlider(
-            self,
+            self.z_label,
             id=-1,
             value=0,
             minval=0,
@@ -329,7 +332,6 @@ class ThreeDViewer(wx.Panel):
             size=(265, height),
         )
         self.z_slider.Bind(wx.EVT_SLIDER, self.OnZScroll3D)
-        self.z_sizer = wx.StaticBoxSizer(self.z_label, wx.VERTICAL)
         self.z_sizer.AddSpacer(15)
         self.z_sizer.Add(self.z_slider)
         self.z_sizer.AddSpacer(15)
@@ -354,9 +356,9 @@ class ThreeDViewer(wx.Panel):
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.csizer = wx.BoxSizer(wx.HORIZONTAL)
         self.x_val = 10.00
-        self.contour2_label = wx.StaticText(self, label="x:")
+        self.contour2_label = wx.StaticText(self.contour_label, label="x:")
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, size=(250, height)
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, size=(250, height)
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnMinContour3D)
         self.csizer.Add(self.contour2_label)
@@ -368,7 +370,7 @@ class ThreeDViewer(wx.Panel):
         self.contour_val_box = wx.BoxSizer(wx.HORIZONTAL)
         self.contour_val_box.AddSpacer(75)
         self.contour_val = wx.TextCtrl(
-            self, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
+            self.contour_label, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
         )
         self.contour_val.Bind(wx.EVT_TEXT_ENTER, self.OnTextContour3D)
         self.contour_val_box.Add(self.contour_val)
@@ -385,7 +387,7 @@ class ThreeDViewer(wx.Panel):
         self.intensity_label = wx.StaticBox(self, -1, "Intensity Scaling 1D (%):")
         self.intensity_sizer = wx.StaticBoxSizer(self.intensity_label, wx.VERTICAL)
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=2, minval=0, maxval=6, res=0.01, size=(265, height)
+            self.intensity_label, id=-1, value=2, minval=0, maxval=6, res=0.01, size=(265, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScroll3D)
         self.intensity_sizer.AddSpacer(5)
@@ -418,7 +420,7 @@ class ThreeDViewer(wx.Panel):
         options.append("(" + labels[2] + "," + labels[0] + ")," + labels[1])
         options.append("(" + labels[0] + "," + labels[2] + ")," + labels[1])
 
-        self.orientation_chooser = wx.ComboBox(self, value=options[0], choices=options)
+        self.orientation_chooser = wx.ComboBox(self.orientation_label, value=options[0], choices=options)
         self.orientation_chooser.Bind(wx.EVT_COMBOBOX, self.OnOrientationCombo)
         self.orientation_chooser.SetSelection(0)
         self.orientation_sizer.Add(self.orientation_chooser)
@@ -1417,7 +1419,7 @@ class ThreeDViewer(wx.Panel):
                 -np.max(self.nmrdata.data[z_index] / 10),
                 np.max(self.nmrdata.data[z_index]),
             )
-        self.UpdateFrame()
+        self.OnIntensityScroll3D(wx.EVT_SCROLL)
 
     def OnMoveY_3D(self, event):
         # update y-axis
@@ -1470,7 +1472,7 @@ class ThreeDViewer(wx.Panel):
                 -np.max(self.nmrdata.data[z_index] / 10),
                 np.max(self.nmrdata.data[z_index]),
             )
-        self.UpdateFrame()
+        self.OnIntensityScroll3D(wx.EVT_SCROLL)
 
     def OnReferenceComboX_3D(self, event):
         # Change the range for the move-x slider
@@ -1665,13 +1667,15 @@ class ThreeDViewer(wx.Panel):
                 complex_data, p0=self.total_P0, p1=self.total_P1
             )
             self.line3.set_xdata(self.phased_data2)
+
+        self.OnIntensityScroll3D(wx.EVT_SCROLL)
         self.UpdateFrame()
 
     def OnMinContour3D(self, event):
         # Get the new contour limits and redraw the plot
         z_index = int(self.z_slider.GetValue())
         contour_val = 10 ** float(self.contour_slider.GetValue())
-        self.contour_val.SetLabel(str(int(contour_val)))
+        self.contour_val.SetValue(str(int(contour_val)))
         self.contour_start = (
             np.max(np.abs(self.nmrdata.data[int(z_index)])) / contour_val
         )
@@ -1725,7 +1729,7 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_ylim(ylim)
         self.ax.set_xlabel(xlabel)
         self.ax.set_ylabel(ylabel)
-        self.UpdateFrame()
+        self.phase3D()
 
     def OnZScroll3D(self, event):
         # Get the new z value and redraw the plot
@@ -2059,7 +2063,7 @@ class WaterfallFrame(wx.Frame):
         self.y_range_label = wx.StaticBox(self, -1, "Y-axis zoom")
         self.y_range_sizer = wx.StaticBoxSizer(self.y_range_label, wx.VERTICAL)
         self.y_range_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.y_range_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.y_range_slider.Bind(wx.EVT_SLIDER, self.OnYRangeSlider)
         self.y_range_sizer.Add(self.y_range_slider)
@@ -2200,7 +2204,7 @@ class Plot3DFrame(wx.Frame):
         self.contour_label = wx.StaticBox(self, -1, "Contour levels")
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnContourSlider)
         self.contour_sizer.Add(self.contour_slider)
@@ -2495,19 +2499,19 @@ class SpinBore(wx.Frame):
 
         # Make a slider to change the contour levels
         self.bore_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.bore_contour_label = wx.StaticBox(self, -1, "Contour Max")
+        self.bore_contour_label = wx.StaticBox(self.bore_sizer_2D_label, -1, "Contour Max")
         self.bore_contour_sizer = wx.StaticBoxSizer(
             self.bore_contour_label, wx.VERTICAL
         )
         self.bore_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.bore_contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.bore_slider.Bind(wx.EVT_SLIDER, self.OnBoreSlider)
         self.bore_contour_sizer.Add(self.bore_slider)
         self.bore_sizer_2D.Add(self.bore_contour_sizer)
 
         # Button to transpose the 2D data
-        self.bore_transpose_button = wx.Button(self, -1, "Transpose")
+        self.bore_transpose_button = wx.Button(self.bore_sizer_2D_label, -1, "Transpose")
         self.bore_transpose_button.Bind(wx.EVT_BUTTON, self.OnTransposeButtonBore)
         self.bore_sizer_2D.AddSpacer(10)
         self.bore_sizer_2D.Add(self.bore_transpose_button, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -2517,29 +2521,29 @@ class SpinBore(wx.Frame):
         self.bore_sizer_1D = wx.StaticBoxSizer(self.bore_sizer_1D_label, wx.HORIZONTAL)
 
         # Slider to change the scaling of the bore intensity
-        self.bore_intensity_label = wx.StaticBox(self, -1, "Intensity")
+        self.bore_intensity_label = wx.StaticBox(self.bore_sizer_1D_label, -1, "Intensity")
         self.bore_intensity_sizer = wx.StaticBoxSizer(
             self.bore_intensity_label, wx.VERTICAL
         )
         self.bore_intensity_slider = FloatSlider(
-            self, id=-1, value=1, minval=-1, maxval=10, res=0.01, style=wx.SL_HORIZONTAL
+            self.bore_intensity_label, id=-1, value=1, minval=-1, maxval=10, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.bore_intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensitySlider)
         self.bore_intensity_sizer.Add(self.bore_intensity_slider)
         self.bore_sizer_1D.Add(self.bore_intensity_sizer)
 
-        self.bore_overlay_sizer_label = wx.StaticBox(self, -1, "Overlay")
+        self.bore_overlay_sizer_label = wx.StaticBox(self.bore_sizer_1D_label, -1, "Overlay")
         self.bore_overlay_sizer = wx.StaticBoxSizer(
             self.bore_overlay_sizer_label, wx.HORIZONTAL
         )
 
         # Toggle amino acid projections
-        self.bore_toggle_button = wx.CheckBox(self, -1, "Show Amino Acid Predictions")
+        self.bore_toggle_button = wx.CheckBox(self.bore_overlay_sizer_label, -1, "Show Amino Acid Predictions")
         self.bore_toggle_button.Bind(wx.EVT_CHECKBOX, self.OnToggleAminoAcid)
 
         # Have a combo box with 1H, 13C, 15N
         self.bore_combo_box = wx.ComboBox(
-            self, -1, choices=["1H", "13C", "15N"], style=wx.CB_READONLY
+            self.bore_overlay_sizer_label, -1, choices=["1H", "13C", "15N"], style=wx.CB_READONLY
         )
         self.bore_combo_box.Bind(wx.EVT_COMBOBOX, self.OnNucleusSelection)
         self.bore_overlay_sizer.Add(
@@ -2550,7 +2554,7 @@ class SpinBore(wx.Frame):
 
         # Have a combobox for free/protein
         self.bore_free_protein_combo_box = wx.ComboBox(
-            self, -1, choices=["Free", "Protein"], style=wx.CB_READONLY
+            self.bore_overlay_sizer_label, -1, choices=["Free", "Protein"], style=wx.CB_READONLY
         )
         self.bore_free_protein_combo_box.Bind(
             wx.EVT_COMBOBOX, self.OnFreeProteinSelection
@@ -2562,7 +2566,7 @@ class SpinBore(wx.Frame):
 
         # Combobox for amino acid selection
         self.bore_amino_acid_combo_box = wx.ComboBox(
-            self,
+            self.bore_overlay_sizer_label,
             -1,
             choices=[
                 "Alanine (A)",
@@ -2606,12 +2610,12 @@ class SpinBore(wx.Frame):
         )
 
         # Make a slider to change the contour levels
-        self.bore_strip_contour_label = wx.StaticBox(self, -1, "Contour Max")
+        self.bore_strip_contour_label = wx.StaticBox(self.bore_sizer_stripplot_label, -1, "Contour Max")
         self.bore_strip_contour_sizer = wx.StaticBoxSizer(
             self.bore_strip_contour_label, wx.VERTICAL
         )
         self.bore_strip_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.bore_strip_contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.bore_strip_slider.Bind(wx.EVT_SLIDER, self.OnBoreSliderStripPlot)
         self.bore_strip_contour_sizer.Add(self.bore_strip_slider)

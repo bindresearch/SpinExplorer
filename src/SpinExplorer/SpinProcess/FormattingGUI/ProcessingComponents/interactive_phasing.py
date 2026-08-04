@@ -132,23 +132,23 @@ class InteractivePhasingFrame(wx.Frame):
         # Create the phasing 1D sizer
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
         self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
-        self.P0_label = wx.StaticText(self, label="P0 (Coarse):")
-        self.P1_label = wx.StaticText(self, label="P1 (Coarse):")
+        self.P0_label = wx.StaticText(self.phasing_label, label="P0 (Coarse):")
+        self.P1_label = wx.StaticText(self.phasing_label, label="P1 (Coarse):")
         self.P0_slider = FloatSlider(
-            self, id=-1, value=0.0, minval=-180, maxval=180, res=0.1, size=(300, height)
+            self.phasing_label, id=-1, value=0.0, minval=-180, maxval=180, res=0.1, size=(300, height)
         )
         self.P1_slider = FloatSlider(
-            self, id=-1, value=0.0, minval=-180, maxval=180, res=0.1, size=(300, height)
+            self.phasing_label, id=-1, value=0.0, minval=-180, maxval=180, res=0.1, size=(300, height)
         )
         self.P0_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
         self.P1_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
-        self.P0_label_fine = wx.StaticText(self, label="P0 (Fine):     ")
-        self.P1_label_fine = wx.StaticText(self, label="P1 (Fine):     ")
+        self.P0_label_fine = wx.StaticText(self.phasing_label, label="P0 (Fine):     ")
+        self.P1_label_fine = wx.StaticText(self.phasing_label, label="P1 (Fine):     ")
         self.P0_slider_fine = FloatSlider(
-            self, id=-1, value=0.0, minval=-10, maxval=10, res=0.01, size=(300, height)
+            self.phasing_label, id=-1, value=0.0, minval=-10, maxval=10, res=0.01, size=(300, height)
         )
         self.P1_slider_fine = FloatSlider(
-            self, id=-1, value=0.0, minval=-10, maxval=10, res=0.01, size=(300, height)
+            self.phasing_label, id=-1, value=0.0, minval=-10, maxval=10, res=0.01, size=(300, height)
         )
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
@@ -169,10 +169,10 @@ class InteractivePhasingFrame(wx.Frame):
         self.sizer_fine.AddSpacer(5)
         self.sizer_fine.Add(self.P1_slider_fine)
         self.phasing_combined = wx.BoxSizer(wx.HORIZONTAL)
-        self.P0_total = wx.StaticText(self, label="P0 (Total):")
-        self.P1_total = wx.StaticText(self, label="P1 (Total):")
-        self.P0_total_value = wx.StaticText(self, label="0")
-        self.P1_total_value = wx.StaticText(self, label="0")
+        self.P0_total = wx.StaticText(self.phasing_label, label="P0 (Total):")
+        self.P1_total = wx.StaticText(self.phasing_label, label="P1 (Total):")
+        self.P0_total_value = wx.StaticText(self.phasing_label, label="0")
+        self.P1_total_value = wx.StaticText(self.phasing_label, label="0")
         self.phasing_combined.Add(self.P0_total)
         self.phasing_combined.AddSpacer(160)
         self.phasing_combined.Add(self.P0_total_value)
@@ -188,7 +188,7 @@ class InteractivePhasingFrame(wx.Frame):
         self.phasing_sizer.Add(self.phasing_combined)
 
         # Add a button to set the pivot point for phasing
-        self.pivot_button = wx.Button(self, label="Set Pivot Point")
+        self.pivot_button = wx.Button(self.phasing_label, label="Set Pivot Point")
         self.pivot_button.Bind(wx.EVT_BUTTON, self.OnPivotButton)
         self.pivot_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.pivot_sizer.AddSpacer(500)
@@ -197,7 +197,7 @@ class InteractivePhasingFrame(wx.Frame):
         self.pivot_x_default = 0
 
         # Add a button to remove the pivot point
-        self.remove_pivot_button = wx.Button(self, label="Remove Pivot Point")
+        self.remove_pivot_button = wx.Button(self.phasing_label, label="Remove Pivot Point")
         self.remove_pivot_button.Bind(wx.EVT_BUTTON, self.OnRemovePivotButton)
         self.pivot_sizer.AddSpacer(20)
         self.pivot_sizer.Add(self.remove_pivot_button)
@@ -210,7 +210,7 @@ class InteractivePhasingFrame(wx.Frame):
         self.zoom_label = wx.StaticBox(self, -1, "Y Axis Zoom (%):")
         self.zoom_sizer = wx.StaticBoxSizer(self.zoom_label, wx.VERTICAL)
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(300, height)
+            self.zoom_label, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(300, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScroll1D)
         self.zoom_sizer.AddSpacer(5)

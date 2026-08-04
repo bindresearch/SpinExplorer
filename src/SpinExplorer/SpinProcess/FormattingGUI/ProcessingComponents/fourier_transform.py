@@ -59,7 +59,7 @@ class FourierTransform:
             self.fourier_transform_box, wx.HORIZONTAL
         )
         self.fourier_transform_checkbox = wx.CheckBox(
-            parent, -1, "Apply fourier transform"
+            self.fourier_transform_box, -1, "Apply fourier transform"
         )
         self.fourier_transform_checkbox.SetValue(True)
         self.fourier_transform_sizer.Add(
@@ -68,7 +68,7 @@ class FourierTransform:
         self.fourier_transform_sizer.AddSpacer(10)
         # Have a button for advanced options for fourier transform
         self.fourier_transform_advanced_options = wx.Button(
-            parent, -1, "Advanced Options"
+            self.fourier_transform_box, -1, "Advanced Options"
         )
         self.fourier_transform_advanced_options.Bind(
             wx.EVT_BUTTON, self.on_fourier_transform_advanced_options
@@ -79,7 +79,7 @@ class FourierTransform:
         self.fourier_transform_sizer.AddSpacer(10)
 
         # Have a button showing information on fourier transform
-        self.fourier_transform_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.fourier_transform_info = wx.Button(self.fourier_transform_box, -1, "\u24d8", size=(25, 32))
         self.fourier_transform_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_fourier_transform_info
         )
@@ -117,7 +117,7 @@ class FourierTransform:
         self.fourier_transform_advanced_options_sizer.AddSpacer(10)
         self.fourier_transform_auto_real_inverse_sign_alternation_radio_box = (
             wx.RadioBox(
-                self.fourier_transform_advanced_options_window,
+                self.ft_label,
                 -1,
                 choices=[
                     "Standard",
@@ -149,7 +149,7 @@ class FourierTransform:
         Negate imaginaries: Chnage sign of imaginaries before Fourier Transform\n\n"""
 
         self.ft_method_info = wx.StaticText(
-            self.fourier_transform_advanced_options_window, -1, self.ft_method_text
+            self.ft_label, -1, self.ft_method_text
         )
         self.fourier_transform_advanced_options_sizer.Add(
             self.ft_method_info, 0, wx.ALIGN_CENTER_HORIZONTAL
@@ -158,7 +158,7 @@ class FourierTransform:
 
         # Have a save and close button
         self.fourier_transform_advanced_options_save_button = wx.Button(
-            self.fourier_transform_advanced_options_window, -1, "Save and Close"
+            self.ft_label, -1, "Save and Close"
         )
         self.fourier_transform_advanced_options_save_button.Bind(
             wx.EVT_BUTTON, self.on_fourier_transform_advanced_options_save

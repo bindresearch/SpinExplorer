@@ -64,7 +64,7 @@ class BaselineCorrection:
             self.baseline_correction_box, wx.HORIZONTAL
         )
         self.baseline_correction_checkbox = wx.CheckBox(
-            parent, -1, "Apply baseline correction"
+            self.baseline_correction_box, -1, "Apply baseline correction"
         )
         self.baseline_correction_checkbox.SetValue(False)
         self.baseline_correction_sizer.Add(
@@ -73,7 +73,7 @@ class BaselineCorrection:
         self.baseline_correction_sizer.AddSpacer(10)
         # Have a radio box for linear or polynomial baseline correction
         self.baseline_correction_radio_box = wx.RadioBox(
-            parent, -1, "Baseline Correction Method", choices=["Linear", "Polynomial"]
+            self.baseline_correction_box, -1, "Baseline Correction Method", choices=["Linear", "Polynomial"]
         )
         # Bind the radio box to a function that will update the baseline correction options
         self.baseline_correction_radio_box.Bind(
@@ -89,13 +89,13 @@ class BaselineCorrection:
 
         # If linear baseline correction is selected, have a textcontrol for the node values to use
         self.baseline_correction_nodes_label = wx.StaticText(
-            parent, -1, "Node width (pts):"
+            self.baseline_correction_box, -1, "Node width (pts):"
         )
         self.baseline_correction_sizer.Add(
             self.baseline_correction_nodes_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.baseline_correction_nodes_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.node_width), size=(30, 20)
+            self.baseline_correction_box, -1, str(self.node_width), size=(30, 20)
         )
         self.baseline_correction_nodes_textcontrol.Bind(
             wx.EVT_TEXT, self.on_baseline_correction_textcontrol
@@ -106,13 +106,13 @@ class BaselineCorrection:
         self.baseline_correction_sizer.AddSpacer(10)
         # Have a textcontrol for the node list (percentages)
         self.baseline_correction_node_list_label = wx.StaticText(
-            parent, -1, "Node list (%):"
+            self.baseline_correction_box, -1, "Node list (%):"
         )
         self.baseline_correction_sizer.Add(
             self.baseline_correction_node_list_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.baseline_correction_node_list_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.node_list), size=(100, 20)
+            self.baseline_correction_box, -1, str(self.node_list), size=(100, 20)
         )
         self.baseline_correction_node_list_textcontrol.Bind(
             wx.EVT_TEXT, self.on_baseline_correction_textcontrol
@@ -124,13 +124,13 @@ class BaselineCorrection:
         # If polynomial baseline correction is selected, have a textcontrol for the polynomial order
 
         self.baseline_correction_polynomial_order_label = wx.StaticText(
-            parent, -1, "Polynomial order:"
+            self.baseline_correction_box, -1, "Polynomial order:"
         )
         self.baseline_correction_sizer.Add(
             self.baseline_correction_polynomial_order_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.baseline_correction_polynomial_order_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.polynomial_order), size=(30, 20)
+            self.baseline_correction_box, -1, str(self.polynomial_order), size=(30, 20)
         )
         self.baseline_correction_polynomial_order_textcontrol.Bind(
             wx.EVT_TEXT, self.on_baseline_correction_textcontrol
@@ -147,7 +147,7 @@ class BaselineCorrection:
             self.baseline_correction_polynomial_order_textcontrol.Hide()
 
         # Have a button showing information on baseline correction
-        self.baseline_correction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.baseline_correction_info = wx.Button(self.baseline_correction_box, -1, "\u24d8", size=(25, 32))
 
         self.baseline_correction_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_baseline_correction_info

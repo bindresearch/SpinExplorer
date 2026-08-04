@@ -446,6 +446,7 @@ def apply_sampling_schedule_nd(fid: NDArray,
 
         max_i0 = sampling_schedule[:, 0].max()
         max_i1 = sampling_schedule[:, 1].max()
+
         if max_i0 >= n0 // 2 or max_i1 >= n1 // 2:
             print('swapping over sampling')
             sampling_schedule = sampling_schedule[:, ::-1]

@@ -628,9 +628,9 @@ class fit_peaks_2D_window(wx.Frame):
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.csizer = wx.BoxSizer(wx.HORIZONTAL)
         self.x_val = 10.00
-        self.contour2_label = wx.StaticText(self, label="x:")
+        self.contour2_label = wx.StaticText(self.contour_label, label="x:")
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, 25)
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, 25)
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnMinContourFit)
         self.csizer.Add(self.contour2_label)

@@ -173,15 +173,15 @@ class OneDViewer(wx.Panel):
         self.select_plot_label = wx.StaticBox(self, -1, "Select Plot:")
         self.select_plot_sizer = wx.StaticBoxSizer(self.select_plot_label, wx.VERTICAL)
         self.plot_combobox = wx.ComboBox(
-            self, choices=["Main Plot"], style=wx.CB_READONLY
+            self.select_plot_label, choices=["Main Plot"], style=wx.CB_READONLY
         )
         self.plot_combobox.Bind(wx.EVT_COMBOBOX, self.OnSelectPlot)
         self.select_plot_sizer.Add(self.plot_combobox, 0, wx.ALL, 5)
         # Checkbox where can select all plots to be edited at the same time
-        self.select_all_checkbox = wx.CheckBox(self, label="Select All")
+        self.select_all_checkbox = wx.CheckBox(self.select_plot_label, label="Select All")
         self.hide_select_row = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.hide_checkbox = wx.CheckBox(self, label="Hide")
+        self.hide_checkbox = wx.CheckBox(self.select_plot_label, label="Hide")
         self.hide_checkbox.Bind(wx.EVT_CHECKBOX, self.OnHideSpectrum)
 
         self.hide_select_row.Add(self.hide_checkbox)
@@ -195,10 +195,10 @@ class OneDViewer(wx.Panel):
         # Creating the phasing 1D sizer
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
         self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
-        self.P0_label = wx.StaticText(self, label="P0 (Coarse):", size=(70, height))
-        self.P1_label = wx.StaticText(self, label="P1 (Coarse):", size=(70, height))
+        self.P0_label = wx.StaticText(self.phasing_label, label="P0 (Coarse):", size=(70, height))
+        self.P1_label = wx.StaticText(self.phasing_label, label="P1 (Coarse):", size=(70, height))
         self.P0_slider = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-180,
@@ -207,7 +207,7 @@ class OneDViewer(wx.Panel):
             size=(int(self.parent.width / 5), height),
         )
         self.P1_slider = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-180,
@@ -217,10 +217,10 @@ class OneDViewer(wx.Panel):
         )
         self.P0_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
         self.P1_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
-        self.P0_label_fine = wx.StaticText(self, label="P0 (Fine):", size=(70, height))
-        self.P1_label_fine = wx.StaticText(self, label="P1 (Fine):", size=(70, height))
+        self.P0_label_fine = wx.StaticText(self.phasing_label, label="P0 (Fine):", size=(70, height))
+        self.P1_label_fine = wx.StaticText(self.phasing_label, label="P1 (Fine):", size=(70, height))
         self.P0_slider_fine = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-10,
@@ -229,7 +229,7 @@ class OneDViewer(wx.Panel):
             size=(int(self.parent.width / 5), height),
         )
         self.P1_slider_fine = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-10,
@@ -239,22 +239,22 @@ class OneDViewer(wx.Panel):
         )
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll1D)
-        self.P0_total = wx.StaticText(self, label="P0 (Total):", size=(70, height))
-        self.P1_total = wx.StaticText(self, label="P1 (Total):", size=(70, height))
-        self.P0_total_value = wx.TextCtrl(self, value = "0", 
+        self.P0_total = wx.StaticText(self.phasing_label, label="P0 (Total):", size=(70, height))
+        self.P1_total = wx.StaticText(self.phasing_label, label="P1 (Total):", size=(70, height))
+        self.P0_total_value = wx.TextCtrl(self.phasing_label, value = "0", 
                                     size = (70, height), style = wx.TE_PROCESS_ENTER)
         self.P0_total_value.Bind(wx.EVT_TEXT_ENTER, self.P0_text_change)
 
-        self.P1_total_value = wx.TextCtrl(self, value = "0", 
+        self.P1_total_value = wx.TextCtrl(self.phasing_label, value = "0", 
                                     size = (70,height), style = wx.TE_PROCESS_ENTER)
         self.P1_total_value.Bind(wx.EVT_TEXT_ENTER, self.P1_text_change)
 
         # Adding a button to change the range of the coarse and fine sliders (default to +/-180 and +/-10 degrees)
-        self.update_phasing_range = wx.Button(self, label="Change slider range")
+        self.update_phasing_range = wx.Button(self.phasing_label, label="Change slider range")
         self.update_phasing_range.Bind(wx.EVT_BUTTON, self.OnSliderRange1D)
 
         # Adding a button to set the pivot point for phasing
-        self.pivot_button = wx.Button(self, label="Set Pivot Point")
+        self.pivot_button = wx.Button(self.phasing_label, label="Set Pivot Point")
         self.pivot_button.Bind(wx.EVT_BUTTON, self.OnPivotButton)
         self.pivot_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.pivot_sizer.Add(self.update_phasing_range)
@@ -262,7 +262,7 @@ class OneDViewer(wx.Panel):
         self.pivot_sizer.Add(self.pivot_button)
 
         # Adding a button to remove the pivot point
-        self.remove_pivot_button = wx.Button(self, label="Remove Pivot Point")
+        self.remove_pivot_button = wx.Button(self.phasing_label, label="Remove Pivot Point")
         self.remove_pivot_button.Bind(wx.EVT_BUTTON, self.OnRemovePivotButton)
         self.pivot_sizer.AddSpacer(10)
         self.pivot_sizer.Add(self.remove_pivot_button)
@@ -315,7 +315,7 @@ class OneDViewer(wx.Panel):
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         width = int(self.parent.width / 4.5)
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(width, height)
+            self.contour_label, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(width, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScroll1D)
         self.contour_sizer.AddSpacer(5)
@@ -335,7 +335,7 @@ class OneDViewer(wx.Panel):
         self.reference_sizer = wx.BoxSizer(wx.VERTICAL)
         self.reference_sizer2 = wx.BoxSizer(wx.VERTICAL)
         self.reference_slider = FloatSlider(
-            self,
+            self.reference_label,
             id=-1,
             value=0,
             minval=-self.reference_range,
@@ -346,7 +346,7 @@ class OneDViewer(wx.Panel):
         self.reference_slider.Bind(wx.EVT_SLIDER, self.OnReferenceScroll1D)
         self.reference_sizer.Add(self.reference_slider, wx.ALIGN_CENTER_HORIZONTAL, 5)
         self.reference_range_chooser = wx.ComboBox(
-            self,
+            self.reference_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
             size=(width, height),
@@ -356,14 +356,14 @@ class OneDViewer(wx.Panel):
         self.reference_sizer2.Add(
             self.reference_range_chooser, wx.ALIGN_CENTER_HORIZONTAL, 5
         )
-        self.reference_value_label = wx.TextCtrl(self, value = "0.0", 
+        self.reference_value_label = wx.TextCtrl(self.reference_label, value = "0.0", 
                                     size = (70, height), style = wx.TE_PROCESS_ENTER)
         self.reference_value_label.Bind(wx.EVT_TEXT_ENTER, self.OnReferenceText)
         self.reference_sizer.AddSpacer(5)
         self.reference_sizer.Add(
             self.reference_value_label, wx.ALIGN_CENTER_HORIZONTAL, 5
         )
-        self.reference_range_text = wx.StaticText(self, label="Range")
+        self.reference_range_text = wx.StaticText(self.reference_label, label="Range")
         self.reference_sizer2.AddSpacer(5)
         self.reference_sizer2.Add(
             self.reference_range_text, wx.ALIGN_CENTER_HORIZONTAL, 5
@@ -386,7 +386,7 @@ class OneDViewer(wx.Panel):
         self.vertical_sizer = wx.StaticBoxSizer(self.vertical_label, wx.HORIZONTAL)
         self.vertical_sizer2 = wx.BoxSizer(wx.VERTICAL)
         self.vertical_slider = FloatSlider(
-            self,
+            self.vertical_label,
             id=-1,
             value=0,
             minval=-self.vertical_range * float(self.vertical_range_values[0]) / 100,
@@ -398,7 +398,7 @@ class OneDViewer(wx.Panel):
         self.vertical_sizer.Add(self.vertical_slider)
         self.vertical_sizer.AddSpacer(5)
         self.vertical_range_chooser = wx.ComboBox(
-            self,
+            self.vertical_label,
             value=self.vertical_range_values[0],
             choices=self.vertical_range_values,
             size=(width, height),
@@ -408,7 +408,7 @@ class OneDViewer(wx.Panel):
         self.vertical_sizer2.Add(
             self.vertical_range_chooser, wx.ALIGN_CENTER_HORIZONTAL, 5
         )
-        self.vertical_range_label = wx.StaticText(self, label="Range")
+        self.vertical_range_label = wx.StaticText(self.vertical_label, label="Range")
         self.vertical_sizer2.AddSpacer(5)
         self.vertical_sizer2.Add(
             self.vertical_range_label, wx.ALIGN_CENTER_HORIZONTAL, 5
@@ -421,7 +421,7 @@ class OneDViewer(wx.Panel):
         self.colour_sizer = wx.StaticBoxSizer(self.colour_label, wx.VERTICAL)
         self.options = colour_options
         self.colour_chooser = wx.ComboBox(
-            self, value=self.options[0], choices=self.options, size=(75, height)
+            self.colour_label, value=self.options[0], choices=self.options, size=(75, height)
         )
         self.colour_chooser.Bind(wx.EVT_COMBOBOX, self.OnColourChoice1D)
         self.colour_chooser.SetSelection(0)
@@ -434,7 +434,7 @@ class OneDViewer(wx.Panel):
         self.linewidth_label = wx.StaticBox(self, -1, "Linewidth")
         self.linewidth_sizer = wx.StaticBoxSizer(self.linewidth_label, wx.VERTICAL)
         self.linewidth_slider = FloatSlider(
-            self, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(50, height)
+            self.linewidth_label, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(50, height)
         )
         self.linewidth_slider.Bind(wx.EVT_SLIDER, self.OnLinewidthScroll1D)
         spacer = 15
@@ -465,7 +465,7 @@ class OneDViewer(wx.Panel):
         self.multiply_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.multiply_value = 1
         self.multiply_slider = FloatSlider(
-            self,
+            self.multiply_label,
             id=-1,
             value=1,
             minval=0.1,
@@ -481,7 +481,7 @@ class OneDViewer(wx.Panel):
         )
         self.multiply_sizer.AddSpacer(5)
         self.multiply_range_chooser = wx.ComboBox(
-            self,
+            self.multiply_label,
             value=self.multiply_range_values[0],
             choices=self.multiply_range_values,
             size=(range_width, height),
@@ -489,11 +489,11 @@ class OneDViewer(wx.Panel):
         self.multiply_range_chooser.Bind(wx.EVT_COMBOBOX, self.OnMultiplyCombo)
         self.multiply_range_chooser.SetSelection(0)
         self.multiply_sizer_column2.Add(self.multiply_range_chooser, border=5)
-        self.multiply_label_value = wx.TextCtrl(self, value = "1.000", 
+        self.multiply_label_value = wx.TextCtrl(self.multiply_label, value = "1.000", 
                                     size = (70, height), style = wx.TE_PROCESS_ENTER)
         self.multiply_label_value.Bind(wx.EVT_TEXT_ENTER, self.OnMultiplyText)
 
-        self.multiply_combobox_label = wx.StaticText(self, label="Range")
+        self.multiply_combobox_label = wx.StaticText(self.multiply_label, label="Range")
         self.multiply_sizer_column1.AddSpacer(5)
         self.multiply_sizer_column1.Add(
             self.multiply_label_value, wx.ALIGN_CENTER_HORIZONTAL, 5
@@ -2062,7 +2062,7 @@ class OneDViewer(wx.Panel):
     def OnMultiplyScroll1D(self, event):
         # Function to multiply the 1D spectrum by a constant value
         self.multiply_value = float(self.multiply_slider.GetValue())
-        self.multiply_label_value.SetLabel("{:.3f}".format(self.multiply_value))
+        self.multiply_label_value.SetValue("{:.3f}".format(self.multiply_value))
         self.ApplyMultiplication()
 
     def ApplyMultiplication(self):
@@ -2151,7 +2151,7 @@ class OneDViewer(wx.Panel):
     def OnReferenceScroll1D(self, event):
         # Function to move the spectrum left/right in the ppm scale when the slider position is changed
         reference_value = float(self.reference_slider.GetValue())
-        self.reference_value_label.SetLabel("{:.4f}".format(reference_value))
+        self.reference_value_label.SetValue("{:.4f}".format(reference_value))
         self.ApplyReference(reference_value)
 
     def ApplyReference(self, reference_value):
@@ -2838,8 +2838,8 @@ class OneDViewer(wx.Panel):
         # Get all the slider values for P0 and P1 (coarse and fine), put the combined coarse and fine values on the screen
         self.total_P0 = self.P0_slider.GetValue() + self.P0_slider_fine.GetValue()
         self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
-        self.P0_total_value.SetLabel("{:.2f}".format(self.total_P0))
-        self.P1_total_value.SetLabel("{:.2f}".format(self.total_P1))
+        self.P0_total_value.SetValue("{:.2f}".format(self.total_P0))
+        self.P1_total_value.SetValue("{:.2f}".format(self.total_P1))
         self.phase1D()
 
     def P0_text_change(self, event):
