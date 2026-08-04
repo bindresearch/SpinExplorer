@@ -202,7 +202,7 @@ class SpinExplorer(wx.Frame):
         self.listbox.Bind(wx.EVT_LISTBOX, self.OnListBoxPress)
 
         self.left_box = wx.BoxSizer(wx.VERTICAL)
-        text = wx.StaticText(self, label="Recently opened:")
+        text = wx.StaticText(self.load_spectra_box_label, label="Recently opened:")
 
         self.left_box.Add(text)
         self.left_box.AddSpacer(5)
