@@ -3101,6 +3101,7 @@ class TwoDViewer(wx.Panel):
                     for i in range(len(self.twoD_slices_horizontal)):
                         multiply_factor = self.values_dictionary[i]["multiply factor"]
                         self.y_difference = self.values_dictionary[i]["move y"]
+                        
                         try:
                             if self.transposed2D == False:
                                 self.twoD_slices_horizontal[i][0].set_ydata(
@@ -3115,6 +3116,7 @@ class TwoDViewer(wx.Panel):
                                 self.twoD_slices_horizontal[i][0].set_xdata(
                                     self.values_dictionary[i]["new_x_ppms"]
                                 )
+        
                             else:
                                 self.twoD_slices_horizontal[i][0].set_ydata(
                                     self.values_dictionary[i]["z_data"][
@@ -3350,6 +3352,7 @@ class TwoDViewer(wx.Panel):
                     self.values_dictionary[self.active_plot_index][
                         "p1 Fine"
                     ] = self.P1_slider_fine.GetValue()
+                    self.y_difference = self.values_dictionary[self.active_plot_index]["move y"]
                     if self.transposed2D == False:
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
@@ -3406,6 +3409,7 @@ class TwoDViewer(wx.Panel):
                         self.values_dictionary[i][
                             "p1 Fine"
                         ] = self.P1_slider_fine.GetValue()
+                        self.y_difference = self.values_dictionary[i]["move y"]
                         if self.transposed2D == False:
                             data = (
                                 self.values_dictionary[i]["z_data"][
