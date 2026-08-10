@@ -184,7 +184,7 @@ class SpinExplorer(wx.Frame):
         button_sizer.AddSpacer(20)
 
         bmp2 = SpinProcessButton.GetBitmap()
-        img2 = bmp1.ConvertToImage()
+        img2 = bmp2.ConvertToImage()
         bmp2 = wx.Bitmap(img2)
         bmp2.SetScaleFactor(2)
         middle = wx.BitmapButton(self, -1, bitmap=bmp2)
@@ -194,7 +194,7 @@ class SpinExplorer(wx.Frame):
         button_sizer.AddSpacer(20)
 
         bmp3 = SpinViewButton.GetBitmap()
-        img3 = bmp1.ConvertToImage()
+        img3 = bmp3.ConvertToImage()
         bmp3 = wx.Bitmap(img3)
         bmp3.SetScaleFactor(2)
         right = wx.BitmapButton(self, -1, bitmap=bmp3)
