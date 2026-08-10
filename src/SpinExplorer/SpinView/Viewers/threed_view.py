@@ -337,7 +337,7 @@ class ThreeDViewer(wx.Panel):
         self.z_sizer.AddSpacer(15)
         self.z_val_box = wx.BoxSizer(wx.HORIZONTAL)
         self.z_val_box.AddSpacer(132)
-        self.z_val = wx.StaticText(self, label="0")
+        self.z_val = wx.StaticText(self.z_label, label="0")
         self.z_val_box.Add(self.z_val)
         self.z_sizer.Add(self.z_val_box)
         self.z_sizer.AddSpacer(4)
@@ -562,18 +562,19 @@ class ThreeDViewer(wx.Panel):
 
     def OnOrientationCombo(self, event):
         self.nmrdata.data = self.data_original
+        self.ax.clear()
+        self.axes1D.clear()
+        self.axes1D_2.clear()
+
         if self.orientation_chooser.GetSelection() == 0:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[0]) + "):")
-            self.ax.clear()
-            self.axes1D.clear()
-            self.axes1D_2.clear()
             self.fig.clear()
             self.draw_figure_3D()
             self.ax.set_xlabel(self.nmrdata.axislabels[1])
             self.ax.set_ylabel(self.nmrdata.axislabels[2])
         elif self.orientation_chooser.GetSelection() == 1:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[0]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
@@ -610,7 +611,7 @@ class ThreeDViewer(wx.Panel):
 
         elif self.orientation_chooser.GetSelection() == 2:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[2]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
@@ -643,7 +644,7 @@ class ThreeDViewer(wx.Panel):
 
         elif self.orientation_chooser.GetSelection() == 3:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[2]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
@@ -676,7 +677,7 @@ class ThreeDViewer(wx.Panel):
 
         elif self.orientation_chooser.GetSelection() == 4:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[1]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
@@ -708,7 +709,7 @@ class ThreeDViewer(wx.Panel):
             self.UpdateFrame()
         elif self.orientation_chooser.GetSelection() == 5:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[1]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
