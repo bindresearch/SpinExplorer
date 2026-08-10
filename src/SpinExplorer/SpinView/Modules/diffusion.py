@@ -2540,18 +2540,28 @@ class DiffusionFit(wx.Frame):
         """
         Ask the user where they would like to save the folder which will contain the outputs
         """
-
-        dlg = wx.FileDialog (self, "Input directory name to create and save output files to",
-            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+        dlg = wx.DirDialog (self, "Choose a location to save the output files to:",
+            defaultPath=os.getcwd()
         )
-        dlg.SetDirectory(os.getcwd())
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
-            os.makedirs(path, exist_ok=True)
-            self.save_metadata(path)
-            self.save_data(path)
+            # Choose a name for the output directory
+            dlg2 = wx.TextEntryDialog(
+                self,
+                "Enter an output directory name:",
+                "Output directory",
+                ""
+            )
+            if dlg2.ShowModal() == wx.ID_OK:
+                name = dlg2.GetValue()
+                final_path = os.path.join(path, name)
+                os.makedirs(final_path, exist_ok=True)
+                self.save_metadata(final_path)
+                self.save_data(final_path)
             dlg.Destroy()
+            dlg2.Destroy()
         else:
+            dlg.Destroy()
             return
 
     def save_metadata(self, path):
