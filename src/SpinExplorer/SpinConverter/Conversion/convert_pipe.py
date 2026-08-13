@@ -128,7 +128,10 @@ class Convert_pipe:
 
         print("converting nmrPipe")
         # Add the necessary permissions to the fid.com file
-        os.system("chmod +x fid.com")
+        chmod_process = subprocess.Popen(
+                                "chmod +x fid.com",
+                                shell=True,
+                                stderr=subprocess.STDOUT)
         # Run the fid.com file
         nmrPipeSubprocess(self)
 
