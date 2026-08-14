@@ -228,7 +228,7 @@ class NotebookProcess(wx.Notebook):
         data extraction is not selected.
         """
         try:
-            if self.tabDim2.linear_prediction_radio_box_dim2.GetSelection() == 2:
+            if (self.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==2):
                 # SMILE processing is selected, asking the user to confirm SMILE is installed as part of nmrPipe
                 dlg = wx.MessageDialog(
                     self,
@@ -243,7 +243,7 @@ class NotebookProcess(wx.Notebook):
                     self.change_to_cwd()
                     return
 
-                if self.tabDim1.extraction_checkbox.GetValue() == False:
+                if self.tabDim1.extraction.extraction_checkbox.GetValue() == False:
                     dlg = wx.MessageDialog(
                         self,
                         "No direct dimension data extraction is selected, SMILE reconstruction may take a while. Consider extracting a region of the direct dimension before reconstruction. Do you want to continue or cancel?",
@@ -258,6 +258,7 @@ class NotebookProcess(wx.Notebook):
                         return
         except:
             pass
+
 
         checking = CheckingParameters(self, self.tabs)
         continue_processing = checking.check_parameter_validity()
@@ -276,7 +277,7 @@ class NotebookProcess(wx.Notebook):
         to remove the requirement of SMILE from nmrPipe.
         """
         try:
-            if self.tabDim2.linear_prediction_radio_box_dim2.GetSelection() == 2:
+            if (self.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==2):
                 # SMILE processing is selected, asking the user to confirm SMILE is installed as part of nmrPipe
                 dlg = wx.MessageDialog(
                     self,
@@ -289,6 +290,23 @@ class NotebookProcess(wx.Notebook):
                 result = dlg.ShowModal()
                 self.change_to_cwd()
                 return
+
+            if (self.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==3):
+                if self.tabDim1.extraction.extraction_checkbox.GetValue() == False:
+                    print('here4')
+                    dlg = wx.MessageDialog(
+                        self,
+                        "No direct dimension data extraction is selected, SpinExplorer IST reconstruction may take a while. Consider extracting a region of the direct dimension before reconstruction. Do you want to continue or cancel?",
+                        "Warning",
+                        wx.OK | wx.CANCEL | wx.ICON_WARNING,
+                    )
+                    self.Raise()
+                    self.SetFocus()
+                    result = dlg.ShowModal()
+                    if result == wx.ID_CANCEL:
+                        self.change_to_cwd()
+                        return
+            
         except:
             pass
 

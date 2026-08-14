@@ -78,7 +78,7 @@ class Read_json:
         dlg = wx.MessageDialog(
             self.notebook,
             "A set of saved parameters has been found (parameters.json). Would you like to read these values?",
-            "Warning",
+            "Loading parameters",
             wx.YES_NO | wx.ICON_QUESTION,
         )
         result = dlg.ShowModal()
@@ -352,6 +352,11 @@ class InputParameters:
                 )
                 lp_only = dictionary["Linear Prediction"][key]["Linear prediction only"]
 
+                try:
+                    ist_threshold = float(dictionary["Linear Prediction"][key]["IST threshold"])
+                except:
+                    ist_threshold = 0.9
+
                 dimension_tab.linear_prediction.nuslist_name_indirect = nusfile
                 dimension_tab.linear_prediction.ist_data_extension_number_indirect = (
                     nus_extension
@@ -365,6 +370,9 @@ class InputParameters:
                 dimension_tab.linear_prediction.on_linear_prediction_radio_box_indirect(
                     wx.EVT_RADIOBOX
                 )
+
+                dimension_tab.linear_prediction.ist_threshold_indirect = ist_threshold
+                dimension_tab.linear_prediction.ist_threshold_textcontrol_indirect = (ist_threshold)
 
 
     def load_apodization(self, dimension, dimension_tab, dictionary):

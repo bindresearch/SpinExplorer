@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import truncnorm # type: ignore
@@ -388,6 +388,11 @@ def general_signals_vector(amp, freq, r2, times):
             (1j * freq[:, None] - r2[:, None]) * times
             )).astype(np.complex64)
 
+def generate_1d_spec_from_vals(num_signals:int, amp_vals: NDArray, freq_vals: NDArray, 
+                                 r2_vals: NDArray, max_time:float, num_points:int):
+    
+    return np.sum([generate_signal(amp,freq,r2, max_time, num_points) for (amp,freq,r2) in zip(amp_vals,freq_vals,r2_vals)], axis = 0)
+
 def generate_1d_spec_from_ranges(num_signals:int, amp_dist: DistributionParam, freq_dist: DistributionParam, 
                                  r2_dist: DistributionParam, max_time:float, num_points:int):
     
@@ -421,11 +426,45 @@ def generate_signs_array(n: int, minus_one_fraction: float) -> np.ndarray:
 
     return arr
 
+def generate_2d_spec_with_vals(num_signals: int, amp_vals1: NDArray, freq_vals1: NDArray, r2_vals1: NDArray,
+                               sw1: float, num_points1: int, 
+                               amp_vals2: NDArray, freq_vals2: NDArray, r2_vals2: NDArray,
+                               sw2: float, num_points2: int, 
+                               neg_signs: Optional[NDArray] = None):
+    
+        if neg_signs is not None:
+            amp_vals1*=neg_signs
+
+        max_time1 = (num_points1 - 1) / sw1
+        max_time2 = (num_points2 - 1) / sw2
+        
+        times1 = np.linspace(0, max_time1, num_points1, dtype=np.float32)
+        times2 = np.linspace(0, max_time2, num_points2, dtype=np.float32)
+
+        sigs_direct    = general_signals_vector(amp_vals1, freq_vals1, r2_vals1, times1)  # (num_signals, num_points1)
+        sigs_indirect  = general_signals_vector(amp_vals2, freq_vals2, r2_vals2, times2)  # (num_signals, num_points2)
+
+        cos_indirect = sigs_indirect.real  # (num_signals, num_points2)
+        sin_indirect = sigs_indirect.imag  # (num_signals, num_points2)
+
+        # Vectorised outer product summed over signals — shape (num_points2, num_points1)
+        fid_2d_r = np.einsum('si,sj->ij', cos_indirect, sigs_direct, optimize=True)
+        fid_2d_i = np.einsum('si,sj->ij', sin_indirect, sigs_direct, optimize=True)
+
+        n_indirect, n_direct = fid_2d_r.shape
+        fid_interleaved = np.empty((n_indirect * 2, n_direct), dtype=np.complex64)
+        fid_interleaved[0::2] = fid_2d_r  # cos-modulated rows
+        fid_interleaved[1::2] = fid_2d_i  # sin-modulated rows
+
+        return fid_interleaved
+
+
 def generate_2d_spec_from_ranges(num_signals:int, amp_dist1: DistributionParam, freq_dist1: DistributionParam, r2_dist1: DistributionParam,
                                  sw1:float, num_points1: int,
                                  amp_dist2: DistributionParam, freq_dist2: DistributionParam, r2_dist2: DistributionParam,
                                  sw2:float, num_points2: int,
-                                 neg_signs: NDArray = None):
+                                 neg_signs: Optional[NDArray] = None):
+                                 
     
     amp_vals1,freq_vals1,r2_vals1 = [d.draw(num_signals) for d in (amp_dist1,freq_dist1,r2_dist1)]
     amp_vals2,freq_vals2,r2_vals2 = [d.draw(num_signals) for d in (amp_dist2,freq_dist2,r2_dist2)]
@@ -463,7 +502,7 @@ def generate_3d_spec_from_ranges(num_signals: int,
                                  sw2: float, num_points2: int,
                                  amp_dist3: DistributionParam, freq_dist3: DistributionParam, r2_dist3: DistributionParam,
                                  sw3: float, num_points3: int,
-                                 neg_signs: NDArray = None):
+                                 neg_signs: Optional[NDArray] = None):
 
     amp_vals1, freq_vals1, r2_vals1 = [d.draw(num_signals) for d in (amp_dist1, freq_dist1, r2_dist1)]
     amp_vals2, freq_vals2, r2_vals2 = [d.draw(num_signals) for d in (amp_dist2, freq_dist2, r2_dist2)]
@@ -525,4 +564,3 @@ def generate_3d_spec_from_ranges(num_signals: int,
  
 
     return fid_3d_c
-

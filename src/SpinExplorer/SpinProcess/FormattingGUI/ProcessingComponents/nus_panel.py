@@ -71,7 +71,8 @@ class NonUniformSampling:
         )
         self.ist_data_extension_number_indirect = 0
         self.ist_linear_prediction_only_flag = self.find_ist_linear_prediction_only_flag()
-        self.ist_nus_iterations_indirect = 2000
+        self.ist_nus_iterations_indirect = 1000
+        self.ist_threshold_indirect = 0.9
 
     def find_ist_linear_prediction_only_flag(self):
         """
@@ -248,7 +249,7 @@ class NonUniformSampling:
 
             # Number of iterations
             self.smile_nus_iterations_text = wx.StaticText(
-                self.linear_prediction_sizer_indirect_label, -1, "Number of Iterations:"
+                self.linear_prediction_sizer_indirect_label, -1, "Max Iterations:"
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.smile_nus_iterations_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -315,7 +316,7 @@ class NonUniformSampling:
 
             # Number of iterations
             self.ist_nus_iterations_text = wx.StaticText(
-                self.linear_prediction_sizer_indirect_label, -1, "Number of Iterations:"
+                self.linear_prediction_sizer_indirect_label, -1, "Max Iterations:"
             )
             self.linear_prediction_sizer_indirect.Add(
                 self.ist_nus_iterations_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -335,11 +336,35 @@ class NonUniformSampling:
                 wx.ALIGN_CENTER_VERTICAL,
             )
 
+            self.linear_prediction_sizer_indirect.AddSpacer(10)
+
+            # Threshold
+            self.ist_threshold_text = wx.StaticText(
+                self.linear_prediction_sizer_indirect_label, -1, "IST Threshold:"
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_threshold_text, 0, wx.ALIGN_CENTER_VERTICAL
+            )
+            self.linear_prediction_sizer_indirect.AddSpacer(5)
+
+
+            self.ist_threshold_textcontrol_indirect = wx.TextCtrl(
+                self.linear_prediction_sizer_indirect_label, -1, str(self.ist_threshold_indirect), size=(50, 20), style=wx.TE_PROCESS_ENTER
+            )
+            self.ist_threshold_textcontrol_indirect.Bind(
+                wx.EVT_TEXT_ENTER, self.on_ist_threshold_textcontrol_indirect
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_threshold_textcontrol_indirect,
+                0,
+                wx.ALIGN_CENTER_VERTICAL,
+            )
+
 
             self.linear_prediction_sizer_indirect.AddSpacer(10)
 
             # Checkbox to determine if NUS reconstruction is to be applied or if IST is to be used
-            # for only linear prediction
+            # for only NUS extrapolation
             self.ist_linear_prediction_only = wx.CheckBox(self.linear_prediction_sizer_indirect_label, -1, label='Data extension only')
             self.ist_linear_prediction_only.SetValue(self.ist_linear_prediction_only_flag)
             self.linear_prediction_sizer_indirect.Add(self.ist_linear_prediction_only, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -588,6 +613,41 @@ class NonUniformSampling:
                 )
                 return
 
+
+    def on_ist_threshold_textcontrol_indirect(self, event):
+            """
+            When changing the nus iteration number, this function checks
+            the parameter validity (must be an integer) and updates
+            the stored value.
+            """
+            if self.ist_threshold_textcontrol_indirect.GetValue() != "":
+                try:
+                    self.ist_threshold_indirect = float(
+                        self.ist_threshold_textcontrol_indirect.GetValue()
+                    )
+    
+                    if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+                        # If IST NUS is selected and there are more than 1 complex indirect dimensions, change the threshold to the same for both indirect dimensions
+                        if(self.parent.parent.tabDim2!=self):
+                            self.parent.parent.tabDim2.linear_prediction.ist_threshold_indirect = self.ist_threshold_indirect
+                            self.parent.parent.tabDim2.linear_prediction.ist_threshold_textcontrol_indirect.SetValue(str(self.ist_threshold_indirect))
+                        if(self.parent.parent.tabDim3!=self):
+                            self.parent.parent.tabDim3.linear_prediction.ist_threshold_indirect = self.ist_threshold_indirect
+                            self.parent.parent.tabDim3.linear_prediction.ist_threshold_textcontrol_indirect.SetValue(str(self.ist_threshold_indirect))
+                except:
+                    msg = wx.MessageDialog(
+                        self.parent,
+                        "The value entered for IST threshold is not a valid number",
+                        "Error",
+                        wx.OK | wx.ICON_ERROR,
+                    )
+                    msg.ShowModal()
+                    msg.Destroy()
+                    self.ist_threshold_textcontrol_indirect.SetValue(
+                        str(self.ist_threshold_indirect)
+                    )
+                    return
+
     def on_linear_prediction_radio_box_indirect(self, event, match_dimensions=False):
         """
         Get the selection from the radio box and update the
@@ -599,16 +659,15 @@ class NonUniformSampling:
 
         if(match_dimensions == False):
             if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
-                if(self.linear_prediction_radio_box_indirect_selection == 2 or self.linear_prediction_radio_box_indirect_selection == 3):
-                    # If SMILE or IST is selected and there are more than 1 complex indirect dimensions, change the selection to te same for both indirect dimensions
-                    if(self.parent.parent.tabDim2!=self):
-                        self.parent.parent.tabDim2.linear_prediction.linear_prediction_radio_box_indirect_selection = self.linear_prediction_radio_box_indirect_selection
-                        self.parent.parent.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(self.linear_prediction_radio_box_indirect_selection)
-                        self.parent.parent.tabDim2.linear_prediction.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX, match_dimensions=True)
-                    if(self.parent.parent.tabDim3!=self):
-                        self.parent.parent.tabDim3.linear_prediction.linear_prediction_radio_box_indirect_selection = self.linear_prediction_radio_box_indirect_selection
-                        self.parent.parent.tabDim3.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(self.linear_prediction_radio_box_indirect_selection)
-                        self.parent.parent.tabDim3.linear_prediction.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX, match_dimensions=True)
+                # If SMILE or IST is selected and there are more than 1 complex indirect dimensions, change the selection to te same for both indirect dimensions
+                if(self.parent.parent.tabDim2!=self):
+                    self.parent.parent.tabDim2.linear_prediction.linear_prediction_radio_box_indirect_selection = self.linear_prediction_radio_box_indirect_selection
+                    self.parent.parent.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(self.linear_prediction_radio_box_indirect_selection)
+                    self.parent.parent.tabDim2.linear_prediction.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX, match_dimensions=True)
+                if(self.parent.parent.tabDim3!=self):
+                    self.parent.parent.tabDim3.linear_prediction.linear_prediction_radio_box_indirect_selection = self.linear_prediction_radio_box_indirect_selection
+                    self.parent.parent.tabDim3.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(self.linear_prediction_radio_box_indirect_selection)
+                    self.parent.parent.tabDim3.linear_prediction.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX, match_dimensions=True)
 
         # Remove all the old sizers and replot
 

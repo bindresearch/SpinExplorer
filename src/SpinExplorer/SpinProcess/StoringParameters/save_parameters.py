@@ -83,7 +83,7 @@ class Save_json:
             dlg = wx.MessageDialog(
                 self.notebook,
                 "A previous set of saved parameters has been found (parameters.json). Would you like to overwrite this?",
-                "Warning",
+                "Overwrite saved parameters",
                 wx.YES_NO | wx.ICON_QUESTION,
             )
             result = dlg.ShowModal()
@@ -334,6 +334,7 @@ class Populate_dictionary_global:
                     dimension_tab.linear_prediction.ist_data_extension_number_indirect
                 )
                 nus_iterations = dimension_tab.linear_prediction.ist_nus_iterations_indirect
+                ist_threshold = dimension_tab.linear_prediction.ist_threshold_indirect
                 lp_only = dimension_tab.linear_prediction.ist_linear_prediction_only_flag
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS file"
@@ -344,6 +345,9 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS iterations"
                 ] = nus_iterations
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                                    "IST threshold"
+                                ] = ist_threshold
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "Linear prediction only"
                 ] = lp_only

@@ -874,6 +874,10 @@ class InfoButtons:
         )
         self.linear_prediction_info_sizer_window.AddSpacer(10)
 
+
+
+        self.smile_info_sizer = wx.BoxSizer(wx.VERTICAL)
+
         # Have text to explain SMILE NUS reconstruction
         smile_nus_text = """SMILE NUS reconstruction is a method 
         used to reconstruct non-uniformly sampled data. The NUS 
@@ -890,23 +894,55 @@ class InfoButtons:
             self.linear_prediction_info_frame,
             -1,
             smile_nus_text,
-            size=(450, 150),
+            size=(450, 115),
             style=wx.ALIGN_CENTER_HORIZONTAL,
         )
-        self.linear_prediction_info_sizer_window.Add(
+        self.smile_info_sizer.Add(
             self.smile_nus_text, 0, wx.ALIGN_CENTER_HORIZONTAL
         )
 
 
-        # Have text to explain SMILE NUS reconstruction
-        ist_nus_text = """SpinExplorer IST NUS reconstruction is a method 
+
+        # Add a url to the nmrPipe help page
+        url = "https://spin.niddk.nih.gov/bax/software/smile/"
+        self.smile_info_url = hl.HyperLinkCtrl(
+            self.linear_prediction_info_frame,
+            -1,
+            "Further information for SMILE",
+            URL=url,
+        )
+        self.smile_info_url.SetColours(
+            self.colour, self.colour, self.colour
+        )
+        self.smile_info_url.SetUnderlines(False, False, False)
+        self.smile_info_url.UpdateLink()
+
+        # Add url to the sizer
+        self.smile_info_sizer.Add(
+            self.smile_info_url, 0, wx.ALIGN_CENTER_HORIZONTAL
+        )
+
+
+
+        # Add the sizer to the window sizer
+        self.linear_prediction_info_sizer_window.Add(
+            self.smile_info_sizer, 0, wx.ALIGN_CENTER
+        )
+        self.linear_prediction_info_sizer_window.AddSpacer(20)
+
+        
+
+
+        # Have text to explain SpinExplorer IST NUS reconstruction
+        ist_nus_text = """SpinExplorer IST (Iterative Soft Threshold) NUS reconstruction is a method 
         used to reconstruct non-uniformly sampled data. The NUS 
         file is a list of points that have been sampled in the FID.
         \nThe maximum number of iterations can be changed
-        (default=2000) and points can be added onto the end of the FID (data extension)\n
-        to perform NUS zero filling (an alternative to linear prediction). If the data was
-        uniformly sampled but you wish to apply NUS zero filling, click the linear prediction
-        only checkbox.\nSpinExplorer IST reconstruction is available only through NMRGlue processing."""
+        (default=1000) and points can be added onto the end of the FID (data extension)\n
+        to perform NUS data extrapolation (an alternative to zero-filling or linear prediction). If the data was
+        uniformly sampled but you wish to apply NUS extrapolation, click the data extension 
+        only checkbox.\nSpinExplorer IST reconstruction is available only through NMRGlue processing. Please ensure that
+        the data is correctly phased before performing SpinExplorer IST reconstruction/extension."""
 
         ist_nus_text = " ".join(ist_nus_text.split())
 
