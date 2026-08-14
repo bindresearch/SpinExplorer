@@ -307,6 +307,7 @@ class ParameterExtractorBruker:
             except:
                 pass
 
+
     def find_sw_bruker(self) -> None:
         """
         Reading through the Bruker acqus file to find the sweep widths
@@ -676,13 +677,13 @@ class ParameterExtractorBruker:
                 for line in file_lines:
                     if "##$FnMODE=" in line:
                         line = line.split()[1]
-                        if(int(line) < 7):
+                        if(int(line) < 8):
                             val = line
                         else:
                             val = fn_mode
                             
                         self.acqusition_modes_indirect.append(int(val))
-                        if int(val) == 0 or int(val) == 1:
+                        if int(val) in [0, 1, 7]:
                             self.pseudo_flag += 1
                         break
 
@@ -693,14 +694,15 @@ class ParameterExtractorBruker:
                     for line in file_lines:
                         if "##$FnMODE=" in line:
                             line = line.split()[1]
-                            if(int(line) < 7):
+                            if(int(line) < 8):
                                 val = line
                             else:
                                 val = fn_mode
                             self.acqusition_modes_indirect.append(int(val))
-                            if int(val) == 0 or int(val) == 1:
+                            if int(val) in [0, 1, 7]:
                                 self.pseudo_flag += 1
                             break
+
             
 
             # try:

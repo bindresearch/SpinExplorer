@@ -93,6 +93,7 @@ class FormatParametersBruker:
         self.N_real_txt = wx.StaticText(self.app, label="Number real points:        ")
         self.N_real_boxes = []
 
+
         if self.params.pseudo_flag == 0:
             for i in range(len(self.params.size_indirect) + 1):
                 if i == 0:
@@ -122,7 +123,7 @@ class FormatParametersBruker:
                     )
 
         else:
-            for i in range(self.nmrdata.data_dimensions):
+            for i in range(len(self.params.size_indirect) + 1):
                 if i == 0:
                     self.N_real_boxes.append(
                         wx.TextCtrl(
@@ -133,8 +134,7 @@ class FormatParametersBruker:
                     )
                 else:
                     if (
-                        self.params.acqusition_modes_indirect[i - 1] == 0
-                        or self.params.acqusition_modes_indirect[i - 1] == 1
+                        self.params.acqusition_modes_indirect[i - 1] in [0, 1, 7]
                     ):
                         # pseudo (real) axis
                         real_size = str(self.params.size_indirect[i - 1])
@@ -210,7 +210,7 @@ class FormatParametersBruker:
             choice_direct = 1
 
         # mapping between FnMODE and options list
-        indirect_mapping = {0: 5, 1: 5, 3: 3, 4: 4, 5: 1, 6: 2}
+        indirect_mapping = {0: 5, 1: 5, 3: 3, 4: 4, 5: 1, 6: 2, 7: 5}
 
         self.acquisition_mode_options_indirect = [
             "Complex",
@@ -251,8 +251,7 @@ class FormatParametersBruker:
                     )
                 )
                 if (
-                    self.params.acqusition_modes_indirect[i - 1] == 0
-                    or self.params.acqusition_modes_indirect[i - 1] == 1
+                    self.params.acqusition_modes_indirect[i - 1] in [0, 1, 2]
                 ):
                     self.N_real_boxes[i].SetValue(
                         str(self.N_complex_boxes[i].GetValue())
