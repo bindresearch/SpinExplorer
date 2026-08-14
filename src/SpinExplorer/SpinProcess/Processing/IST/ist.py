@@ -178,6 +178,9 @@ def ist_3d(input_spec: NDArray,
     window_dim3 = np.ones(int(input_spec.shape[-1]/2))
 
 
+    cancelled_button_pressed = False
+
+
     def _reconstruct_until_convergence(nus_fid: NDArray) -> tuple[NDArray,NDArray]:
         reconstructed_r = None
         
@@ -188,6 +191,9 @@ def ist_3d(input_spec: NDArray,
 
 
         for iteration in range(1, max_iter + 1):
+
+            # Check to see if a user has cancelled the IST reconstruction
+
             nus_fid, threshold_sig_real, threshold_sig_imag, _, max_val = ist_iteration_3d(nus_fid, threshold, sampling_schedule, window_dim2, window_dim3)
             if reconstructed_r is None:
                 reconstructed_r = np.zeros_like(threshold_sig_real)
@@ -259,7 +265,9 @@ def ist_3d(input_spec: NDArray,
     results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice_3d)(i) for i in range(input_spec.shape[0]))
     for i, result, converged in results:
         if(ist_callback!=None):
-            ist_callback()
+            continue_reconstruction = ist_callback(converged)
+            if(continue_reconstruction == False):
+                return input_spec, converged_results
         recon_spec[i] = result
         if(converged==True):
             converged_results+=1
@@ -416,7 +424,9 @@ def ist_2d(input_spec: NDArray,
     results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
     for i, result, converged in results:
         if(ist_callback!=None):
-            ist_callback()
+            continue_reconstruction = ist_callback(converged)
+            if(continue_reconstruction == False):
+                return input_spec, converged_results
         recon_spec[i] = result
         if(converged==True):
             converged_results+=1

@@ -406,11 +406,17 @@ class ProcessNMRGlue:
         return dic, data
     
 
-    def ist_current_state_callback(self):
+    def ist_current_state_callback(self, converged):
         self.count+=1
 
-        self.popout_window.Update(self.count, 'Percentage through NUS reconstruction: ' + str(int((self.count/self.number_of_points)*100)) + '%')
+        if(converged==True):
+            self.converged+=1
 
+        self.popout_window.Update(self.count, 'Percentage through NUS reconstruction: {} %, {} % converged slices'.format(str(int((self.count/self.number_of_points)*100)), str(int((self.converged/self.count)*100))))
+
+        if(self.popout_window.WasCancelled()==True):
+            # Cancel the IST reconstruction)
+            return False
     
     def apply_ist_reconstruction(self, dic, data, ndim, dimension_tab, max_val, ist_convergence_number=1E-7):
         """
@@ -418,12 +424,12 @@ class ProcessNMRGlue:
         """
 
         self.count = 0 # counter for the number of IST slices reconstructed
-        self.count_non_converged = 0 # counter for the number of non-converged IST slices
+        self.converged = 0 # counter for the number of non-converged IST slices
         self.number_of_points = data.shape[0]
 
         self.popout_window = wx.ProgressDialog('NUS reconstruction', 'Percentage through NUS reconstruction', maximum=self.number_of_points, parent=None, style=wx.PD_APP_MODAL|wx.PD_AUTO_HIDE|wx.PD_CAN_ABORT)
         self.popout_window.Show()
-        self.popout_window.Update(self.count, 'Percentage through NUS reconstruction: ' + str(int((self.count/self.number_of_points)*100)) + '%')
+        self.popout_window.Update(self.count, 'Percentage through NUS reconstruction: ' + str(int((self.count/self.number_of_points)*100)) + '%                        ')
 
         if(ndim==2):
             shape1 = int(data.shape[1]/2)
