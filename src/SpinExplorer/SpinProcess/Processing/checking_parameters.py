@@ -41,7 +41,7 @@ class CheckingParameters:
         self.dimension_tabs = dimension_tabs
 
         self.check = True  # Start off having passed the check
-        self.check_parameter_validity()
+        # self.check_parameter_validity()
 
 
     def check_nmrglue_fid(self, nmr_data):
@@ -144,7 +144,7 @@ class CheckingParameters:
         check = self.check_baseline(dimension_tab, dimension)
         if check == False:
             return check
-        if dimension == 1:
+        if dimension > 0: # Don't need to check indirect dimension 2 of a 3D as it is the same check as indirect dimension 1
             check = self.check_nus(dimension_tab, dimension)
         return check
 
@@ -328,6 +328,7 @@ class CheckingParameters:
 
     def check_nus(self, dimension_tab, dimension: int) -> bool:
         # If SMILE processing is selected, check to see that the SMILE file exists
+
         if (
             dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
             == 2
@@ -363,7 +364,7 @@ class CheckingParameters:
             except:
                 dlg = wx.MessageDialog(
                     self,
-                    "SMILE NUS reconstruction error (dimension {}): The number of CPUs must be an integer".format(
+                    "SMILE NUS reconstruction error (dimension {}): The maximum number of CPUs must be an integer".format(
                         dimension + 1
                     ),
                     "Warning",
@@ -375,15 +376,18 @@ class CheckingParameters:
                 # self.change_to_cwd()
                 return False
 
+
+        if (dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==3):
+ 
             # Check that the number of iterations is an integer
             try:
                 int(
-                    dimension_tab.linear_prediction.smile_nus_iterations_textcontrol_indirect.GetValue()
+                    dimension_tab.linear_prediction.ist_nus_iterations_textcontrol_indirect.GetValue()
                 )
             except:
                 dlg = wx.MessageDialog(
                     self.notebook,
-                    "SMILE NUS reconstruction error (dimension {}): The number of iterations must be an integer".format(
+                    "NUS reconstruction error (dimension {}): The maximum number of iterations must be an integer".format(
                         dimension + 1
                     ),
                     "Warning",
@@ -395,4 +399,99 @@ class CheckingParameters:
                 # self.change_to_cwd()
                 return False
 
+            # Check that the threshold is a float number above 0.1 and less than 0.999
+            try:
+                value = float(
+                    dimension_tab.linear_prediction.ist_threshold_textcontrol_indirect.GetValue()
+                )
+                if(value < 0.1 or value > 0.999):
+                    dlg = wx.MessageDialog(
+                        self.notebook,
+                        "NUS reconstruction error (dimension {}): The IST threshold must be a float number between 0.1 and 0.999. (Default=0.9)".format(
+                            dimension + 1
+                        ),
+                        "Warning",
+                        wx.OK | wx.ICON_WARNING,
+                    )
+                    self.notebook.Raise()
+                    self.notebook.SetFocus()
+                    result = dlg.ShowModal()
+                    return False
+
+            except:
+                dlg = wx.MessageDialog(
+                    self.notebook,
+                    "NUS reconstruction error (dimension {}): The IST threshold must be a float number between 0.1 and 0.999 (Default=0.9)".format(
+                        dimension + 1
+                    ),
+                    "Warning",
+                    wx.OK | wx.ICON_WARNING,
+                )
+                self.notebook.Raise()
+                self.notebook.SetFocus()
+                result = dlg.ShowModal()
+                return False
+
+
+
+            # List the files in the current directory
+            files = os.listdir()
+            # Check to see if the NUS file
+            if (
+                dimension_tab.linear_prediction.ist_nus_file_textcontrol_indirect.GetValue()
+                not in files
+            ):
+                if(dimension_tab.linear_prediction.ist_linear_prediction_only.GetValue()==False):
+                    message = (
+                        "IST NUS reconstruction error (dimension {}): The NUS file ".format(
+                            dimension + 1
+                        )
+                        + dimension_tab.linear_prediction.ist_nus_file_textcontrol_indirect.GetValue()
+                        + " cannot be found in the current directory. If this data was fully sampled and you wish to perform NUS extension/extrapolation, please check the data extension only checkbox."
+                    )
+                    dlg = wx.MessageDialog(
+                        self.notebook, message, "Warning", wx.OK | wx.ICON_WARNING
+                    )
+                    self.notebook.Raise()
+                    self.notebook.SetFocus()
+                    result = dlg.ShowModal()
+                    return False
+
+
+            # Check to see if zero-filling is added if the NUS extension value is greater than zero. Ask the user to turn of zero-filling
+            # if NUS extrapolation is used as it is an alternative to zero filling
+
+            if(int(dimension_tab.linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())>0):
+                if(dimension_tab.zero_filling.zero_filling_checkbox.GetValue()==True):
+                    message = (
+                                "IST NUS reconstruction error (dimension {}): zero filling cannot be applied if NUS extrapolation/extension is used. Please either set the NUS extension value to 0, or uncheck the apply zero filling checkbox and try again.".format(
+                            dimension + 1
+                        )
+                                )
+                    dlg = wx.MessageDialog(
+                        self.notebook, message, "Warning", wx.OK | wx.ICON_WARNING
+                    )
+                    self.notebook.Raise()
+                    self.notebook.SetFocus()
+                    result = dlg.ShowModal()
+                    return False
+
+        if(dimension==1):
+            phasing_check_message = ("NUS data reconstruction or data extension (using SMILE or SpinExplorerIST) requires the phasing parameters to be correct, giving all in-phase peaks. If the phasing has not been checked, please process without NUS reconstruction to check the phasing is correct before continuing NUS reconstruction. Would you like to continue NUS reconstruction?")
+            dlg = wx.MessageDialog(
+                self.notebook, phasing_check_message, "NUS Phase Check", wx.YES_NO 
+            )
+            self.notebook.Raise()
+            self.notebook.SetFocus()
+            result = dlg.ShowModal()
+            if result == wx.ID_YES:
+                dlg.Destroy()
+                return True
+            else:
+                dlg.Destroy()
+                return False
+
+
         return True
+    
+
