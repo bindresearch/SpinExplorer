@@ -453,6 +453,18 @@ class ProcessNMRGlue:
             dic['FDF1APOD'] = data.shape[1]
             dic["FDSIZE"] = data.shape[1]
 
+
+            dlg = wx.MessageDialog(
+            self.notebook,
+            "Reconstruction completed with {:.2f}% of iterations converging".format(100*converged_results/self.number_of_points),
+            "Reconstruction completion",
+            wx.OK
+            )
+            self.notebook.Raise()
+            self.notebook.SetFocus()
+            dlg.ShowModal() 
+            dlg.Destroy()
+
         else:
             shape1 = int(data.shape[1]/2)
             shape2 = int(data.shape[2]/2)
@@ -835,8 +847,8 @@ class ProcessNMRGlue:
                     "Warning",
                     wx.OK | wx.ICON_WARNING,
                 )
-                self.Raise()
-                self.SetFocus()
+                self.notebook.Raise()
+                self.notebook.SetFocus()
                 result = dlg.ShowModal()
 
         return dic, data
@@ -1187,8 +1199,8 @@ class ProcessNMRGlue:
                 dlg = wx.MessageDialog(
                     self.notebook, message, "Warning", wx.OK | wx.ICON_WARNING
                 )
-                self.Raise()
-                self.SetFocus()
+                self.notebook.Raise()
+                self.notebook.SetFocus()
                 result = dlg.ShowModal()
                 return dic, data
 
