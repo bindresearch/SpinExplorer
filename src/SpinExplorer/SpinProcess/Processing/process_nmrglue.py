@@ -196,14 +196,10 @@ class ProcessNMRGlue:
 
 
         # For the direct dimension, apply the processing functions
-        # if(self.ist_phasing==True and include_dim2 == True and include_dim3==False):
-        #     dic, data = self.apply_dimension_processing(
-        #         dic, data, 0, self.dimension_tabs[0], direct_ist=True
-        #     )
-
-        dic, data = self.apply_dimension_processing(
-                        dic, data, 0, self.dimension_tabs[0]
-                    )
+        if(self.ist_phasing==True and include_dim2 == True and include_dim3==False):
+            dic, data = self.apply_dimension_processing(
+                dic, data, 0, self.dimension_tabs[0]
+            )
         
 
 
@@ -217,14 +213,25 @@ class ProcessNMRGlue:
             
             if self.nmr_data.pseudo_axis == False and include_dim3 == False:
                 if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
-                    # dic, data = ng.pipe_proc.ft(dic, data, inv=True)
-                    # data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
+                    print('1 ', data.shape)
                     dic, data, ist_convergence_number, max_val = self.phasing_for_IST_2D(dic, data)
-                    # print(data.shape)
+                    print('2 ', data.shape)
+                    dic, data = ng.pipe_proc.ft(dic, data, inv=True)
+                    print('3 ', data.shape)
+                    data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
+                    print('4 ', data.shape) 
                     dic, data = self.apply_ist_reconstruction(dic, data, ndim = len(self.dimension_tabs), dimension_tab=self.dimension_tabs[1], ist_convergence_number=ist_convergence_number, max_val=max_val)
-                    # dic, data = ng.pipe_proc.ft(dic, data)
-                    # dic, data = ng.pipe_proc.di(dic, data)
-                    # dic, data = ng.pipe_proc.tp(dic, data, auto=True)
+
+                    dic, data = self.tp(dic, data, hyper=False, nohyper=False)
+                    print(data.shape)
+                    dic, data = self.tp(dic, data, hyper=False, unpack_complex=True)
+                    print('5 ', data.shape)
+                    dic, data = ng.pipe_proc.ft(dic, data)
+                    print('6 ', data.shape)
+                    dic, data = ng.pipe_proc.di(dic, data)
+                    print('7 ', data.shape)
+                    dic, data = ng.pipe_proc.tp(dic, data, nohyper=True)
+                    print('8 ', data.shape)
                 else:
                     dic, data = ng.pipe_proc.tp(dic, data, auto=True)
             elif self.nmr_data.pseudo_axis == True:
@@ -288,13 +295,15 @@ class ProcessNMRGlue:
         original_data, original_dic = copy.deepcopy(data), copy.deepcopy(dic)
         ist_convergence_number, max_val = self.find_parameters_for_ist_2D(original_dic, original_data)
 
-        dic, data = ng.pipe_proc.tp(dic, data, auto=True)
-        dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
+        # dic, data = self.tp(dic, data, nohyper=True, unpack_complex=True)
+        dic, data = self.tp(dic, data)
+        print('1.1 ', data.shape)
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
         dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], inv=True, ist_phasing=True)
-        # data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
-        # dic, data = ng.pipe_proc.tp(dic, data, auto=True, nohyper=True)
+        data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
+        print('1.2 ', data.shape)
+        dic, data = ng.pipe_proc.tp(dic, data, nohyper=True)
 
         return dic, data, ist_convergence_number, max_val
 
@@ -326,20 +335,34 @@ class ProcessNMRGlue:
 
 
     def find_parameters_for_ist_2D(self, dic, data):
-        dic, data = ng.pipe_proc.tp(dic, data, auto=True)
+        # dic, data = ng.pipe_proc.tp(dic, data, auto=True)
+        # extension = int(self.dimension_tabs[1].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
+        # if(extension!=0):
+        #     dic, data = ng.pipe_proc.zf(dic, data, pad=extension)
+        # else:
+        #     dic, data = self.add_zero_filling(dic, data, 1, self.dimension_tabs[1])
+        # dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
+        # dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
+
+
+        dic, data = self.tp(dic, data, nohyper=True, unpack_complex=True)
+        print('1.1 ', data.shape)
         extension = int(self.dimension_tabs[1].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
         if(extension!=0):
             dic, data = ng.pipe_proc.zf(dic, data, pad=extension)
         else:
             dic, data = self.add_zero_filling(dic, data, 1, self.dimension_tabs[1])
-        dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
         dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
 
         max_val = np.max(np.abs(data))
 
 
-        convergence_number = self.find_convergence_number(max_val, data, noise_scaling=10)
+
+
+
+
+        convergence_number = self.find_convergence_number(max_val, data, noise_scaling=3)
 
         return convergence_number, max_val
     
@@ -464,33 +487,38 @@ class ProcessNMRGlue:
         self.popout_window.Update(self.count, 'Percentage through NUS reconstruction: ' + str(int((self.count/self.number_of_points)*100)) + '%                        ')
 
         if(ndim==2):
-            shape1 = int(data.shape[1]/2) # indirect dimension
-            # shape2 = int(data.shape[0]/2) # indirect dimension
+            print(data.shape)
+            shape1 = int(data.shape[1]/2) # direct dimension
+            shape2 = int(data.shape[0]/2) # indirect dimension
             if(dimension_tab.linear_prediction.ist_linear_prediction_only.GetValue()==True):
-                sched = []
-                for s1 in range(shape1):
-                    sched.append(s1)
                 # sched = []
                 # for s1 in range(shape1):
-                #     for s2 in range(shape2):
-                #         sched.append([s1, s2])
+                #     sched.append(s1)
+                sched = []
+                for s1 in range(shape1):
+                    for s2 in range(shape2):
+                        sched.append([s2, s1])
             else:
                 nus_file = dimension_tab.linear_prediction.nuslist_name_indirect
                 sched = read_sched(nus_file)
 
+
+            print(len(sched))
 
             aq2 = self.get_indirect_acquisition_times(dic, data, dim_count=2)
 
             extension1 = int(dimension_tab.linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
 
             # Padding out the extension for NUS zero fill with zeros
-            data = np.pad(data, pad_width=[(0, 0), (0, int(extension1*2))])
-            # data = np.pad(data, pad_width=[(0, int(extension1*2)), (0, 0)])
+            # data = np.pad(data, pad_width=[(0, 0), (0, int(extension1*2))])
+            data = np.pad(data, pad_width=[(0, int(extension1*2)), (0, 0)])
+
+            print(data.shape)
 
             maxiter = dimension_tab.linear_prediction.ist_nus_iterations_indirect
             threshold = float(dimension_tab.linear_prediction.ist_threshold_textcontrol_indirect.GetValue())
 
-            data, converged_results = ist_2d(data, sampling_schedule=sched, max_iter = maxiter, ist_callback = self.ist_current_state_callback, max_time=aq2, threshold=threshold, convergence_tol=ist_convergence_number, max_val=max_val)
+            data, converged_results = ist_2d_as_plane(data, sampling_schedule=sched, max_iter = maxiter, ist_callback = self.ist_current_state_callback, max_time=aq2, threshold=threshold, convergence_tol=ist_convergence_number, max_val=max_val)
 
             print(data.shape)
 
@@ -500,9 +528,9 @@ class ProcessNMRGlue:
             dic["FDSIZE"] = data.shape[1]
 
 
-            # dic["FDF2SIZE"] = data.shape[0]
-            # dic['FDF2TDSIZE'] = data.shape[0]
-            # dic['FDF2APOD'] = data.shape[0]
+            dic["FDF2SIZE"] = data.shape[0]
+            dic['FDF2TDSIZE'] = data.shape[0]
+            dic['FDF2APOD'] = data.shape[0]
 
 
 
@@ -1172,7 +1200,7 @@ class ProcessNMRGlue:
         except:
             return True
 
-    def add_phasing(self, dic, data, dimension, dimension_tab, ist_phasing=False, direct_ist=False):
+    def add_phasing(self, dic, data, dimension, dimension_tab, ist_phasing=False, direct_ist=False, di=False):
         """
         1 - checking if the phasing check box is ticked
         2 - if it is ticked, then perform the selected phasing
@@ -1185,8 +1213,7 @@ class ProcessNMRGlue:
             p1 = float(tab.phase_correction_p1_textcontrol.GetValue())
         else:
             if(self.ist_phasing==True and ist_phasing==False):
-                if(direct_ist==False):
-                    dic, data = ng.pipe_proc.di(dic, data)
+                dic, data = ng.pipe_proc.di(dic, data)
                 return dic, data
             check = tab.phase_correction_checkbox_indirect.GetValue()
             p0 = float(tab.phase_correction_p0_textcontrol_indirect.GetValue())
@@ -1208,8 +1235,7 @@ class ProcessNMRGlue:
                 dic, data = ng.pipe_proc.mc(dic, data)
 
         if(ist_phasing==False):
-            # if(direct_ist==False):
-                dic, data = ng.pipe_proc.di(dic, data)
+            dic, data = ng.pipe_proc.di(dic, data)
 
         return dic, data
 
@@ -2353,4 +2379,82 @@ class ProcessNMRGlue:
         dic = ng.pipe_proc.recalc_orig(dic, data, fn)
         dic["FDSIZE"] = s
         dic = ng.pipe_proc.update_minmax(dic, data)
+        return dic, data
+
+
+
+    def tp(self, dic, data, hyper=False, nohyper=False, auto=False, nohdr=False, unpack_complex=False):
+        """
+        Transpose data (2D).
+
+        Parameters
+        ----------
+        dic : dict
+            Dictionary of NMRPipe parameters.
+        data : ndarray
+            Array of NMR data.
+        hyper : bool
+            True to perform hypercomplex transpose.
+        nohyper : bool
+            True to suppress hypercomplex transpose.
+        auto : bool
+            True to choose transpose mode automatically.
+        nohdr : bool
+            True to not update the transpose parameters in ndic.
+
+        Returns
+        -------
+        ndic : dict
+            Dictionary of updated NMRPipe parameters.
+        ndata : ndarray
+            Array of NMR data which has been transposed.
+
+        """
+        # XXX test if works with TPPI
+        if nohyper:
+            hyper = False
+
+        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
+        fn2 = "FDF" + str(int(dic["FDDIMORDER"][1]))  # F1, F2, etc
+
+        if auto:
+            if (dic[fn + "QUADFLAG"] != 1) and (dic[fn2 + "QUADFLAG"] != 1):
+                hyper = True
+            else:
+                hyper = False
+
+
+        if hyper:   # Hypercomplex transpose need type recast
+            data = np.array(ng.pipe_proc.p.tp_hyper(data), dtype="complex64")
+        else:
+            data = ng.pipe_proc.p.tp(data)
+            if dic[fn2 + "QUADFLAG"] != 1 and nohyper is False:
+                # unpack complex as needed
+                data = np.array(ng.pipe_proc.p.c2ri(data), dtype="complex64")
+            elif(unpack_complex == True):
+                data = np.array(ng.pipe_proc.p.c2ri(data), dtype="complex64")
+        # update the dimensionality and order
+        dic["FDSLICECOUNT"] = data.shape[0]
+        if (data.dtype == 'float32') and (nohyper is True):
+            # when nohyper is True and the new last dimension was complex
+            # prior to transposing then FDSIZE is set as if the dimension was
+            # converted to complex data, that is half the actual size.
+            dic["FDSIZE"] = data.shape[1] / 2
+        else:
+            dic["FDSIZE"] = data.shape[1]
+
+        dic["FDSPECNUM"] = dic["FDSLICECOUNT"]
+        dic["FDDIMORDER1"], dic["FDDIMORDER2"] = (dic["FDDIMORDER2"],
+                                                dic["FDDIMORDER1"])
+        dic['FDDIMORDER'] = [dic["FDDIMORDER1"], dic["FDDIMORDER2"],
+                            dic["FDDIMORDER3"], dic["FDDIMORDER4"]]
+
+        if dic["FD2DPHASE"] == 0:
+            dic['FDF1QUADFLAG'], dic['FDF2QUADFLAG'] = (dic['FDF2QUADFLAG'],
+                                                        dic['FDF1QUADFLAG'])
+
+        if nohdr is not True:
+            dic["FDTRANSPOSED"] = (dic["FDTRANSPOSED"] + 1) % 2
+
+        dic = ng.pipe_proc.clean_minmax(dic)
         return dic, data

@@ -293,7 +293,6 @@ class NotebookProcess(wx.Notebook):
 
             if (self.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==3):
                 if self.tabDim1.extraction.extraction_checkbox.GetValue() == False:
-                    print('here4')
                     dlg = wx.MessageDialog(
                         self,
                         "No direct dimension data extraction is selected, SpinExplorer IST reconstruction may take a while. Consider extracting a region of the direct dimension before reconstruction. Do you want to continue or cancel?",
