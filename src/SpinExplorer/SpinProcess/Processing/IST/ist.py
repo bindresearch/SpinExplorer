@@ -19,8 +19,7 @@ def write_as_nmrpipe(array: NDArray, spec_dic: dict, outfile: str):
 
 def get_thresh_signal_3d(signal_real: NDArray,
                         signal_imag: NDArray,
-                        threshold: float,
-                        window_dim2: NDArray,window_dim3:NDArray):
+                        threshold: float):
 
     def soft_thresh(x, threshold):
         mag = np.abs(x)
@@ -34,7 +33,7 @@ def get_thresh_signal_3d(signal_real: NDArray,
 
     max_val = np.max(np.abs(thresh_real))
 
-    thresh_fid = retrieve_signal_ist_3d(thresh_real, thresh_imag, window_dim2, window_dim3)
+    thresh_fid = retrieve_signal_ist_3d(thresh_real, thresh_imag)
 
     thresh_real, thresh_imag = pack_signal_ist_3d(thresh_fid)
 
@@ -44,15 +43,13 @@ def get_thresh_signal_3d(signal_real: NDArray,
 
 def ist_iteration_3d(data: NDArray,
                     threshold: float,
-                    sampling_schedule: Union[list[int], NDArray],
-                    window_dim2:NDArray,
-                    window_dim3:NDArray) -> tuple[NDArray, NDArray, NDArray, np.floating]:
+                    sampling_schedule: Union[list[int], NDArray]) -> tuple[NDArray, NDArray, NDArray, np.floating, np.floating]:
 
     # FT along faster indirect (axis=1): collapse cos/sin pairs → complex, FT, take real
 
     data_real, data_imag = pack_signal_ist_3d(data)
 
-    thresh_sig_real, thresh_sig_imag, max_val = get_thresh_signal_3d(data_real, data_imag, threshold, window_dim2, window_dim3)
+    thresh_sig_real, thresh_sig_imag, max_val = get_thresh_signal_3d(data_real, data_imag, threshold)
 
     leftover_sig_real = data_real - thresh_sig_real
     leftover_sig_imag = data_imag - thresh_sig_imag
@@ -68,7 +65,8 @@ def ist_iteration_3d(data: NDArray,
 
 def pack_signal_ist_3d(data: NDArray):
 
-    data = data[:, 0::2] + 1.0j * data[:, 1::2]       
+    data = data[:, 0::2] + 1.0j * data[:, 1::2]
+    data = np.pad(data, pad_width=[(0,0),(0,data.shape[-1])])       
     data = fft.fft(data, axis=-1)
     data_real = np.real(data)                                 
     data_imag = np.imag(data)
@@ -78,28 +76,18 @@ def pack_signal_ist_3d(data: NDArray):
 
     data_real = data_real[:,0::2] + 1.0j*data_real[:,1::2]
     data_imag = data_imag[:,0::2] + 1.0j*data_imag[:,1::2]
-    
+
+    data_real = np.pad(data_real, pad_width=[(0,0),(0,data_real.shape[-1])])
+    data_imag = np.pad(data_imag, pad_width=[(0,0),(0,data_imag.shape[-1])])
         
-    stacked = np.stack([data_real, data_imag])  # (2, ...)
-    stacked = fft.fft(stacked, axis=-1)
-    data_real, data_imag = stacked[0], stacked[1]
+    data_real = fft.fft(data_real, axis=-1)
+    data_imag = fft.fft(data_imag, axis=-1)
     return data_real, data_imag
 
-def retrieve_signal_ist_3d(leftover_sig_real: NDArray, leftover_sig_imag: NDArray, window_dim2: Optional[NDArray] = None, window_dim3: Optional[NDArray] = None):
+def retrieve_signal_ist_3d(leftover_sig_real: NDArray, leftover_sig_imag: NDArray):
 
     
-    
-    stacked = np.stack([leftover_sig_real, leftover_sig_imag])
-    stacked = fft.ifft(stacked, axis=-1)
-    
-    leftover_sig_real, leftover_sig_imag = stacked[0], stacked[1]
-    
-    if window_dim2 is None:
-        window_dim2 = np.ones(leftover_sig_real.shape[-1])
-
-
-    leftover_sig_real*=window_dim2
-    leftover_sig_imag*=window_dim2
+    leftover_sig_real, leftover_sig_imag = fid_from_absorption(leftover_sig_real), fid_from_absorption(leftover_sig_imag)
 
     def unpack_complex(x: NDArray):
         out = np.empty(x.shape[:-1] + (x.shape[-1]*2,), dtype=np.float32)
@@ -116,29 +104,15 @@ def retrieve_signal_ist_3d(leftover_sig_real: NDArray, leftover_sig_imag: NDArra
 
     data = leftover_sig_real + 1j*leftover_sig_imag
     
-
-    data = fft.ifft(data, axis = -1)
-
-    if window_dim3 is None:
-        window_dim3 = np.ones(data.shape[-1])
-
-    data *= window_dim3
+    data = fid_from_absorption(data)
     data = unpack_complex(data)
 
-    
 
     return data
 
 
-
-
-
 def ist_3d(input_spec: NDArray,
            sampling_schedule: Union[list[int], NDArray],
-           max_time_dim2: float,
-           max_time_dim3: float,
-           r2_dim2: Optional[float]= None,
-           r2_dim3: Optional[float]= None,
            threshold: float = 0.9,
            terminate: float = 1e-4,
            convergence_tol: float = 1e-8,
@@ -146,7 +120,7 @@ def ist_3d(input_spec: NDArray,
            mode: int = 1,
            sched_ord: int = 0,
            verb: bool = False,
-           ist_callback = None) -> NDArray:
+           ist_callback = None) -> tuple[NDArray,int]:
     
     """
     IST reconstruction of 3D NUS data
@@ -157,34 +131,12 @@ def ist_3d(input_spec: NDArray,
         sampling_schedule = np.asarray(sampling_schedule)
         sampling_schedule = sampling_schedule[:, ::-1]
 
-    if r2_dim2 is None:
-        r2_dim2 = 1.5/(max_time_dim2)
-    
-    if r2_dim3 is None:
-        r2_dim3 = 1.5/(max_time_dim3)
-
-    r2_dim2 = 0
-    r2_dim3 = 0
-
-    window_vals_dim3 = np.arange(input_spec.shape[-1]/2)/input_spec.shape[-1]/2
-    window_dim3 = np.exp(-window_vals_dim3*r2_dim3*max_time_dim3)
-
-
-    window_vals_dim2 = np.arange(input_spec.shape[1]/2)/input_spec.shape[1]/2
-    window_dim2 = np.exp(-window_vals_dim2*r2_dim2*max_time_dim2)
-
-
-    window_dim2 = np.ones(int(input_spec.shape[1]/2))
-    window_dim3 = np.ones(int(input_spec.shape[-1]/2))
-
 
     cancelled_button_pressed = False
 
 
-    def _reconstruct_until_convergence(nus_fid: NDArray) -> tuple[NDArray,NDArray]:
-        reconstructed_r = None
-        
-        reconstructed_i = None
+    def _reconstruct_until_convergence(nus_fid: NDArray) -> tuple[NDArray,NDArray,bool]:
+
         prev_norm = 0.0
 
         converged = False
@@ -194,12 +146,12 @@ def ist_3d(input_spec: NDArray,
 
             # Check to see if a user has cancelled the IST reconstruction
 
-            nus_fid, threshold_sig_real, threshold_sig_imag, _, max_val = ist_iteration_3d(nus_fid, threshold, sampling_schedule, window_dim2, window_dim3)
-            if reconstructed_r is None:
+            nus_fid, threshold_sig_real, threshold_sig_imag, _, max_val = ist_iteration_3d(nus_fid, threshold, sampling_schedule)
+
+            if(iteration==1):
                 reconstructed_r = np.zeros_like(threshold_sig_real)
                 reconstructed_i = np.zeros_like(threshold_sig_imag)
 
-            if(iteration==1):
                 thresh_signal_real_max = max_val
 
                 
@@ -222,19 +174,26 @@ def ist_3d(input_spec: NDArray,
                         f"relative change: {relative_change:.2e}")
 
 
-        leftover_real, leftover_imag = pack_signal_ist_3d(nus_fid)
+        # leftover_real, leftover_imag = pack_signal_ist_3d(nus_fid)
 
-        return reconstructed_r+leftover_real, reconstructed_i+leftover_imag, converged
+        return reconstructed_r, reconstructed_i, converged
 
-    def _reconstruct_until_l2(nus_fid: NDArray) -> NDArray:
-        reconstructed = np.zeros((nus_fid.shape[1]//2,nus_fid.shape[0]//2))
+    def _reconstruct_until_l2(nus_fid: NDArray) -> tuple[NDArray,NDArray,bool]:
         l2_norm = terminate * 1000.0
 
         converged = False
 
         for iteration in range(1, max_iter + 1):
-            nus_fid, threshold_signal_real, threshold_signal_imag, l2_norm, max_val = ist_iteration_3d(nus_fid, threshold, sampling_schedule, window_dim2, window_dim3)
-            reconstructed += (threshold_signal_real+1j*threshold_signal_imag)
+            nus_fid, threshold_sig_real, threshold_sig_imag, l2_norm, _ = ist_iteration_3d(nus_fid, threshold, sampling_schedule)
+
+            if iteration==1:
+                reconstructed_r = np.zeros_like(threshold_sig_real)
+                reconstructed_i = np.zeros_like(threshold_sig_imag)
+
+                
+            reconstructed_r += threshold_sig_real 
+            reconstructed_i += threshold_sig_imag
+
             if l2_norm <= terminate:
                 if verb:
                     print(f"  converged at iteration {iteration} — "
@@ -245,7 +204,7 @@ def ist_3d(input_spec: NDArray,
                 if verb:
                     print(f"  reached max iterations — L2 norm: {l2_norm:.2e}")
 
-        return reconstructed, converged
+        return reconstructed_r, reconstructed_i, converged
 
     recon_spec = np.zeros_like(input_spec)
     reconstruct = _reconstruct_until_convergence if mode == 1 else _reconstruct_until_l2
@@ -275,11 +234,15 @@ def ist_3d(input_spec: NDArray,
 
     return recon_spec, converged_results
 
+def fid_from_absorption(S):
+    """S: 2N complex spectrum, FFT order, last axis. Returns N-point complex FID."""
+    N = S.shape[-1] // 2
+
+    return fft.ifft(S, axis=-1)[..., :N].copy()
 
 
 def get_thresh_signal(signal_ft: NDArray,
-                        threshold: float,
-                        window: NDArray):
+                        threshold: float):
 
     def soft_thresh(x, threshold):
         mag = np.abs(x)
@@ -289,27 +252,26 @@ def get_thresh_signal(signal_ft: NDArray,
 
     thresh_real = soft_thresh(signal_ft, threshold)
     max_val = np.max(np.abs(thresh_real))
-    thresh_fid = fft.ifft(thresh_real)
-    thresh_fid*=window
-
-    thresh_real = fft.fft(thresh_fid)
+    #thresh_fid = fft.ifft(thresh_real)
+    thresh_fid = fid_from_absorption(thresh_real)
 
     return thresh_real, thresh_fid, max_val
 
 
 def ist_iteration_2d(nus_fid:NDArray, 
                   threshold:float, 
-                  sampling_schedule:Union[list[int],NDArray],
-                  window: NDArray)->tuple[NDArray,NDArray,np.floating]:
+                  sampling_schedule:Union[list[int],NDArray])->tuple[NDArray,NDArray,np.floating,np.floating]:
     
 
+    nus_fid = np.pad(nus_fid, pad_width = ([0,nus_fid.shape[0]])) 
     signal_ft = fft.fft(nus_fid)
-    threshold_sig, thresh_fid, max_val = get_thresh_signal(signal_ft, threshold, window)
+    threshold_sig, thresh_fid, max_val = get_thresh_signal(signal_ft, threshold)
     leftover_sig = signal_ft-threshold_sig
-    l2_norm = l2_norm = np.sqrt(np.vdot(leftover_sig, leftover_sig).real)
+    l2_norm = np.sqrt(np.vdot(leftover_sig, leftover_sig).real)
 
     # leftover_fid = fft.ifft(leftover_sig)
-    leftover_fid = nus_fid - thresh_fid
+    leftover_fid = fid_from_absorption(leftover_sig)
+    # leftover_fid = nus_fid - thresh_fid # commented this out it doesn't make sense
     leftover_fid = apply_sampling_schedule_nd(leftover_fid, sampling_schedule, (0,))
 
     return leftover_fid, thresh_fid, l2_norm, max_val
@@ -317,15 +279,13 @@ def ist_iteration_2d(nus_fid:NDArray,
 
 def ist_2d(input_spec: NDArray,
            sampling_schedule: Union[list[int], NDArray],
-           max_time: float,
-           r2: Optional[float] = None,
            threshold: float = 0.9,
            terminate: float = 0.001,
            convergence_tol: float = 1e-6,
            max_iter: int = 4000,
            mode: int = 1,
            verb: bool = False,
-           ist_callback = None) -> NDArray:
+           ist_callback = None) -> tuple[NDArray,int]:
     """
     IST reconstruction of 2D NUS data. Direct dimension is assumed to be
     already Fourier transformed. IST is applied column by column along
@@ -345,16 +305,7 @@ def ist_2d(input_spec: NDArray,
     """
     converged_results = 0
 
-    if r2 is None:
-        r2 = 1.2/(max_time)+1.0
-
-    r2 = 0
-
-    window_vals = np.arange(input_spec.shape[-1])/input_spec.shape[-1]
-    window = np.exp(-window_vals*r2*max_time)
-
-
-    def _reconstruct_until_convergence(nus_fid: NDArray) -> NDArray:
+    def _reconstruct_until_convergence(nus_fid: NDArray) -> tuple[NDArray,bool]:
         reconstructed = np.zeros_like(nus_fid)
         prev_reconstructed = np.zeros_like(nus_fid)
         prev_norm = 0.0
@@ -362,7 +313,7 @@ def ist_2d(input_spec: NDArray,
         converged = False
 
         for iteration in range(1, max_iter + 1):
-            nus_fid, threshold_signal, _, max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule, window)
+            nus_fid, threshold_signal, _, max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule)
             reconstructed += threshold_signal
 
             curr_norm = np.sqrt(np.vdot(reconstructed, reconstructed).real)
@@ -385,15 +336,16 @@ def ist_2d(input_spec: NDArray,
                         f"relative change: {relative_change:.2e}")
                 break
 
-        return reconstructed + nus_fid, converged
+        # return reconstructed + nus_fid, converged
+        return reconstructed, converged
 
-    def _reconstruct_until_l2(nus_fid: NDArray) -> NDArray:
+    def _reconstruct_until_l2(nus_fid: NDArray) -> tuple[NDArray,bool]:
         reconstructed = np.zeros_like(nus_fid)
 
         converged = False
 
         for iteration in range(1, max_iter + 1):
-            nus_fid, threshold_signal, l2_norm, max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule, window)
+            nus_fid, threshold_signal, l2_norm, max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule)
             reconstructed += threshold_signal
 
             if l2_norm <= terminate:
