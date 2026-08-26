@@ -441,8 +441,6 @@ class ProcessNMRGlue:
                 nus_file = dimension_tab.linear_prediction.nuslist_name_indirect
                 sched = read_sched(nus_file)
 
-            aq2 = self.get_indirect_acquisition_times(dic, data, dim_count=2)
-
             extension1 = int(dimension_tab.linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
 
             # Padding out the extension for NUS zero fill with zeros
@@ -451,7 +449,7 @@ class ProcessNMRGlue:
             maxiter = dimension_tab.linear_prediction.ist_nus_iterations_indirect
             threshold = float(dimension_tab.linear_prediction.ist_threshold_textcontrol_indirect.GetValue())
 
-            data, converged_results = ist_2d(data, sampling_schedule=sched, max_iter = maxiter, ist_callback = self.ist_current_state_callback, max_time=aq2, threshold=threshold, convergence_tol=ist_convergence_number)
+            data, converged_results = ist_2d(data, sampling_schedule=sched, max_iter = maxiter, ist_callback = self.ist_current_state_callback, threshold=threshold, convergence_tol=ist_convergence_number)
 
 
             dic["FDF1SIZE"] = data.shape[1]
@@ -477,7 +475,6 @@ class ProcessNMRGlue:
 
             threshold = float(dimension_tab.linear_prediction.ist_threshold_textcontrol_indirect.GetValue())
 
-            aq2, aq3 = self.get_indirect_acquisition_times(dic, data, dim_count=3)
 
             if(dimension_tab.linear_prediction.ist_linear_prediction_only.GetValue()==True):
                 # No NUS (assuming that the data is fully sampled and setting this to the schedule)
@@ -496,12 +493,10 @@ class ProcessNMRGlue:
 
             data = np.pad(data, pad_width=[(0, 0), (0, int(extension1*2)), (0, int(extension2*2))])
 
-
             maxiter = dimension_tab.linear_prediction.ist_nus_iterations_indirect
 
             data, converged_results = ist_3d(data,
                                              sampling_schedule=sched, 
-                                             max_time_dim2=aq2, max_time_dim3=aq3, 
                                              sched_ord=1, 
                                              max_iter=maxiter, 
                                              ist_callback=self.ist_current_state_callback, 
