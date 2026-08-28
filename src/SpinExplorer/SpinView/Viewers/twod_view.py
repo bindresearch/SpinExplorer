@@ -1509,10 +1509,28 @@ class TwoDViewer(wx.Panel):
             udic = ng.bruker.guess_udic(self.nmrdata.dic, self.nmrdata.data)
             self.uc0 = ng.fileiobase.uc_from_udic(udic, dim=0)
             self.uc1 = ng.fileiobase.uc_from_udic(udic, dim=1)
+
+
         if(self.fid_viewer==False):
             self.ppms_0 = self.uc0.ppm_scale()
             self.ppms_1 = self.uc1.ppm_scale()
+            if(self.nmrdata.dic['FDDIMORDER'][0]==2.0):
+                self.ft1_flg = 'FDF1FTFLAG'
+                self.ft2_flg = 'FDF2FTFLAG'
+            else:
+                self.ft1_flg = 'FDF2FTFLAG'
+                self.ft2_flg = 'FDF1FTFLAG'
+            if(self.nmrdata.dic[self.ft1_flg]==1):
+                self.ppms_0 = self.uc0.ppm_scale()
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            if(self.nmrdata.dic[self.ft2_flg]==1):
+                self.ppms_1 = self.uc1.ppm_scale()
+            else:
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
         else:
+            self.ft1_flg = 'FDF2FTFLAG'
+            self.ft2_flg = 'FDF1FTFLAG'
             self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
             self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
         self.new_x_ppms = self.ppms_0
@@ -1535,11 +1553,35 @@ class TwoDViewer(wx.Panel):
             colors=self.cmap_neg,
             linewidths=self.linewidth,
         )
+
+        if(self.nmrdata.dic[self.ft1_flg]==1):
+            if('(ppm)' not in self.nmrdata.axislabels[1]):
+                self.nmrdata.axislabels[1]+= ' (ppm)'
+        else:
+            if('(points)' not in self.nmrdata.axislabels[1]):
+                self.nmrdata.axislabels[1]+= ' (points)'
+
+        if(self.nmrdata.dic[self.ft2_flg]==1):
+            if('(ppm)' not in self.nmrdata.axislabels[0]):
+                self.nmrdata.axislabels[0]+= ' (ppm)'
+        else:
+            if('(points)' not in self.nmrdata.axislabels[0]):
+                self.nmrdata.axislabels[0]+= ' (points)'
+        
+
         self.ax.set_xlabel(self.nmrdata.axislabels[1])
         self.ax.set_ylabel(self.nmrdata.axislabels[0])
+
         if(self.fid_viewer==False):
-            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+            if(self.nmrdata.dic[self.ft1_flg]==1):
+                self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
+            else:
+                self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
+            if(self.nmrdata.dic[self.ft2_flg]==1):
+                self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+            else:
+                self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
+
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
             self.nmrdata.data[:, 1] * self.multiply_factor,
@@ -1813,8 +1855,25 @@ class TwoDViewer(wx.Panel):
                 linewidths=self.linewidth,
             )
             if(self.fid_viewer==False):
-                self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
-                self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+                if(self.transposed2D==False):
+                    if(self.nmrdata.dic[self.ft1_flg]==1):
+                        self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
+                    else:
+                        self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
+                    if(self.nmrdata.dic[self.ft2_flg]==1):
+                        self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+                    else:
+                        self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
+                else:
+                    if(self.nmrdata.dic[self.ft2_flg]==1):
+                        self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
+                    else:
+                        self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
+                    if(self.nmrdata.dic[self.ft1_flg]==1):
+                        self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+                    else:
+                        self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
+
             else:
                 self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
                 self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
@@ -1880,6 +1939,8 @@ class TwoDViewer(wx.Panel):
         else:
 
             # Add in the ability to transpose the data in multiplot mode
+            
+            xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             self.ax.clear()
             self.twoD_spectra = []
             self.twoD_slices_horizontal = []
@@ -1954,6 +2015,7 @@ class TwoDViewer(wx.Panel):
                     )
                 )
 
+
             self.line_h = self.ax.axhline(
                 y=self.values_dictionary[i]["new_x_ppms"][1], color="black", lw=1.5
             )
@@ -1968,18 +2030,8 @@ class TwoDViewer(wx.Panel):
                 self.twoD_slices_vertical[i][0].set_visible(False)
 
             if(self.fid_viewer==False):
-                self.ax.set_xlim(
-                    [
-                        max(self.values_dictionary[0]["new_x_ppms"]),
-                        min(self.values_dictionary[0]["new_x_ppms"]),
-                    ]
-                )
-                self.ax.set_ylim(
-                    [
-                        max(self.values_dictionary[0]["new_y_ppms"]),
-                        min(self.values_dictionary[0]["new_y_ppms"]),
-                    ]
-                )
+                self.ax.set_xlim(ylim)
+                self.ax.set_ylim(xlim)
             self.axislabels_old = self.nmrdata.axislabels[0], self.nmrdata.axislabels[1]
             self.nmrdata.axislabels[1] = self.axislabels_old[0]
             self.nmrdata.axislabels[0] = self.axislabels_old[1]
@@ -2899,9 +2951,18 @@ class TwoDViewer(wx.Panel):
 
                     self.slice_mode = "x"
                     if(self.fid_viewer==False):
-                        data = self.nmrdata.data[
-                                :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
-                            ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                        :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
+                                    ]
+                            else:
+                                data = self.nmrdata.data[:, int(self.new_y_ppms[1])]
+                        else:
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[:, self.uc1(str(self.new_y_ppms[1]) + "ppm")]
+                            else:
+                                data = self.nmrdata.data[:, int(self.new_y_ppms[1])]
                     else:
                         data = self.nmrdata.data[
                                 :, int(self.new_y_ppms[1])
@@ -2933,9 +2994,20 @@ class TwoDViewer(wx.Panel):
                     self.line3.set_visible = True
                     self.line4.set_visible = True
                     if(self.fid_viewer==False):
-                        data = self.nmrdata.data[
-                            self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
-                        ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[int(self.new_x_ppms[1]), :]
+                        else:
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[int(self.new_x_ppms[1]), :]
                     else:
                         data = self.nmrdata.data[
                             int(self.new_x_ppms[1]), :
@@ -2972,27 +3044,44 @@ class TwoDViewer(wx.Panel):
                         multiply_factor = self.values_dictionary[i][
                             "multiply factor"
                         ]
+
                         try:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_y_ppms"][1])
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_y_ppms"][1])
                             self.twoD_slices_horizontal[i] = self.axes1D.plot(
                                 self.values_dictionary[i]["new_x_ppms"],
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.new_y_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor,
                                 color=self.twoD_label_colours[i],
                                 linewidth=self.values_dictionary[i]["linewidth 1D"],
                             )
                         except:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = self.values_dictionary[i]["uc0"](str(self.new_y_ppms[1]) + "ppm")
+                                else:
+                                    slice_index = self.values_dictionary[i]["new_y_ppms"][1]
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = self.values_dictionary[i]["uc0"](str(self.new_y_ppms[1]) + "ppm")
+                                else:
+                                    slice_index = self.values_dictionary[i]["new_y_ppms"][1]
                             self.twoD_slices_horizontal[i] = self.axes1D.plot(
                                 self.values_dictionary[i]["new_x_ppms"],
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.new_y_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor,
                                 color=self.twoD_label_colours[i],
@@ -3023,11 +3112,19 @@ class TwoDViewer(wx.Panel):
                             "multiply factor"
                         ]
                         try:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc0"](str(self.new_x_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc0"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
                             self.twoD_slices_vertical[i] = self.axes1D_2.plot(
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.new_x_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor,
@@ -3036,11 +3133,19 @@ class TwoDViewer(wx.Panel):
                                 linewidth=self.values_dictionary[i]["linewidth 1D"],
                             )
                         except:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_x_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
                             self.twoD_slices_vertical[i] = self.axes1D_2.plot(
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.new_x_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor,
@@ -3066,13 +3171,27 @@ class TwoDViewer(wx.Panel):
 
                 if self.line1.get_visible() == True:
                     if(self.fid_viewer==False):
-                        data = self.nmrdata.data[
-                            :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                        ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                    :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            :, int(self.y1 - self.y_movement)
+                                                        ]
+                        else:
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[
+                                    :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            :, int(self.y1 - self.y_movement)
+                                                        ]
                     else:
                         data = self.nmrdata.data[
-                            :, int(self.y1 - self.y_movement)
-                        ]
+                            :, int(self.y1 - self.y_movement)]
                     self.line1.set_ydata(data*self.multiply_factor)
                     self.line2.set_ydata([self.y1])
                     self.line1.set_xdata(self.ppms_0 + self.x_movement)
@@ -3080,9 +3199,24 @@ class TwoDViewer(wx.Panel):
                     self.UpdateFrame()
                 if self.line3.get_visible() == True:
                     if(self.fid_viewer == False):
-                        data = self.nmrdata.data[
-                            self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                        ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            int(self.x1 - self.x_movement), :
+                                                        ]
+                        else:
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            int(self.x1 - self.x_movement), :
+                                                        ]
                     else:
                         data = self.nmrdata.data[
                             int(self.x1 - self.x_movement), :
@@ -3104,12 +3238,18 @@ class TwoDViewer(wx.Panel):
                         
                         try:
                             if self.transposed2D == False:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](
+                                                                                str(self.y1 - self.y_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = int(self.y1 - self.y_difference)
+                                                            
+                                                                
                                 self.twoD_slices_horizontal[i][0].set_ydata(
                                     self.values_dictionary[i]["z_data"][
                                         :,
-                                        self.values_dictionary[i]["uc1"](
-                                            str(self.y1 - self.y_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                     ]
                                     * multiply_factor
                                 )
@@ -3118,12 +3258,16 @@ class TwoDViewer(wx.Panel):
                                 )
         
                             else:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc0"](
+                                                                                str(self.y1 - self.y_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = int(self.y1 - self.y_difference)
                                 self.twoD_slices_horizontal[i][0].set_ydata(
                                     self.values_dictionary[i]["z_data"][
                                         :,
-                                        self.values_dictionary[i]["uc0"](
-                                            str(self.y1 - self.y_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                     ]
                                     * multiply_factor
                                 )
@@ -3164,11 +3308,15 @@ class TwoDViewer(wx.Panel):
                         self.x_difference = self.values_dictionary[i]["move x"]
                         try:
                             if self.transposed2D == False:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc0"](
+                                                                                str(self.x1 - self.x_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = int(self.x1 - self.x_difference)
                                 self.twoD_slices_vertical[i][0].set_xdata(
                                     self.values_dictionary[i]["z_data"][
-                                        self.values_dictionary[i]["uc0"](
-                                            str(self.x1 - self.x_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                         :,
                                     ]
                                     * multiply_factor
@@ -3177,11 +3325,15 @@ class TwoDViewer(wx.Panel):
                                     self.values_dictionary[i]["new_y_ppms"]
                                 )
                             else:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](
+                                                                                str(self.x1 - self.x_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = int(self.x1 - self.x_difference)
                                 self.twoD_slices_vertical[i][0].set_xdata(
                                     self.values_dictionary[i]["z_data"][
-                                        self.values_dictionary[i]["uc1"](
-                                            str(self.x1 - self.x_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                         :,
                                     ]
                                     * multiply_factor
@@ -3245,12 +3397,36 @@ class TwoDViewer(wx.Panel):
             try:
                 if self.line1.get_visible() == True:
                     if(self.fid_viewer==False):
-                        data = (
-                            self.nmrdata.data[
-                                :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                            ]
-                            * self.multiply_factor
-                        )
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                        self.nmrdata.data[
+                                            :, int(self.y1 - self.y_movement)
+                                        ]
+                                        * self.multiply_factor
+                                )
+                        else:
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                        self.nmrdata.data[
+                                            :, int(self.y1 - self.y_movement)
+                                        ]
+                                        * self.multiply_factor
+                                )
                     else:
                         data = (
                             self.nmrdata.data[
@@ -3284,12 +3460,37 @@ class TwoDViewer(wx.Panel):
                     self.UpdateFrame()
                 if self.line3.get_visible() == True:
                     if(self.fid_viewer==False):
-                        data = (
-                            self.nmrdata.data[
-                                self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                            ]
-                            * self.multiply_factor
-                        )
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                         self.nmrdata.data[
+                                            int(self.x1 - self.x_movement), :
+                                        ]
+                                        * self.multiply_factor
+                                    )
+                        else:
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                         self.nmrdata.data[
+                                            int(self.x1 - self.x_movement), :
+                                        ]
+                                        * self.multiply_factor
+                                    )
+
                     else:
                         data = (
                             self.nmrdata.data[
@@ -3354,16 +3555,26 @@ class TwoDViewer(wx.Panel):
                     ] = self.P1_slider_fine.GetValue()
                     self.y_difference = self.values_dictionary[self.active_plot_index]["move y"]
                     if self.transposed2D == False:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft2_flg]==1):
+                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc1"](
+                                                                        str(self.y1 - self.y_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = int(self.y1 - self.y_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 :,
-                                self.values_dictionary[self.active_plot_index]["uc1"](
-                                    str(self.y1 - self.y_difference) + "ppm"
-                                ),
+                                slice_index,
                             ]
                             * multiply_factor
                         )
                     else:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft1_flg]==1):
+                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc0"](
+                                                                        str(self.y1 - self.y_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = int(self.y1 - self.y_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 :,
@@ -3411,22 +3622,30 @@ class TwoDViewer(wx.Panel):
                         ] = self.P1_slider_fine.GetValue()
                         self.y_difference = self.values_dictionary[i]["move y"]
                         if self.transposed2D == False:
+                            if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                slice_index = int(self.values_dictionary[i]["uc1"](
+                                                                            str(self.y1 - self.y_difference) + "ppm"
+                                                                        ))
+                            else:
+                                slice_index = int(self.y1 - self.y_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.y1 - self.y_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor
                             )
                         else:
+                            if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                slice_index = int(self.values_dictionary[i]["uc0"](
+                                                            str(self.y1 - self.y_difference) + "ppm"
+                                                                                                    ))
+                            else:
+                                slice_index = int(self.y1 - self.y_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.y1 - self.y_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor
                             )
@@ -3454,21 +3673,29 @@ class TwoDViewer(wx.Panel):
                         "move x"
                     ]
                     if self.transposed2D == False:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft1_flg]==1):
+                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc0"](
+                                                                        str(self.x1 - self.x_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = int(self.x1 - self.x_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
-                                self.values_dictionary[self.active_plot_index]["uc0"](
-                                    str(self.x1 - self.x_difference) + "ppm"
-                                ),
+                                slice_index,
                                 :,
                             ]
                             * multiply_factor
                         )
                     else:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft2_flg]==1):
+                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc1"](
+                                                                        str(self.x1 - self.x_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = int(self.x1 - self.x_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
-                                self.values_dictionary[self.active_plot_index]["uc1"](
-                                    str(self.x1 - self.x_difference) + "ppm"
-                                ),
+                                slice_index,
                                 :,
                             ]
                             * multiply_factor
@@ -3508,21 +3735,29 @@ class TwoDViewer(wx.Panel):
                         ] = self.P1_slider_fine.GetValue()
                         self.x_difference = self.values_dictionary[i]["move x"]
                         if self.transposed2D == False:
+                            if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                slice_index = int(self.values_dictionary[i]["uc0"](
+                                                                            str(self.x1 - self.x_difference) + "ppm"
+                                                                        ))
+                            else:
+                                slice_index = int(self.x1 - self.x_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.x1 - self.x_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor
                             )
                         else:
+                            if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                slice_index = int(self.values_dictionary[i]["uc1"](
+                                                                            str(self.x1 - self.x_difference) + "ppm"
+                                                                        ))
+                            else:
+                                slice_index = int(self.x1 - self.x_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.x1 - self.x_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor

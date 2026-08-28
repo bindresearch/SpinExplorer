@@ -283,9 +283,13 @@ class FileDrop(wx.FileDropTarget):
                             else:
                                 udic = ng.bruker.guess_udic(dic, data)
                                 uc0 = ng.fileiobase.uc_from_udic(udic)
+
                             self.data.append(data)
                             x0, x1 = uc0.ppm_limits()
-                            uc0.ppms_scale = np.linspace(x0, x1, int(uc0._size))
+                            if(dic['FDF2FTFLAG']==1):
+                                uc0.ppms_scale = np.linspace(x0, x1, int(uc0._size))
+                            else:
+                                uc0.ppms_scale = np.arange(0, int(uc0._size), 1)
                             msg = "Please enter title of this data!"
                             dlg = wx.TextEntryDialog(self.tempframe, msg)
                             self.tempframe.Raise()
@@ -523,6 +527,7 @@ class FileDrop(wx.FileDropTarget):
                                     "contour levels"
                                 ] = self.parent.contour_levels_slider.GetValue()
                                 self.parent.values_dictionary[0]["transposed"] = False
+                                self.parent.values_dictionary[0]["dic"] = self.parent.nmrdata.dic
                                 try:
                                     if self.parent.parent.parent.path != "":
                                         path = self.parent.parent.parent.path
@@ -568,8 +573,26 @@ class FileDrop(wx.FileDropTarget):
                                 udic = ng.bruker.guess_udic(dic, data)
                                 uc0 = ng.fileiobase.uc_from_udic(udic, dim=0)
                                 uc1 = ng.fileiobase.uc_from_udic(udic, dim=1)
-                            ppm0 = uc0.ppm_scale()
-                            ppm1 = uc1.ppm_scale()
+
+                            if(dic['FDDIMORDER'][0]==2.0):
+                                if(dic['FDF1FTFLAG']==1):
+                                    ppm0 = uc0.ppm_scale()
+                                else:
+                                    ppm0 = np.arange(0, len(uc0.ppm_scale()),1)
+                                if(dic['FDF2FTFLAG']==1):
+                                    ppm1 = uc1.ppm_scale()
+                                else:
+                                    ppm1 = np.arange(0, len(uc1.ppm_scale()),1)
+                            else:
+                                if(dic['FDF2FTFLAG']==1):
+                                    ppm0 = uc0.ppm_scale()
+                                else:
+                                    ppm0 = np.arange(0, len(uc0.ppm_scale()),1)
+                                if(dic['FDF1FTFLAG']==1):
+                                    ppm1 = uc1.ppm_scale()
+                                else:
+                                    ppm1 = np.arange(0, len(uc1.ppm_scale()),1)
+                                
                             x, y = np.meshgrid(ppm1, ppm0)
 
                             if len(self.parent.twoD_spectra) == 0:
@@ -598,6 +621,7 @@ class FileDrop(wx.FileDropTarget):
                             self.parent.values_dictionary[index]["multiply factor"] = 1.0
                             self.parent.values_dictionary[index]["contour levels"] = 20
                             self.parent.values_dictionary[index]["path"] = name
+                            self.parent.values_dictionary[index]["dic"] = dic
 
 
                             # Work out the difference in max intensities between the first and the added spectra

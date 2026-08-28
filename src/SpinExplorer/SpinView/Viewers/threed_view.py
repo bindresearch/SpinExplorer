@@ -580,9 +580,23 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
@@ -617,9 +631,23 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
@@ -650,9 +678,23 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
@@ -683,9 +725,23 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
@@ -715,9 +771,23 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
@@ -1195,13 +1265,45 @@ class ThreeDViewer(wx.Panel):
             self.uc2 = ng.fileiobase.uc_from_udic(udic, dim=0)
 
         if(self.fid_viewer==False):
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+            uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+            uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+
+            if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                self.ppms_0 = self.uc0.ppm_scale()
+                if('(ppm)' not in self.nmrdata.axislabels[1]):
+                    self.nmrdata.axislabels[1]+= ' (ppm)'
+            else:
+                self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                if('(points)' not in self.nmrdata.axislabels[1]):
+                    self.nmrdata.axislabels[1]+= ' (points)'
+
+            if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                self.ppms_1 = self.uc1.ppm_scale()
+                if('(ppm)' not in self.nmrdata.axislabels[2]):
+                    self.nmrdata.axislabels[2]+= ' (ppm)'
+            else:
+                self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                if('(points)' not in self.nmrdata.axislabels[2]):
+                    self.nmrdata.axislabels[2]+= ' (points)'
+            if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                self.ppms_2 = self.uc2.ppm_scale()
+                if('(ppm)' not in self.nmrdata.axislabels[0]):
+                    self.nmrdata.axislabels[0]+= ' (ppm)'
+            else:
+                self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                if('(points)' not in self.nmrdata.axislabels[0]):
+                        self.nmrdata.axislabels[0]+= ' (points)'
         else:
             self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
             self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
             self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+            for l, label in enumerate(self.nmrdata.axislabels):
+                if('(points)' not in label):
+                    self.nmrdata.axislabels[l]+= ' (points)'
+
+        self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[0]) + "):"
+                )
 
         self.new_x_ppms = self.ppms_0
         self.new_y_ppms = self.ppms_1
@@ -1740,7 +1842,6 @@ class ThreeDViewer(wx.Panel):
             + str(z_index)
             + " , "
             + "{:.2f}".format(self.ppms_2[z_index - 1])
-            + "ppm"
         )
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
         xlim_1, ylim_1 = self.axes1D.get_xlim(), self.axes1D.get_ylim()

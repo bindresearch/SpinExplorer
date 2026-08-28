@@ -222,10 +222,11 @@ class GetData:
 
             if self.dim == 1:
                 # If 1D take FDF1LABEL
-                self.axislabels.append(self.dic["FDF1LABEL"])
+                self.axislabels.append(self.dic["FDF2LABEL"])
             elif self.dim == 2:
                 # If 2D take FDF2LABEL as direct and FDF1LABEL as indirect
-                if(self.pseudo_flag == False):
+                if(self.dic['FDDIMORDER'][0]==1.0):
+                # if(self.pseudo_flag == False):
                     self.axislabels.append(self.dic["FDF1LABEL"])
                     self.axislabels.append(self.dic["FDF2LABEL"])
                 else:

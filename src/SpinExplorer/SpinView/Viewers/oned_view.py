@@ -2793,18 +2793,32 @@ class OneDViewer(wx.Panel):
                 udic = ng.bruker.guess_udic(self.nmrdata.dic, self.nmrdata.data)
                 self.uc0 = ng.fileiobase.uc_from_udic(udic)
 
+
         if(self.fid_viewer==False):
-            self.ppm_original = self.uc0.ppm_scale()
+            if(self.nmrdata.dic['FDF2FTFLAG']==1):
+                # Fourier transformed axis
+                self.ppm_original = self.uc0.ppm_scale()
+                if('(ppm)' not in self.nmrdata.axislabels[0]):
+                    self.nmrdata.axislabels[0] += ' (ppm)'
+            else:
+                # Data has not been Fourier transformed
+                self.ppm_original = np.arange(0, len(self.nmrdata.data),1)
+                if('(points)' not in self.nmrdata.axislabels[0]):
+                    self.nmrdata.axislabels[0] += ' (points)'
         else:
             # showing the fid axis as points
             self.ppm_original = np.arange(0, len(self.nmrdata.data),1)
+            if('(points)' not in self.nmrdata.axislabels[0]):
+                self.nmrdata.axislabels[0] += ' (points)'
         self.ppms = self.ppm_original
         self.data = self.nmrdata.data
         (self.line1,) = self.ax.plot(self.ppms, self.data, linewidth=0.5)
         self.ax.set_xlabel(self.nmrdata.axislabels[0])
         self.ax.set_ylabel("Intensity")
-        if(self.fid_viewer==False):
+        if('(points)' not in self.nmrdata.axislabels[0]):
             self.ax.set_xlim(max(self.ppms), min(self.ppms))
+        else:
+            self.ax.set_xlim(min(self.ppms), max(self.ppms))
         self.line1.set_color(self.colour_value)
 
         # Create a pivot line and set to invisible
