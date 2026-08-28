@@ -476,20 +476,23 @@ class CheckingParameters:
                     result = dlg.ShowModal()
                     return False
 
-        if(dimension==1):
-            phasing_check_message = ("NUS data reconstruction or data extension (using SMILE or SpinExplorerIST) requires the phasing parameters to be correct, giving all in-phase peaks. If the phasing has not been checked, please process without NUS reconstruction to check the phasing is correct before continuing NUS reconstruction. Would you like to continue NUS reconstruction?")
-            dlg = wx.MessageDialog(
-                self.notebook, phasing_check_message, "NUS Phase Check", wx.YES_NO 
-            )
-            self.notebook.Raise()
-            self.notebook.SetFocus()
-            result = dlg.ShowModal()
-            if result == wx.ID_YES:
-                dlg.Destroy()
-                return True
-            else:
-                dlg.Destroy()
-                return False
+        if(dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
+                    == 2 or dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
+                                == 3):
+            if(dimension==1):
+                phasing_check_message = ("NUS data reconstruction or data extension (using SMILE or SpinExplorerIST) requires the phasing parameters to be correct, giving all in-phase peaks. If the phasing has not been checked, please process without NUS reconstruction to check the phasing is correct before continuing NUS reconstruction. Would you like to continue NUS reconstruction?")
+                dlg = wx.MessageDialog(
+                    self.notebook, phasing_check_message, "NUS Phase Check", wx.YES_NO 
+                )
+                self.notebook.Raise()
+                self.notebook.SetFocus()
+                result = dlg.ShowModal()
+                if result == wx.ID_YES:
+                    dlg.Destroy()
+                    return True
+                else:
+                    dlg.Destroy()
+                    return False
 
 
         return True

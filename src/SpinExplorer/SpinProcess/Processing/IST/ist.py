@@ -236,6 +236,7 @@ def ist_3d(input_spec: NDArray,
 
 def fid_from_absorption(S):
     """S: 2N complex spectrum, FFT order, last axis. Returns N-point complex FID."""
+    print('fid from absorption')
     N = S.shape[-1] // 2
 
     return fft.ifft(S, axis=-1)[..., :N].copy()
@@ -251,11 +252,10 @@ def get_thresh_signal(signal_ft: NDArray,
         return x * scale
 
     thresh_real = soft_thresh(signal_ft, threshold)
-    max_val = np.max(np.abs(thresh_real))
     #thresh_fid = fft.ifft(thresh_real)
     thresh_fid = fid_from_absorption(thresh_real)
 
-    return thresh_real, thresh_fid, max_val
+    return thresh_real, thresh_fid
 
 
 def ist_iteration_2d(nus_fid:NDArray, 
@@ -265,8 +265,10 @@ def ist_iteration_2d(nus_fid:NDArray,
 
     nus_fid = np.pad(nus_fid, pad_width = ([0,nus_fid.shape[0]])) 
     signal_ft = fft.fft(nus_fid)
-    threshold_sig, thresh_fid, max_val = get_thresh_signal(signal_ft, threshold)
+    threshold_sig, thresh_fid = get_thresh_signal(signal_ft, threshold)
+    threshold_ft_max_val = np.max(np.abs(threshold_sig))
     leftover_sig = signal_ft-threshold_sig
+    leftover_max_val = np.max(np.abs(leftover_sig))
     l2_norm = np.sqrt(np.vdot(leftover_sig, leftover_sig).real)
 
     # leftover_fid = fft.ifft(leftover_sig)
@@ -274,7 +276,8 @@ def ist_iteration_2d(nus_fid:NDArray,
     # leftover_fid = nus_fid - thresh_fid # commented this out it doesn't make sense
     leftover_fid = apply_sampling_schedule_nd(leftover_fid, sampling_schedule, (0,))
 
-    return leftover_fid, thresh_fid, threshold_sig, l2_norm, leftover_max_val
+    # return leftover_fid, thresh_fid, threshold_sig, l2_norm, threshold_ft_max_val, leftover_max_val
+    return leftover_fid, thresh_fid, l2_norm, threshold_ft_max_val, leftover_max_val
 
 
 def ist_2d(input_spec: NDArray,
@@ -285,7 +288,8 @@ def ist_2d(input_spec: NDArray,
            max_iter: int = 4000,
            mode: int = 1,
            verb: bool = False,
-           ist_callback = None) -> tuple[NDArray,int]:
+           ist_callback = None,
+           max_val=1) -> tuple[NDArray,int]:
     """
     IST reconstruction of 2D NUS data. Direct dimension is assumed to be
     already Fourier transformed. IST is applied column by column along
@@ -302,6 +306,7 @@ def ist_2d(input_spec: NDArray,
     mode            : 1 = converge on relative change, 2 = converge on L2 norm
     ist_callback    : A function to update the SpinExplorer counter so that the % through
                       reconstruction can be reported.
+    max_val         : Max value in the spectrum (needed to determine convergence)
     """
     converged_results = 0
 
@@ -315,7 +320,9 @@ def ist_2d(input_spec: NDArray,
         nus_fid_initial = copy.deepcopy(nus_fid)
 
         for iteration in range(1, max_iter + 1):
-            nus_fid, threshold_signal, _, max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule)
+            nus_fid, threshold_signal, _, threshold_ft_max_val, leftover_max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule)
+
+            print(reconstructed.dtype, threshold_signal.dtype)
             reconstructed += threshold_signal
 
             curr_norm = np.sqrt(np.vdot(reconstructed, reconstructed).real)
@@ -324,23 +331,26 @@ def ist_2d(input_spec: NDArray,
 
 
             if(iteration==1):
-                if((leftover_max_val+np.abs(np.max(threshold_ft)))/max_val < convergence_tol):
+                if((leftover_max_val+threshold_ft_max_val)/max_val < convergence_tol):
+                    # The initial signal was less than the convergence tolerance (no reconstruction applied to this slice)
                     return nus_fid_initial, True
             
             if(leftover_max_val/max_val < convergence_tol):
+                # The leftover signal is now below the convergence tolerance so break
                 if verb:
                     print(f"  converged at iteration {iteration} — "
                         f"relative change: {relative_change:.2e}")
                 converged = True
                 break
             if iteration == max_iter:
+                # Convergence not reached but max iterations reached so break loop
                 if verb:
                     print(f"  reached max iterations of {iteration+1} "
                         f"relative change: {relative_change:.2e}")
                 break
 
-        # return reconstructed + nus_fid, converged
-        return reconstructed, converged
+        return reconstructed + nus_fid, converged
+        # return reconstructed, converged
 
     def _reconstruct_until_l2(nus_fid: NDArray) -> tuple[NDArray,bool]:
         reconstructed = np.zeros_like(nus_fid)
@@ -376,9 +386,14 @@ def ist_2d(input_spec: NDArray,
     # for i in range(input_spec.shape[0]):
     #     print(f"IST slice {i + 1} / {input_spec.shape[0]}")
     #     recon_buffer[i] = reconstruct(input_spec[i].copy())
+
+    results = []
+    for i in range(input_spec.shape[0]):
+        results.append(_process_slice(i))
+
     
     
-    results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
+    # results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
     for i, result, converged in results:
         if(ist_callback!=None):
             continue_reconstruction = ist_callback(converged)
