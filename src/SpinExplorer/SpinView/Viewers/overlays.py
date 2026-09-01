@@ -187,7 +187,19 @@ class FileDrop(wx.FileDropTarget):
                 if ".dat" in name or ".ft" in name or bruker == True:
                     if self.stackmode == False:
                         if bruker == False:
-                            dic, data = ng.pipe.read(name)
+                            try:
+                                dic, data = ng.pipe.read(name)
+                            except:
+                                # Give a popout saying the NMRPipe file has not been read properly. Retry processing
+                                dlg = wx.MessageDialog(
+                                    None,
+                                    "NMRPipe file not read properly. Ensure raw data is downloaded to the local device or please retry processing the data then try again.",
+                                    "Error",
+                                    wx.OK | wx.ICON_INFORMATION,
+                                )
+                                dlg.ShowModal()
+                                dlg.Destroy()
+                                return False
                         else:
                             dic, data = ng.bruker.read_pdata(name)
                         if len(data.shape) == 1:

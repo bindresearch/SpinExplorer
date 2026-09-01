@@ -153,7 +153,7 @@ class GetData:
                 # Give a popout saying the NMRPipe file has not been read properly. Retry processing
                 dlg = wx.MessageDialog(
                     self.tempframe,
-                    "NMRPipe file not read properly. Please retry processing the file then try again.",
+                    "NMRPipe file not read properly. Ensure raw data is downloaded to the local device or please retry processing the data then try again.",
                     "Error",
                     wx.OK | wx.ICON_INFORMATION,
                 )

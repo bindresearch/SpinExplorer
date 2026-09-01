@@ -49,7 +49,7 @@ def ist_iteration_3d(data: NDArray,
 
     data_real, data_imag = pack_signal_ist_3d(data)
 
-    thresh_sig_real, thresh_sig_imag, max_val = get_thresh_signal_3d(data_real, data_imag, threshold)
+    thresh_sig_real, thresh_sig_imag, leftover_max_val = get_thresh_signal_3d(data_real, data_imag, threshold)
 
     leftover_sig_real = data_real - thresh_sig_real
     leftover_sig_imag = data_imag - thresh_sig_imag
@@ -120,7 +120,8 @@ def ist_3d(input_spec: NDArray,
            mode: int = 1,
            sched_ord: int = 0,
            verb: bool = False,
-           ist_callback = None) -> tuple[NDArray,int]:
+           ist_callback = None,
+           max_val=1) -> tuple[NDArray,int]:
     
     """
     IST reconstruction of 3D NUS data
@@ -146,13 +147,11 @@ def ist_3d(input_spec: NDArray,
 
             # Check to see if a user has cancelled the IST reconstruction
 
-            nus_fid, threshold_sig_real, threshold_sig_imag, _, max_val = ist_iteration_3d(nus_fid, threshold, sampling_schedule)
+            nus_fid, threshold_sig_real, threshold_sig_imag, _, leftover_max_val = ist_iteration_3d(nus_fid, threshold, sampling_schedule)
 
             if(iteration==1):
                 reconstructed_r = np.zeros_like(threshold_sig_real)
                 reconstructed_i = np.zeros_like(threshold_sig_imag)
-
-                thresh_signal_real_max = max_val
 
                 
             reconstructed_r += threshold_sig_real 
@@ -236,7 +235,6 @@ def ist_3d(input_spec: NDArray,
 
 def fid_from_absorption(S):
     """S: 2N complex spectrum, FFT order, last axis. Returns N-point complex FID."""
-    print('fid from absorption')
     N = S.shape[-1] // 2
 
     return fft.ifft(S, axis=-1)[..., :N].copy()
@@ -322,7 +320,6 @@ def ist_2d(input_spec: NDArray,
         for iteration in range(1, max_iter + 1):
             nus_fid, threshold_signal, _, threshold_ft_max_val, leftover_max_val = ist_iteration_2d(nus_fid, threshold, sampling_schedule)
 
-            print(reconstructed.dtype, threshold_signal.dtype)
             reconstructed += threshold_signal
 
             curr_norm = np.sqrt(np.vdot(reconstructed, reconstructed).real)
@@ -387,13 +384,13 @@ def ist_2d(input_spec: NDArray,
     #     print(f"IST slice {i + 1} / {input_spec.shape[0]}")
     #     recon_buffer[i] = reconstruct(input_spec[i].copy())
 
-    results = []
-    for i in range(input_spec.shape[0]):
-        results.append(_process_slice(i))
+    # results = []
+    # for i in range(input_spec.shape[0]):
+    #     results.append(_process_slice(i))
 
     
     
-    # results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
+    results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
     for i, result, converged in results:
         if(ist_callback!=None):
             continue_reconstruction = ist_callback(converged)
