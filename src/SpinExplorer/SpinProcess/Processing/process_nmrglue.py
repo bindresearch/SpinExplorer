@@ -293,8 +293,10 @@ class ProcessNMRGlue:
 
         dic, data = self.transpose_3d(dic, data, auto=True)
         dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
+        print('here1')
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
         dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
+        print('here2')
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], inv=True, ist_phasing=True)
         data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
         dic, data = self.transpose_3d(dic, data, auto=True, nohyper=True)
@@ -1065,10 +1067,13 @@ class ProcessNMRGlue:
                 if(self.ist_phasing==True):
                     if(inv==True):
                         dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
+                        print('2: IST phasing IFT', dimension)
                     else:
                         if(ist_phasing==True):
+                            print('1: IST phasing FT', dimension)
                             dic, data = ng.pipe_proc.ft(dic, data, alt=True, inv=inv)
                         else:
+                            print('3: extra FT', dimension)
                             dic, data = ng.pipe_proc.ft(dic, data)
                 else:
                     dic, data = ng.pipe_proc.ft(dic, data, alt=True, inv=inv)
@@ -1088,10 +1093,13 @@ class ProcessNMRGlue:
                 if(self.ist_phasing==True):
                     if(inv==True):
                         dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
+                        print('2: IST phasing IFT', dimension)
                     else:
                         if(ist_phasing==True):
+                            print('1: IST phasing FT', dimension)
                             dic, data = ng.pipe_proc.ft(dic, data, alt=True, neg=True, inv=inv)
                         else:
+                            print('3: extra FT', dimension)
                             dic, data = ng.pipe_proc.ft(dic, data)
                 else:
                     dic, data = ng.pipe_proc.ft(dic, data, alt=True, neg=True, inv=inv)

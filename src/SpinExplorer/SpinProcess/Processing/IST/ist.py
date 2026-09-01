@@ -346,8 +346,8 @@ def ist_2d(input_spec: NDArray,
                         f"relative change: {relative_change:.2e}")
                 break
 
-        return reconstructed + nus_fid, converged
-        # return reconstructed, converged
+        # return reconstructed + nus_fid, converged
+        return reconstructed, converged
 
     def _reconstruct_until_l2(nus_fid: NDArray) -> tuple[NDArray,bool]:
         reconstructed = np.zeros_like(nus_fid)
