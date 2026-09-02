@@ -173,9 +173,10 @@ def ist_3d(input_spec: NDArray,
                         f"relative change: {relative_change:.2e}")
 
 
-        # leftover_real, leftover_imag = pack_signal_ist_3d(nus_fid)
+        leftover_real, leftover_imag = pack_signal_ist_3d(nus_fid)
 
-        return reconstructed_r, reconstructed_i, converged
+        return reconstructed_r+leftover_real, reconstructed_i+leftover_imag, converged
+        # return reconstructed_r, reconstructed_i, converged
 
     def _reconstruct_until_l2(nus_fid: NDArray) -> tuple[NDArray,NDArray,bool]:
         l2_norm = terminate * 1000.0
@@ -260,8 +261,8 @@ def ist_iteration_2d(nus_fid:NDArray,
                   threshold:float, 
                   sampling_schedule:Union[list[int],NDArray])->tuple[NDArray,NDArray,np.floating,np.floating]:
     
-
-    nus_fid = np.pad(nus_fid, pad_width = ([0,nus_fid.shape[0]])) 
+ 
+    # nus_fid = np.pad(nus_fid, pad_width = ([0,nus_fid.shape[0]])) 
     signal_ft = fft.fft(nus_fid)
     threshold_sig, thresh_fid = get_thresh_signal(signal_ft, threshold)
     threshold_ft_max_val = np.max(np.abs(threshold_sig))
@@ -346,8 +347,8 @@ def ist_2d(input_spec: NDArray,
                         f"relative change: {relative_change:.2e}")
                 break
 
-        # return reconstructed + nus_fid, converged
-        return reconstructed, converged
+        return reconstructed + nus_fid, converged
+        # return reconstructed, converged
 
     def _reconstruct_until_l2(nus_fid: NDArray) -> tuple[NDArray,bool]:
         reconstructed = np.zeros_like(nus_fid)
@@ -384,13 +385,13 @@ def ist_2d(input_spec: NDArray,
     #     print(f"IST slice {i + 1} / {input_spec.shape[0]}")
     #     recon_buffer[i] = reconstruct(input_spec[i].copy())
 
-    # results = []
-    # for i in range(input_spec.shape[0]):
-    #     results.append(_process_slice(i))
+    results = []
+    for i in range(input_spec.shape[0]):
+        results.append(_process_slice(i))
 
     
     
-    results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
+    # results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice)(i) for i in range(input_spec.shape[0]))
     for i, result, converged in results:
         if(ist_callback!=None):
             continue_reconstruction = ist_callback(converged)

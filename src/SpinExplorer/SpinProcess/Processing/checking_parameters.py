@@ -461,20 +461,20 @@ class CheckingParameters:
             # Check to see if zero-filling is added if the NUS extension value is greater than zero. Ask the user to turn of zero-filling
             # if NUS extrapolation is used as it is an alternative to zero filling
 
-            if(int(dimension_tab.linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())>0):
-                if(dimension_tab.zero_filling.zero_filling_checkbox.GetValue()==True):
-                    message = (
-                                "IST NUS reconstruction error (dimension {}): zero filling cannot be applied if NUS extrapolation/extension is used. Please either set the NUS extension value to 0, or uncheck the apply zero filling checkbox and try again.".format(
-                            dimension + 1
-                        )
-                                )
-                    dlg = wx.MessageDialog(
-                        self.notebook, message, "Warning", wx.OK | wx.ICON_WARNING
-                    )
-                    self.notebook.Raise()
-                    self.notebook.SetFocus()
-                    result = dlg.ShowModal()
-                    return False
+            # if(int(dimension_tab.linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())>0):
+            #     if(dimension_tab.zero_filling.zero_filling_checkbox.GetValue()==True):
+            #         message = (
+            #                     "IST NUS reconstruction error (dimension {}): zero filling cannot be applied if NUS extrapolation/extension is used. Please either set the NUS extension value to 0, or uncheck the apply zero filling checkbox and try again.".format(
+            #                 dimension + 1
+            #             )
+            #                     )
+            #         dlg = wx.MessageDialog(
+            #             self.notebook, message, "Warning", wx.OK | wx.ICON_WARNING
+            #         )
+            #         self.notebook.Raise()
+            #         self.notebook.SetFocus()
+            #         result = dlg.ShowModal()
+            #         return False
 
         if(dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
                     == 2 or dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()

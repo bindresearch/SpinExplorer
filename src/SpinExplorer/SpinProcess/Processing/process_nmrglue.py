@@ -293,10 +293,8 @@ class ProcessNMRGlue:
 
         dic, data = self.transpose_3d(dic, data, auto=True)
         dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
-        print('here1')
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
         dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        print('here2')
         dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], inv=True, ist_phasing=True)
         data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
         dic, data = self.transpose_3d(dic, data, auto=True, nohyper=True)
@@ -311,6 +309,7 @@ class ProcessNMRGlue:
     
 
         return dic, data, ist_convergence_number, max_val
+
 
 
     def find_parameters_for_ist_2D(self, dic, data):
@@ -334,17 +333,34 @@ class ProcessNMRGlue:
     
 
     def find_parameters_for_ist_3D(self, dic, data):
+
+
+        extension1 = int(self.dimension_tabs[1].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
+        extension2 = int(self.dimension_tabs[2].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
+
         dic, data = self.transpose_3d(dic, data, auto=True)
         dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
         dic, data = self.add_zero_filling(dic, data, 1, self.dimension_tabs[1])
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1])
+
+        # double the data size
+        # NUS extension
+        dic, data = ng.pipe_proc.zf(dic, data, pad=extension1)
+        dic, data = ng.pipe_proc.zf(dic, data, pad=data.shape[-1])
+
+        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
         dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1])
         dic, data = self.transpose_3d(dic, data, auto=True, nohyper=True)
 
         dic, data = self.zero_transpose_3d(dic, data)
         dic, data = self.add_apodization(dic, data, 2, self.dimension_tabs[2])
         dic, data = self.add_zero_filling(dic, data, 2, self.dimension_tabs[2])
-        dic, data = self.add_fourier_transform(dic, data, 2, self.dimension_tabs[2])
+
+        # double the data size
+        # NUS extension
+        dic, data = ng.pipe_proc.zf(dic, data, pad=extension2)
+        dic, data = ng.pipe_proc.zf(dic, data, pad=data.shape[-1])
+        
+        dic, data = self.add_fourier_transform(dic, data, 2, self.dimension_tabs[2], ist_phasing=True)
         dic, data = self.add_phasing(dic, data, 2, self.dimension_tabs[2])
 
         max_val = np.max(np.abs(data))
@@ -401,6 +417,7 @@ class ProcessNMRGlue:
             )
         dic, data = self.add_linear_prediction(dic, data, dimension, dimension_tab)
 
+        # dic, data = self.add_apodization(dic, data, dimension, dimension_tab)
         if(dimension==0):
             dic, data = self.add_apodization(dic, data, dimension, dimension_tab)
         else:
