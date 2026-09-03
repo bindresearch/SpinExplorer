@@ -1044,6 +1044,7 @@ class FileDrop(wx.FileDropTarget):
                         else:
                             uc0 = ng.pipe.make_uc(dic, data_original, dim=0)
                             data_original = data_original.T
+                        self.color_list = [self.color_list[0]]+self.color_list[2:]+ [self.color_list[1]]
                         while len(data_original) > len(self.color_list):
                             self.color_list = self.color_list * 2
                         x0, x1 = uc0.ppm_limits()
@@ -1124,7 +1125,7 @@ class FileDrop(wx.FileDropTarget):
                                             uc0_ppms,
                                             data_original[i],
                                             color=self.color_list[
-                                                len(self.parent.extra_plots) + 1
+                                                len(self.parent.extra_plots)
                                             ],
                                             label=str(i + 1),
                                             linewidth=self.linewidth,
@@ -1144,7 +1145,6 @@ class FileDrop(wx.FileDropTarget):
                                             data_original[i],
                                             color=self.color_list[
                                                 len(self.parent.extra_plots)
-                                                + 1
                                                 - len(self.color_list)
                                             ],
                                             label=str(i + 1),

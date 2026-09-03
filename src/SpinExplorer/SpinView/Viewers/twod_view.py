@@ -3831,10 +3831,10 @@ class Stack2D(wx.Frame):
 
         if parent.transposed2D == True:
             nmr_data_0.data = nmr_data_0.data[0]
-            nmr_data_0.axislabels = nmr_data_0.axislabels[0]
+            nmr_data_0.axislabels[0] = nmr_data_0.axislabels[0]
         else:
             nmr_data_0.data = nmr_data_0.data.T[0]
-            nmr_data_0.axislabels = nmr_data_0.axislabels[1]
+            nmr_data_0.axislabels[0] = nmr_data_0.axislabels[1]
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -3876,6 +3876,8 @@ class Stack2D(wx.Frame):
         except:
             self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.filename])
         self.viewer_oneD.files.stackmode = False
+
+        
 
         self.Show()
         self.Centre()
