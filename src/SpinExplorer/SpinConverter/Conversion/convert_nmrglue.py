@@ -46,27 +46,7 @@ class Convert_nmrglue:
         self.params = params
         self.nmrdata = nmrdata
 
-        sizes = []
-
-        if(len(self.app.format.N_complex_boxes)>1):
-            if(self.app.shared_format.NUS_tickbox.GetValue() == False):
-                for i, box in enumerate(self.app.format.N_complex_boxes):
-                    size = int(box.GetValue())
-                    if i == 0:
-                        size = int(size / 2)
-                    sizes.append(size)
-                sizes.reverse()
-
-            else:
-                sampling_schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
-                sizes = [len(sampling_schedule)*4, int(self.app.format.N_real_boxes[0].GetValue())]
-        else:
-            for i, box in enumerate(self.app.format.N_complex_boxes):
-                size = int(box.GetValue())
-                if i == 0:
-                    size = int(size / 2)
-                sizes.append(size)
-            sizes.reverse()
+        sizes = self.find_data_shape()
 
 
         C = ng.convert.converter()
@@ -122,6 +102,38 @@ class Convert_nmrglue:
         self.app.SetFocus()
         dlg.ShowModal()
         dlg.Destroy()
+
+    def find_data_shape(self) -> list:
+        """
+        The shape of the data as it was recorded, which is needed to read it
+        in. For non-uniformly sampled data only the points in the sampling
+        schedule were recorded, so the data is smaller than the size given in
+        the interface and is expanded after it has been read.
+        """
+        if len(self.app.format.N_complex_boxes) > 1:
+            if self.app.shared_format.NUS_tickbox.GetValue() == True:
+                sampling_schedule = np.asarray(
+                    read_sched(self.app.shared_format.nusfile_input.GetValue())
+                )
+                # Each sampled point of a single indirect dimension is recorded
+                # as a cos/sin pair, and each sampled point of two indirect
+                # dimensions as four hypercomplex combinations
+                if sampling_schedule.ndim == 1:
+                    rows = len(sampling_schedule) * 2
+                else:
+                    rows = len(sampling_schedule) * 4
+
+                return [rows, int(self.app.format.N_real_boxes[0].GetValue())]
+
+        sizes = []
+        for i, box in enumerate(self.app.format.N_complex_boxes):
+            size = int(box.GetValue())
+            if i == 0:
+                size = int(size / 2)
+            sizes.append(size)
+        sizes.reverse()
+
+        return sizes
 
     def perform_conversion(self, C, u, dic, data):
         """
@@ -360,20 +372,23 @@ class Convert_nmrglue:
         zeros into the missing gaps.
         """
 
-        schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
+        schedule = np.asarray(read_sched(self.app.shared_format.nusfile_input.GetValue()))
 
-        schedule = np.asarray(schedule)
-        schedule = schedule[:, ::-1]
-
-        # max points is an array of the maximum points in each dimension (equal to the value in the N real boxes)
-        if(len(self.app.format.N_complex_boxes)==2):
+        # max points is the maximum number of points in each indirect dimension
+        # (equal to the value in the N real boxes)
+        if schedule.ndim == 1:
+            # 2D data, a single indirect dimension sampled as cos/sin pairs
             max_points = int(self.app.format.N_real_boxes[-1].GetValue())
+
+            data, dic = inflate_spectra_2D_signal(
+                data, dic, sampling_schedule=schedule, max_points=max_points
+            )
         else:
+            schedule = schedule[:, ::-1]
+
             max_points = [int(self.app.format.N_real_boxes[-1].GetValue()), int(self.app.format.N_real_boxes[-2].GetValue())]
 
-
-        data, dic = inflate_spectra_3D_signal(data, dic, sampling_schedule=schedule, max_points=max_points, acq_ord = 0)
-        #data, dic = inflate_spectra_nd_signal_ist(data, dic, sampling_schedule=schedule, max_points=max_points)
+            data, dic = inflate_spectra_3D_signal(data, dic, sampling_schedule=schedule, max_points=max_points, acq_ord = 0)
 
         return dic, data
             
