@@ -91,6 +91,7 @@ class NotebookProcess(wx.Notebook):
         self.tabDim1 = DirectDimensionFrame(self.parent, self, info_buttons)
         self.tabs.append(self.tabDim1)
         self.AddPage(self.tabDim1, "Dimension 1 (" + self.nmr_data.axislabels[0] + ")")
+        self.tabDim1.dimension_size.set_data_dimension(0)
         if self.nmr_data.dim == 2 and self.nmr_data.pseudo_axis == False:
             self.tabDim2 = IndirectDimensionFrame(
                 self.parent, self, info_buttons, self.tabDim1
@@ -99,6 +100,7 @@ class NotebookProcess(wx.Notebook):
             self.AddPage(
                 self.tabDim2, "Dimension 2 (" + self.nmr_data.axislabels[1] + ")"
             )
+            self.tabDim2.dimension_size.set_data_dimension(1)
         if self.nmr_data.dim == 3 and self.nmr_data.pseudo_axis == True:
             if self.nmr_data.index == 2:
                 self.tabDim2 = IndirectDimensionFrame(
@@ -108,6 +110,7 @@ class NotebookProcess(wx.Notebook):
                 self.AddPage(
                     self.tabDim2, "Dimension 2 (" + self.nmr_data.axislabels[1] + ")"
                 )
+                self.tabDim2.dimension_size.set_data_dimension(1)
             else:
                 self.tabDim2 = IndirectDimensionFrame(
                     self.parent, self, info_buttons, self.tabDim1
@@ -116,6 +119,7 @@ class NotebookProcess(wx.Notebook):
                 self.AddPage(
                     self.tabDim2, "Dimension 2 (" + self.nmr_data.axislabels[2] + ")"
                 )
+                self.tabDim2.dimension_size.set_data_dimension(2)
         if self.nmr_data.dim == 3 and self.nmr_data.pseudo_axis == False:
             self.tabDim2 = IndirectDimensionFrame(
                 self.parent, self, info_buttons, self.tabDim1
@@ -124,6 +128,7 @@ class NotebookProcess(wx.Notebook):
             self.AddPage(
                 self.tabDim2, "Dimension 2 (" + self.nmr_data.axislabels[1] + ")"
             )
+            self.tabDim2.dimension_size.set_data_dimension(1)
             self.tabDim3 = IndirectDimensionFrame(
                 self.parent, self, info_buttons, self.tabDim1
             )
@@ -131,6 +136,7 @@ class NotebookProcess(wx.Notebook):
             self.AddPage(
                 self.tabDim3, "Dimension 3 (" + self.nmr_data.axislabels[2] + ")"
             )
+            self.tabDim3.dimension_size.set_data_dimension(2)
 
         # Setting the fourier transform modes to the guessed values
         self.add_ft_mode_guess()
@@ -260,6 +266,8 @@ class NotebookProcess(wx.Notebook):
             pass
 
 
+        self.sync_gui_values()
+
         checking = CheckingParameters(self, self.tabs)
         continue_processing = checking.check_parameter_validity()
         if continue_processing == True:
@@ -309,6 +317,8 @@ class NotebookProcess(wx.Notebook):
         except:
             pass
 
+        self.sync_gui_values()
+
         checking = CheckingParameters(self, self.tabs)
         if checking.check_parameter_validity() == True:
             if(checking.check_nmrglue_fid(self.nmr_data)==True):
@@ -320,11 +330,28 @@ class NotebookProcess(wx.Notebook):
 
     
 
+    def sync_gui_values(self):
+        """
+        Making sure that the values currently shown in the graphical interface
+        have been stored in the processing parameter variables. The apodization
+        and NUS textcontrols only update their stored values when the user
+        presses enter, so this is called before the parameters are saved or
+        used for processing.
+        """
+        for tab in self.tabs:
+            for component in [tab.apodization, tab.linear_prediction]:
+                update_values = getattr(
+                    component, "update_stored_values_from_gui", None
+                )
+                if update_values != None:
+                    update_values()
+
     def on_save_processing(self, event):
         """
         Saving the current parameters in the SpinProcess graphical interface
         into parameters.json
         """
+        self.sync_gui_values()
         save = Save_json(self, self.nmr_data, self.tabs)
 
     def on_read_processing(self):

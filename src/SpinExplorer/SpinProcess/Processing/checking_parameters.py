@@ -432,7 +432,26 @@ class CheckingParameters:
                 result = dlg.ShowModal()
                 return False
 
-
+            # Check that the convergence tolerance is a number greater than zero
+            try:
+                value = float(
+                    dimension_tab.linear_prediction.ist_convergence_tolerance_textcontrol_indirect.GetValue()
+                )
+                if value <= 0 or value >= 1:
+                    raise ValueError
+            except:
+                dlg = wx.MessageDialog(
+                    self.notebook,
+                    "NUS reconstruction error (dimension {}): The IST convergence tolerance must be a number between 0 and 1 (Default=1e-06)".format(
+                        dimension + 1
+                    ),
+                    "Warning",
+                    wx.OK | wx.ICON_WARNING,
+                )
+                self.notebook.Raise()
+                self.notebook.SetFocus()
+                result = dlg.ShowModal()
+                return False
 
             # List the files in the current directory
             files = os.listdir()

@@ -70,8 +70,7 @@ SOFTWARE."""
 
 from SpinExplorer.SpinConverter.Conversion.convert_nmrglue import Convert_nmrglue
 from SpinExplorer.SpinProcess.Processing.IST.ist import ist_3d, ist_2d, ist_2d_as_plane
-from SpinExplorer.SpinProcess.Processing.ist import read_sched
-
+from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import read_sched
 
 import wx
 import numpy as np
@@ -82,6 +81,18 @@ import copy
 import traceback
 import shutil
 import pyfftw.interfaces.numpy_fft as fft
+
+# Fourier transform options for each of the SpinProcess fourier transform
+# method selections (passed through to ng.pipe_proc.ft)
+FT_MODES = {
+    0: {},
+    1: {"auto": True},
+    2: {"real": True},
+    3: {"inv": True},
+    4: {"alt": True},
+    5: {"neg": True},
+    6: {"alt": True, "neg": True},
+}
 
 
 class ProcessNMRGlue:
@@ -166,6 +177,21 @@ class ProcessNMRGlue:
         processing = self.apply_processing_parameters()
         return processing
 
+
+    def ist_selected(self, dimension_tab) -> bool:
+        """
+        Check whether IST (NUS) reconstruction has been selected for an
+        indirect dimension.
+        """
+        try:
+            selection = (
+                dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()
+            )
+        except AttributeError:
+            return False
+
+        return selection == 3
+
     def apply_processing_parameters(self):
         # Process the data according to the user inputted processing parameters
 
@@ -176,30 +202,15 @@ class ProcessNMRGlue:
         include_dim2, include_dim3 = self.checking_dimensions()
 
         # Set the comment to nmrglue so that the fact nmrglue processing was used is noted in the processed spectrum header
-        dic['FDCOMMENT'] = 'nmrglue'
+        dic["FDCOMMENT"] = "nmrglue"
         if self.nmr_data.pseudo_axis == True:
             # Adding the fact that there is a pseudo axis to the FDCOMMENT
-            dic['FDCOMMENT'] += '_pseudo'
+            dic["FDCOMMENT"] += "_pseudo"
 
-
-        
-
-
-        try:
-            if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
-                # Phasing is to be applied before IST reconstruction
-                self.ist_phasing = True
-            else:
-                self.ist_phasing = False
-        except:
-            self.ist_phasing = False
-
-
+        # Processing the direct dimension
         dic, data = self.apply_dimension_processing(
-                        dic, data, 0, self.dimension_tabs[0]
-                    )
-        
-
+            dic, data, 0, self.dimension_tabs[0]
+        )
 
         # Adding processing lines for the first complex indirect dimension
         if include_dim2:
@@ -208,16 +219,21 @@ class ProcessNMRGlue:
                 # Give an error saying that SMILE NUS reconstruction is not currently supported using nmrglue processing.
                 self.smile_nmrglue_error()
                 return False
-            
+
             if self.nmr_data.pseudo_axis == False and include_dim3 == False:
-                if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
-                    dic, data = ng.pipe_proc.tp(dic, data, auto=True)
-                    dic, data, ist_convergence_number, max_val = self.phasing_for_IST_2D(dic, data)
-                    dic, data = self.apply_ist_reconstruction(dic, data, ndim = len(self.dimension_tabs), dimension_tab=self.dimension_tabs[1], ist_convergence_number=ist_convergence_number, max_val=max_val)
-                else:
-                    dic, data = ng.pipe_proc.tp(dic, data, auto=True)
+                # 2D dataset, IST is applied to the single indirect dimension
+                dic, data = ng.pipe_proc.tp(dic, data, auto=True)
+                if self.ist_selected(self.dimension_tabs[1]):
+                    dic, data = self.apply_ist_reconstruction(
+                        dic,
+                        data,
+                        ndim=len(self.dimension_tabs),
+                        dimension_tab=self.dimension_tabs[1],
+                    )
+
             elif self.nmr_data.pseudo_axis == True:
-                if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
+                # Pseudo 3D dataset (NUS reconstruction is not supported)
+                if self.ist_selected(self.dimension_tabs[1]):
                     self.pseudo3d_nus_error()
                     return False
                 if self.nmr_data.index == 2:
@@ -226,23 +242,26 @@ class ProcessNMRGlue:
                     # If the pseudo axis is the central axis then need to move the third axis
                     dic, data = self.transpose_3d(dic, data, auto=True)
                     dic, data = self.zero_transpose_3d(dic, data)
-            
+
             else:
-                if(self.dimension_tabs[1].linear_prediction.linear_prediction_radio_box_indirect.GetSelection()== 3):
-                    dic, data, ist_convergence_number, max_val = self.phasing_for_IST_3D(dic, data)
+                # 3D dataset, IST is applied to both indirect dimensions at once
+                if self.ist_selected(self.dimension_tabs[1]):
+                    # The reconstruction expects the direct dimension to be the
+                    # first axis, so transpose into (direct, F1, F3) and back again
                     dic, data = self.zero_transpose_3d(dic, data, nohyper=True)
-                    dic, data = self.apply_ist_reconstruction(dic, data, ndim = len(self.dimension_tabs), dimension_tab=self.dimension_tabs[1], ist_convergence_number=ist_convergence_number, max_val=max_val)
+                    dic, data = self.apply_ist_reconstruction(
+                        dic,
+                        data,
+                        ndim=len(self.dimension_tabs),
+                        dimension_tab=self.dimension_tabs[1],
+                    )
                     dic, data = self.zero_transpose_3d(dic, data, nohyper=True)
-                    dic, data = self.transpose_3d(dic, data, auto=True)
-                else:
-                    dic, data = self.transpose_3d(dic, data, auto=True)
-            
-                
+
+                dic, data = self.transpose_3d(dic, data, auto=True)
 
             dic, data = self.apply_dimension_processing(
                 dic, data, 1, self.dimension_tabs[1]
             )
-
 
         if include_dim3:
             dic, data = self.zero_transpose_3d(dic, data)
@@ -266,146 +285,10 @@ class ProcessNMRGlue:
 
         self.write_output(dic, data)
 
-        original_frame = []
         if self.notebook.parent.original_frame != None:
             self.update_spinview_frame()
 
-
-    def phasing_for_IST_2D(self, dic, data):
-
-
-        original_data, original_dic = copy.deepcopy(data), copy.deepcopy(dic)
-        ist_convergence_number, max_val = self.find_parameters_for_ist_2D(original_dic, original_data)
-
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], inv=True, ist_phasing=True)
-
-
-        return dic, data, ist_convergence_number, max_val
-
-
-    def phasing_for_IST_3D(self, dic, data):
-
-        original_data, original_dic = copy.deepcopy(data), copy.deepcopy(dic)
-        ist_convergence_number, max_val = self.find_parameters_for_ist_3D(original_dic, original_data)
-
-
-        dic, data = self.transpose_3d(dic, data, auto=True)
-        dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], inv=True, ist_phasing=True)
-        data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
-        dic, data = self.transpose_3d(dic, data, auto=True, nohyper=True)
-
-        dic, data = self.zero_transpose_3d(dic, data)
-        dic, data = self.add_apodization(dic, data, 2, self.dimension_tabs[2])
-        dic, data = self.add_fourier_transform(dic, data, 2, self.dimension_tabs[2], ist_phasing=True)
-        dic, data = self.add_phasing(dic, data, 2, self.dimension_tabs[2], ist_phasing=True)
-        dic, data = self.add_fourier_transform(dic, data, 2, self.dimension_tabs[2], inv=True, ist_phasing=True)
-        data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
-        dic, data = self.zero_transpose_3d(dic, data, nohyper=True)
-    
-
-        return dic, data, ist_convergence_number, max_val
-
-
-
-    def find_parameters_for_ist_2D(self, dic, data):
-        dic, data = ng.pipe_proc.tp(dic, data, auto=True)
-        extension = int(self.dimension_tabs[1].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
-        if(extension!=0):
-            dic, data = ng.pipe_proc.zf(dic, data, pad=extension)
-        else:
-            dic, data = self.add_zero_filling(dic, data, 1, self.dimension_tabs[1])
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-
-
-
-        max_val = np.max(np.abs(data))
-
-
-        convergence_number = self.find_convergence_number(max_val, data, noise_scaling=10)
-
-        return convergence_number, max_val
-    
-
-    def find_parameters_for_ist_3D(self, dic, data):
-
-
-        extension1 = int(self.dimension_tabs[1].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
-        extension2 = int(self.dimension_tabs[2].linear_prediction.ist_nus_extension_textcontrol_indirect.GetValue())
-
-        dic, data = self.transpose_3d(dic, data, auto=True)
-        dic, data = self.add_apodization(dic, data, 1, self.dimension_tabs[1])
-        dic, data = self.add_zero_filling(dic, data, 1, self.dimension_tabs[1])
-
-        # double the data size
-        # NUS extension
-        dic, data = ng.pipe_proc.zf(dic, data, pad=extension1)
-        dic, data = ng.pipe_proc.zf(dic, data, pad=data.shape[-1])
-
-        dic, data = self.add_fourier_transform(dic, data, 1, self.dimension_tabs[1], ist_phasing=True)
-        dic, data = self.add_phasing(dic, data, 1, self.dimension_tabs[1])
-        dic, data = self.transpose_3d(dic, data, auto=True, nohyper=True)
-
-        dic, data = self.zero_transpose_3d(dic, data)
-        dic, data = self.add_apodization(dic, data, 2, self.dimension_tabs[2])
-        dic, data = self.add_zero_filling(dic, data, 2, self.dimension_tabs[2])
-
-        # double the data size
-        # NUS extension
-        dic, data = ng.pipe_proc.zf(dic, data, pad=extension2)
-        dic, data = ng.pipe_proc.zf(dic, data, pad=data.shape[-1])
-        
-        dic, data = self.add_fourier_transform(dic, data, 2, self.dimension_tabs[2], ist_phasing=True)
-        dic, data = self.add_phasing(dic, data, 2, self.dimension_tabs[2])
-
-        max_val = np.max(np.abs(data))
-
-
-        convergence_number = self.find_convergence_number(max_val, data, noise_scaling=10)
-
-        return convergence_number, max_val
-
-
-    def find_convergence_number(self, max_val, data, noise_scaling=1):
-        from scipy.optimize import curve_fit
-
-        try:
-            counts, bins = np.histogram(np.real(data.flatten()), bins=int(len(data.flatten())/100))
-
-            # estimating the noise by fitting a gaussian to the data - most of the data will be noise
-
-            # Gaussian function
-            def Gauss(x, A, mean, sigma):
-                return A * np.exp(-(x-mean)**2/(sigma**2))
-
-            bins_new = bins[1:]
-
-            parameters, _ = curve_fit(Gauss, bins_new, counts, p0=[np.max(counts),0,np.max(np.real(data.flatten()))/4])
-            A, fit_mean, fit_sigma = parameters
-            fit_gauss = Gauss(bins_new, A, fit_mean, fit_sigma)
-
-        except:
-            x=np.real(data).flatten()
-            median = np.median(x)
-            mad = np.median(np.abs(x - median))
-            fit_sigma =  mad / 0.6744897501960817
-
-
-        convergence_number = noise_scaling*np.abs(fit_sigma)/max_val
-
-        return convergence_number
-
-
-        
-
-    
-
-    def apply_dimension_processing(self, dic, data, dimension, dimension_tab, direct_ist=False):
+    def apply_dimension_processing(self, dic, data, dimension, dimension_tab):
         """
         Applying NMR processing to a given dimension using nmrglue
         functions. May need to be altered for 3D datasets
@@ -416,28 +299,14 @@ class ProcessNMRGlue:
                 dic, data, dimension, dimension_tab
             )
         dic, data = self.add_linear_prediction(dic, data, dimension, dimension_tab)
-
-        # dic, data = self.add_apodization(dic, data, dimension, dimension_tab)
-        if(dimension==0):
-            dic, data = self.add_apodization(dic, data, dimension, dimension_tab)
-        else:
-            if(dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.GetSelection() != 3):
-                dic, data = self.add_apodization(dic, data, dimension, dimension_tab)
-
+        dic, data = self.add_apodization(dic, data, dimension, dimension_tab)
         dic, data = self.add_zero_filling(dic, data, dimension, dimension_tab)
         dic, data = self.add_fourier_transform(dic, data, dimension, dimension_tab)
-        if(dimension == 0):
-            dic, data = self.add_phasing(dic, data, dimension, dimension_tab, direct_ist)
-        else:
-            if(self.ist_phasing==False):
-                dic, data = self.add_phasing(dic, data, dimension, dimension_tab)
-            else:
-                dic, data = ng.pipe_proc.di(dic, data)
+        dic, data = self.add_phasing(dic, data, dimension, dimension_tab)
         dic, data = self.add_extraction(dic, data, dimension, dimension_tab)
         dic, data = self.add_baseline_correction(dic, data, dimension, dimension_tab)
 
         return dic, data
-    
 
     def ist_current_state_callback(self, converged):
         self.count+=1
@@ -451,10 +320,14 @@ class ProcessNMRGlue:
             # Cancel the IST reconstruction)
             return False
     
-    def apply_ist_reconstruction(self, dic, data, ndim, dimension_tab, max_val, ist_convergence_number=1E-7):
+    def apply_ist_reconstruction(self, dic, data, ndim, dimension_tab):
         """
         Apply an implementation of the IST reconstruction algorithm
         """
+
+        ist_convergence_number = float(
+            dimension_tab.linear_prediction.ist_convergence_tolerance_indirect
+        )
 
         self.count = 0 # counter for the number of IST slices reconstructed
         self.converged = 0 # counter for the number of non-converged IST slices
@@ -465,10 +338,11 @@ class ProcessNMRGlue:
         self.popout_window.Update(self.count, 'Percentage through NUS reconstruction: ' + str(int((self.count/self.number_of_points)*100)) + '%                        ')
 
         if(ndim==2):
-            shape1 = int(data.shape[0]/2) # indirect dimension
+            # The data is (direct points, complex indirect points) at this stage
+            shape1 = data.shape[1] # indirect dimension
             if(dimension_tab.linear_prediction.ist_linear_prediction_only.GetValue()==True):
                 sched = []
-                for s1 in range(shape1-1):
+                for s1 in range(shape1):
                     sched.append(s1)
             else:
                 nus_file = dimension_tab.linear_prediction.nuslist_name_indirect
@@ -485,7 +359,13 @@ class ProcessNMRGlue:
 
             converged_results = 0
 
-            data, converged_results = ist_2d(data, sampling_schedule=sched, max_iter = maxiter, ist_callback = self.ist_current_state_callback, threshold=threshold, convergence_tol=ist_convergence_number, max_val=max_val)
+            data, converged_results = ist_2d(data,
+                                             sampling_schedule=sched,
+                                             max_iter=maxiter,
+                                             ist_callback=self.ist_current_state_callback,
+                                             threshold=threshold,
+                                             convergence_tol=ist_convergence_number
+                                             )
 
 
             dic["FDF1SIZE"] = data.shape[1]
@@ -538,8 +418,7 @@ class ProcessNMRGlue:
                                              ist_callback=self.ist_current_state_callback, 
                                              threshold=threshold, 
                                              mode=1,
-                                             convergence_tol=ist_convergence_number,
-                                             max_val=max_val
+                                             convergence_tol=ist_convergence_number
                                              )
 
 
@@ -594,7 +473,7 @@ class ProcessNMRGlue:
             size2 = data.shape[1]
             size3 = data.shape[2]
             
-            aq2 = size2/sweep_width3
+            aq2 = size2/sweep_width2
             aq3 = size3/sweep_width3
 
             return aq2, aq3
@@ -645,6 +524,10 @@ class ProcessNMRGlue:
         ng.pipe.write(nmrfile, dic, data, overwrite=True)
 
     def check_nus_smile(self, include_dim2, include_dim3) -> list[int]:
+
+        # this function is problematic -> currently returning True, False and
+        # integers need to fix
+
         """
         Checking if NUS reconstruction has been selected.
         Output:
@@ -737,6 +620,7 @@ class ProcessNMRGlue:
         dlg = wx.MessageDialog(
             self.notebook,
             "NUS reconstruction with Pseudo3D datasets is not currently supported. NUS extrapolation is also not supported, please use the standard zero filling processing options instead.",
+            "Warning",
             wx.OK | wx.ICON_WARNING,
         )
         self.notebook.Raise()
@@ -986,7 +870,7 @@ class ProcessNMRGlue:
                 )
             elif tab.apodization_combobox_selection == 5:
                 # Trapezoid apodization
-                dic, data = ng.pipe_proc.tp(
+                dic, data = ng.pipe_proc.tm(
                     dic,
                     data,
                     t1=float(tab.t1),
@@ -1048,7 +932,7 @@ class ProcessNMRGlue:
 
         return dic, data
 
-    def add_fourier_transform(self, dic, data, dimension, dimension_tab, inv=False, ist_phasing=False):
+    def add_fourier_transform(self, dic, data, dimension, dimension_tab, inv=False):
         """
         1 - checking if the fourier transform check box is ticked
         2 - if it is ticked, then perform the selected fourier transform
@@ -1058,72 +942,13 @@ class ProcessNMRGlue:
 
         tab = dimension_tab.fourier_transform
 
-
-        if tab.fourier_transform_checkbox.GetValue() == True or ist_phasing==True:
-            if tab.ft_method_selection == 0:
-                dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
-            if tab.ft_method_selection == 1:
-                if(inv==True):
-                    dic, data = ng.pipe_proc.ft(dic, data, auto=True, inv=inv)
-                else:
-                    dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
-            elif tab.ft_method_selection == 2:
-                if(self.ist_phasing==True):
-                    if(inv==True):
-                        dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
-                    else:
-                        if(ist_phasing==True):
-                            dic, data = ng.pipe_proc.ft(dic, data, real=True, inv=inv)
-                        else:
-                            dic, data = ng.pipe_proc.ft(dic, data)
-                else:
-                    dic, data = ng.pipe_proc.ft(dic, data, real=True, inv=inv)
-            elif tab.ft_method_selection == 3:
-                dic, data = ng.pipe_proc.ft(dic, data, inv=True)
-            elif tab.ft_method_selection == 4:
-                if(self.ist_phasing==True):
-                    if(inv==True):
-                        dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
-                        print('2: IST phasing IFT', dimension)
-                    else:
-                        if(ist_phasing==True):
-                            print('1: IST phasing FT', dimension)
-                            dic, data = ng.pipe_proc.ft(dic, data, alt=True, inv=inv)
-                        else:
-                            print('3: extra FT', dimension)
-                            dic, data = ng.pipe_proc.ft(dic, data)
-                else:
-                    dic, data = ng.pipe_proc.ft(dic, data, alt=True, inv=inv)
-            elif tab.ft_method_selection == 5:
-                if(self.ist_phasing==True):
-                    if(inv==True):
-                        dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
-                    else:
-                        if(ist_phasing==True):
-                            dic, data = ng.pipe_proc.ft(dic, data, neg=True, inv=inv)
-                        else:
-                            dic, data = ng.pipe_proc.ft(dic, data)
-                else:
-                    dic, data = ng.pipe_proc.ft(dic, data, neg=True, inv=inv)
-
-            elif tab.ft_method_selection == 6:
-                if(self.ist_phasing==True):
-                    if(inv==True):
-                        dic, data = ng.pipe_proc.ft(dic, data, inv=inv)
-                        print('2: IST phasing IFT', dimension)
-                    else:
-                        if(ist_phasing==True):
-                            print('1: IST phasing FT', dimension)
-                            dic, data = ng.pipe_proc.ft(dic, data, alt=True, neg=True, inv=inv)
-                        else:
-                            print('3: extra FT', dimension)
-                            dic, data = ng.pipe_proc.ft(dic, data)
-                else:
-                    dic, data = ng.pipe_proc.ft(dic, data, alt=True, neg=True, inv=inv)
-
-
-
-
+        if tab.fourier_transform_checkbox.GetValue() == True:
+            mode = FT_MODES.get(tab.ft_method_selection, {})
+            # The inverse fourier transform option (mode 3) is always an
+            # inverse transform, otherwise the direction is set by the caller
+            options = dict(mode)
+            options["inv"] = mode.get("inv", False) or inv
+            dic, data = ng.pipe_proc.ft(dic, data, **options)
 
         if dimension == 0:
             digital_filter_removal = self.check_digital_filter_removal()
@@ -1163,7 +988,7 @@ class ProcessNMRGlue:
         except:
             return True
 
-    def add_phasing(self, dic, data, dimension, dimension_tab, ist_phasing=False):
+    def add_phasing(self, dic, data, dimension, dimension_tab):
         """
         1 - checking if the phasing check box is ticked
         2 - if it is ticked, then perform the selected phasing
@@ -1175,16 +1000,11 @@ class ProcessNMRGlue:
             p0 = float(tab.phase_correction_p0_textcontrol.GetValue())
             p1 = float(tab.phase_correction_p1_textcontrol.GetValue())
         else:
-            if(self.ist_phasing==True and ist_phasing==False):
-                dic, data = ng.pipe_proc.di(dic, data)
-                return dic, data
             check = tab.phase_correction_checkbox_indirect.GetValue()
             p0 = float(tab.phase_correction_p0_textcontrol_indirect.GetValue())
             p1 = float(tab.phase_correction_p1_textcontrol_indirect.GetValue())
 
-
-
-        if check == True or ist_phasing==True:
+        if check == True:
             dic, data = ng.pipe_proc.ps(
                 dic,
                 data,
@@ -1197,8 +1017,7 @@ class ProcessNMRGlue:
             if tab.magnitude_mode_checkbox.GetValue() == True:
                 dic, data = ng.pipe_proc.mc(dic, data)
 
-        if(ist_phasing==False):
-            dic, data = ng.pipe_proc.di(dic, data)
+        dic, data = ng.pipe_proc.di(dic, data)
 
         return dic, data
 
@@ -1640,7 +1459,7 @@ class ProcessNMRGlue:
         fn3 = "FDF" + str(int(dic["FDDIMORDER"][2]))  # F1, F2, etc
 
         # Create new dictionary
-        new_dic = dic.copy()
+        new_dic = copy.deepcopy(dic)
 
         # for i, new_i in enumerate(
         #     new_axis_order
@@ -1657,8 +1476,6 @@ class ProcessNMRGlue:
         order3 = dic["FDDIMORDER3"]
         new_dic["FDDIMORDER1"] = order3
         new_dic["FDDIMORDER3"] = order1
-        new_dic["FDDIMORDER"][0] = order3
-        new_dic["FDDIMORDER"][2] = order1
 
         new_dic["FDDIMORDER"] = [
             new_dic["FDDIMORDER1"],
@@ -1675,7 +1492,9 @@ class ProcessNMRGlue:
             if dic[fn3 + "QUADFLAG"] != 1:
                 # unpack complex as needed
                 new_data = np.array(ng.proc_base.c2ri(new_data), dtype="complex64")
-                new_dic[fn3 + "SIZE"] = int(new_dic[fn3 + "SIZE"] / 2)
+                if fn3 + "SIZE" in new_dic:
+                    # F1/F2 sizes are not stored in the nmrPipe header
+                    new_dic[fn3 + "SIZE"] = int(new_dic[fn3 + "SIZE"] / 2)
 
         return new_dic, new_data
 

@@ -335,6 +335,9 @@ class Populate_dictionary_global:
                 )
                 nus_iterations = dimension_tab.linear_prediction.ist_nus_iterations_indirect
                 ist_threshold = dimension_tab.linear_prediction.ist_threshold_indirect
+                convergence_tolerance = (
+                    dimension_tab.linear_prediction.ist_convergence_tolerance_indirect
+                )
                 lp_only = dimension_tab.linear_prediction.ist_linear_prediction_only_flag
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS file"
@@ -348,6 +351,9 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                                     "IST threshold"
                                 ] = ist_threshold
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "IST convergence tolerance"
+                ] = convergence_tolerance
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "Linear prediction only"
                 ] = lp_only

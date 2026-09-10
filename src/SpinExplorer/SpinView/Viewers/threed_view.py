@@ -580,27 +580,36 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             if(self.fid_viewer==False):
-                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
                 uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
-                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
     
                 if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
                     self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
                 else:
                     self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
     
                 if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
                     self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
                 else:
                     self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
                 if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
                     self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
                 else:
                     self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
 
             # Transpose the data to the right format
@@ -632,26 +641,35 @@ class ThreeDViewer(wx.Panel):
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             if(self.fid_viewer==False):
                 uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
-                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
-                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
     
                 if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
                     self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
                 else:
                     self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
     
                 if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
                     self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
                 else:
                     self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
                 if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
                     self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
                 else:
                     self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (2, 1, 0))
@@ -678,27 +696,36 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             if(self.fid_viewer==False):
-                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
                 uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
-                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
 
                 if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
                     self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
                 else:
                     self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
 
                 if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
                     self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
                 else:
                     self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
                 if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
                     self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
                 else:
                     self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (2, 0, 1))
@@ -725,27 +752,36 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             if(self.fid_viewer==False):
-                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
-                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
                 uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
     
                 if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
                     self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
                 else:
                     self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
     
                 if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
                     self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
                 else:
                     self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
                 if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
                     self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
                 else:
                     self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (1, 2, 0))
@@ -771,27 +807,36 @@ class ThreeDViewer(wx.Panel):
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             if(self.fid_viewer==False):
-                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
-                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
                 uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
     
                 if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
                     self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
                 else:
                     self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
     
                 if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
                     self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
                 else:
                     self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
                 if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
                     self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
                 else:
                     self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (1, 0, 2))
@@ -809,6 +854,56 @@ class ThreeDViewer(wx.Panel):
             self.ax.set_xlabel(self.nmrdata.axislabels[0])
             self.ax.set_ylabel(self.nmrdata.axislabels[2])
             self.UpdateFrame()
+
+    def x_index(self, value) -> int:
+        """
+        Convert a value on the x axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_0 == True:
+            return self.uc0(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_0) - 1))
+
+    def y_index(self, value) -> int:
+        """
+        Convert a value on the y axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_1 == True:
+            return self.uc1(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_1) - 1))
+
+    def x_limits(self, ppms=None):
+        """
+        The limits for the x axis. A ppm axis is plotted with the chemical
+        shift decreasing from left to right, an axis in points is plotted
+        normally with the points increasing from left to right.
+        """
+        if ppms is None:
+            ppms = self.ppms_0
+
+        if self.ppm_axis_0 == True:
+            return max(ppms), min(ppms)
+
+        return min(ppms), max(ppms)
+
+    def y_limits(self, ppms=None):
+        """
+        The limits for the y axis. A ppm axis is plotted with the chemical
+        shift increasing from top to bottom, an axis in points is plotted
+        normally with the points increasing from bottom to top.
+        """
+        if ppms is None:
+            ppms = self.ppms_1
+
+        if self.ppm_axis_1 == True:
+            return max(ppms), min(ppms)
+
+        return min(ppms), max(ppms)
 
     def replot_3D(self):
         self.new_x_ppms = self.ppms_0
@@ -831,12 +926,8 @@ class ThreeDViewer(wx.Panel):
             linewidths=self.contour_linewidth,
         )
 
-        if(self.fid_viewer==False):
-            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
-        else:
-            self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
-            self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
+        self.ax.set_xlim(*self.x_limits())
+        self.ax.set_ylim(*self.y_limits())
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
             self.nmrdata.data[self.max_intensity_index][:, 1],
@@ -1266,38 +1357,47 @@ class ThreeDViewer(wx.Panel):
 
         if(self.fid_viewer==False):
             uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
-            uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
-            uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+            uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+            uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
 
             if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
                 self.ppms_0 = self.uc0.ppm_scale()
+                self.ppm_axis_0 = True
                 if('(ppm)' not in self.nmrdata.axislabels[1]):
                     self.nmrdata.axislabels[1]+= ' (ppm)'
             else:
                 self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 if('(points)' not in self.nmrdata.axislabels[1]):
                     self.nmrdata.axislabels[1]+= ' (points)'
 
             if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
                 self.ppms_1 = self.uc1.ppm_scale()
+                self.ppm_axis_1 = True
                 if('(ppm)' not in self.nmrdata.axislabels[2]):
                     self.nmrdata.axislabels[2]+= ' (ppm)'
             else:
                 self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 if('(points)' not in self.nmrdata.axislabels[2]):
                     self.nmrdata.axislabels[2]+= ' (points)'
             if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
                 self.ppms_2 = self.uc2.ppm_scale()
+                self.ppm_axis_2 = True
                 if('(ppm)' not in self.nmrdata.axislabels[0]):
                     self.nmrdata.axislabels[0]+= ' (ppm)'
             else:
                 self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
                 if('(points)' not in self.nmrdata.axislabels[0]):
                         self.nmrdata.axislabels[0]+= ' (points)'
         else:
             self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            self.ppm_axis_0 = False
             self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+            self.ppm_axis_1 = False
             self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+            self.ppm_axis_2 = False
             for l, label in enumerate(self.nmrdata.axislabels):
                 if('(points)' not in label):
                     self.nmrdata.axislabels[l]+= ' (points)'
@@ -1327,12 +1427,8 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_xlabel(self.nmrdata.axislabels[1])
         self.ax.set_ylabel(self.nmrdata.axislabels[2])
 
-        if(self.fid_viewer==False):
-            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
-        else:
-            self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
-            self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
+        self.ax.set_xlim(*self.x_limits())
+        self.ax.set_ylim(*self.y_limits())
 
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
@@ -1504,7 +1600,7 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_ylim(ylim)
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[z_index][:, self.y_index(self.y1)]
             )
             self.line1.set_xdata(self.new_x_ppms)
             self.line2 = self.ax.axhline(self.y1 + self.y_movement, color="k")
@@ -1514,7 +1610,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[z_index][self.x_index(self.x1), :]
             )
             self.line3.set_ydata(self.new_y_ppms)
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
@@ -1557,7 +1653,7 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_ylim(ylim)
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[z_index][:, self.y_index(self.y1)]
             )
             self.line1.set_xdata(self.new_x_ppms)
             self.line2 = self.ax.axhline(self.y1, color="k")
@@ -1567,7 +1663,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[z_index][self.x_index(self.x1), :]
             )
             self.line3.set_ydata(self.new_y_ppms)
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
@@ -1654,14 +1750,9 @@ class ThreeDViewer(wx.Panel):
                     self.line4.set_visible(False)
                     self.UpdateFrame()
                 else:
-                    if(self.fid_viewer==False):
-                        data = self.nmrdata.data[z_index][
-                            :, self.uc1(str(self.ppms_1[1]) + "ppm")
-                        ]
-                    else:
-                        data = self.nmrdata.data[z_index][
-                            :, int(self.ppms_1[1])
-                        ]
+                    data = self.nmrdata.data[z_index][
+                        :, self.y_index(self.ppms_1[1])
+                    ]
                     (self.line1,) = self.axes1D.plot(
                         self.ppms_0,
                         data,
@@ -1688,14 +1779,9 @@ class ThreeDViewer(wx.Panel):
                 else:
                     self.line3.set_visible = True
                     self.line4.set_visible = True
-                    if(self.fid_viewer==False):
-                        data = self.nmrdata.data[z_index][
-                            self.uc0(str(self.ppms_0[1]) + "ppm"), :
-                        ]
-                    else:
-                        data = self.nmrdata.data[z_index][
-                            int(self.ppms_0[1]), :
-                        ]
+                    data = self.nmrdata.data[z_index][
+                        self.x_index(self.ppms_0[1]), :
+                    ]
                     (self.line3,) = self.axes1D_2.plot(
                         data,
                         self.ppms_1,
@@ -1710,14 +1796,9 @@ class ThreeDViewer(wx.Panel):
         self.x1, self.y1 = self.ax.transData.inverted().transform((event.x, event.y))
         if self.x1 != None and self.y1 != None:
             if self.line1.get_visible() == True:
-                if(self.fid_viewer==False):
-                    data = self.nmrdata.data[z_index][
-                        :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                    ]
-                else:
-                    data = self.nmrdata.data[z_index][
-                        :, int(self.y1 - self.y_movement)
-                    ]
+                data = self.nmrdata.data[z_index][
+                    :, self.y_index(self.y1 - self.y_movement)
+                ]
                 self.line1.set_ydata(
                     data
                 )
@@ -1725,14 +1806,9 @@ class ThreeDViewer(wx.Panel):
                 self.line1.set_xdata(self.new_x_ppms)
                 self.OnSliderScroll3D(None)
             if self.line3.get_visible() == True:
-                if(self.fid_viewer==False):
-                    data = self.nmrdata.data[z_index][
-                        self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                    ]
-                else:
-                    data = self.nmrdata.data[z_index][
-                        int(self.x1 - self.x_movement), :
-                    ]
+                data = self.nmrdata.data[z_index][
+                    self.x_index(self.x1 - self.x_movement), :
+                ]
                 self.line3.set_xdata(
                     data
                 )
@@ -1751,20 +1827,14 @@ class ThreeDViewer(wx.Panel):
     def phase3D(self):
         z_index = int(self.z_slider.GetValue())
         if self.line1.get_visible() == True:
-            if(self.fid_viewer==False):
-                data = self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
-            else:
-                data = self.nmrdata.data[z_index][:, int(self.y1)]
+            data = self.nmrdata.data[z_index][:, self.y_index(self.y1)]
             complex_data = ng.process.proc_base.ht(data, self.nmrdata.data.shape[1])
             self.phased_data = ng.process.proc_base.ps(
                 complex_data, p0=self.total_P0, p1=self.total_P1
             )
             self.line1.set_ydata(self.phased_data)
         if self.line3.get_visible() == True:
-            if(self.fid_viewer==False):
-                data = self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
-            else:
-                data = self.nmrdata.data[z_index][int(self.x1), :]
+            data = self.nmrdata.data[z_index][self.x_index(self.x1), :]
             complex_data = ng.process.proc_base.ht(data, self.nmrdata.data.shape[2])
             self.phased_data2 = ng.process.proc_base.ps(
                 complex_data, p0=self.total_P0, p1=self.total_P1
@@ -1812,7 +1882,7 @@ class ThreeDViewer(wx.Panel):
         )
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[int(z_index)][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[int(z_index)][:, self.y_index(self.y1)]
             )
             self.line2 = self.ax.axhline(self.y1 + self.y_movement, color="k")
             self.axes1D.set_ylim(
@@ -1821,7 +1891,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[int(z_index)][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[int(z_index)][self.x_index(self.x1), :]
             )
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
             self.axes1D_2.set_xlim(
@@ -1869,7 +1939,7 @@ class ThreeDViewer(wx.Panel):
         )
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[int(z_index)][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[int(z_index)][:, self.y_index(self.y1)]
             )
             self.line1.set_xdata(self.new_x_ppms)
             self.line2 = self.ax.axhline(self.y1 + self.y_movement, color="k")
@@ -1879,7 +1949,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[int(z_index)][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[int(z_index)][self.x_index(self.x1), :]
             )
             self.line3.set_ydata(self.new_y_ppms)
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
@@ -2189,7 +2259,7 @@ class WaterfallFrame(wx.Frame):
             for i in range(len(self.main_frame.nmrdata.data)):
                 vals.append(
                     self.main_frame.nmrdata.data[i][
-                        :, self.main_frame.uc1(str(self.main_frame.y1) + "ppm")
+                        :, self.main_frame.y_index(self.main_frame.y1)
                     ]
                 )
             for i in range(len(vals)):
@@ -2204,7 +2274,7 @@ class WaterfallFrame(wx.Frame):
             for i in range(len(self.main_frame.nmrdata.data)):
                 vals.append(
                     self.main_frame.nmrdata.data[i][
-                        self.main_frame.uc0(str(self.main_frame.x1) + "ppm"), :
+                        self.main_frame.x_index(self.main_frame.x1), :
                     ]
                 )
             for i in range(len(vals)):

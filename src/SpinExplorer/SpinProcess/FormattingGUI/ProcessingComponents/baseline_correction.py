@@ -46,6 +46,7 @@ class BaselineCorrection:
         Initialising relevent variables for the baseline
         correction section of the graphical interface.
         """
+        self.baseline_correction_checkbox_value = False
         self.baseline_correction_radio_box_selection = 0
         self.node_width = "2"
         self.node_list = "0,5,95,100"
@@ -66,7 +67,12 @@ class BaselineCorrection:
         self.baseline_correction_checkbox = wx.CheckBox(
             self.baseline_correction_box, -1, "Apply baseline correction"
         )
-        self.baseline_correction_checkbox.SetValue(False)
+        self.baseline_correction_checkbox.SetValue(
+            self.baseline_correction_checkbox_value
+        )
+        self.baseline_correction_checkbox.Bind(
+            wx.EVT_CHECKBOX, self.on_baseline_correction_checkbox
+        )
         self.baseline_correction_sizer.Add(
             self.baseline_correction_checkbox, 0, wx.ALIGN_CENTER_VERTICAL
         )
@@ -157,6 +163,15 @@ class BaselineCorrection:
         )
         parent.sizer_1.Add(self.baseline_correction_sizer)
         parent.sizer_1.AddSpacer(10)
+
+    def on_baseline_correction_checkbox(self, event):
+        """
+        When the baseline correction checkbox is clicked, update the stored
+        value so that it is kept when the interface is refreshed.
+        """
+        self.baseline_correction_checkbox_value = (
+            self.baseline_correction_checkbox.GetValue()
+        )
 
     def on_baseline_correction_textcontrol(self, event):
         """

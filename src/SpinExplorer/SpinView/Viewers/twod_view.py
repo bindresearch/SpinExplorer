@@ -31,6 +31,7 @@ from SpinExplorer.SpinView.config import *
 
 # A class to create a panel for viewing 2D NMR spectra
 class TwoDViewer(wx.Panel):
+
     def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False, title=''):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
@@ -179,6 +180,28 @@ class TwoDViewer(wx.Panel):
             self.canvas.Update()
             self.panel.Refresh()
             self.panel.Update()
+
+    def x_index(self, value) -> int:
+        """
+        Convert a value on the x axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_0 == True:
+            return self.uc0(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_0) - 1))
+
+    def y_index(self, value) -> int:
+        """
+        Convert a value on the y axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_1 == True:
+            return self.uc1(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_1) - 1))
 
     def create_button_panel_2D(self):
 
@@ -1513,7 +1536,9 @@ class TwoDViewer(wx.Panel):
 
         if(self.fid_viewer==False):
             self.ppms_0 = self.uc0.ppm_scale()
+            self.ppm_axis_0 = True
             self.ppms_1 = self.uc1.ppm_scale()
+            self.ppm_axis_1 = True
             if(self.nmrdata.dic['FDDIMORDER'][0]==2.0):
                 self.ft1_flg = 'FDF1FTFLAG'
                 self.ft2_flg = 'FDF2FTFLAG'
@@ -1522,17 +1547,23 @@ class TwoDViewer(wx.Panel):
                 self.ft2_flg = 'FDF1FTFLAG'
             if(self.nmrdata.dic[self.ft1_flg]==1):
                 self.ppms_0 = self.uc0.ppm_scale()
+                self.ppm_axis_0 = True
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
             if(self.nmrdata.dic[self.ft2_flg]==1):
                 self.ppms_1 = self.uc1.ppm_scale()
+                self.ppm_axis_1 = True
             else:
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
         else:
             self.ft1_flg = 'FDF2FTFLAG'
             self.ft2_flg = 'FDF1FTFLAG'
             self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            self.ppm_axis_0 = False
             self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+            self.ppm_axis_1 = False
         self.new_x_ppms = self.ppms_0
         self.new_y_ppms = self.ppms_1
         self.X, self.Y = np.meshgrid(self.ppms_1, self.ppms_0)
@@ -1885,6 +1916,8 @@ class TwoDViewer(wx.Panel):
 
             self.uc0 = uc1
             self.uc1 = uc0
+
+            self.ppm_axis_0, self.ppm_axis_1 = self.ppm_axis_1, self.ppm_axis_0
 
             self.ax.set_xlabel(self.nmrdata.axislabels[1])
             self.ax.set_ylabel(self.nmrdata.axislabels[0])
@@ -2954,13 +2987,13 @@ class TwoDViewer(wx.Panel):
                         if(self.transposed2D==False):
                             if(self.nmrdata.dic[self.ft2_flg]==1):
                                 data = self.nmrdata.data[
-                                        :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
+                                        :, self.y_index(self.new_y_ppms[1])
                                     ]
                             else:
                                 data = self.nmrdata.data[:, int(self.new_y_ppms[1])]
                         else:
                             if(self.nmrdata.dic[self.ft1_flg]==1):
-                                data = self.nmrdata.data[:, self.uc1(str(self.new_y_ppms[1]) + "ppm")]
+                                data = self.nmrdata.data[:, self.y_index(self.new_y_ppms[1])]
                             else:
                                 data = self.nmrdata.data[:, int(self.new_y_ppms[1])]
                     else:
@@ -2997,14 +3030,14 @@ class TwoDViewer(wx.Panel):
                         if(self.transposed2D==False):
                             if(self.nmrdata.dic[self.ft1_flg]==1):
                                 data = self.nmrdata.data[
-                                    self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
+                                    self.x_index(self.new_x_ppms[1]), :
                                 ]
                             else:
                                 data = self.nmrdata.data[int(self.new_x_ppms[1]), :]
                         else:
                             if(self.nmrdata.dic[self.ft2_flg]==1):
                                 data = self.nmrdata.data[
-                                    self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
+                                    self.x_index(self.new_x_ppms[1]), :
                                 ]
                             else:
                                 data = self.nmrdata.data[int(self.new_x_ppms[1]), :]
@@ -3174,7 +3207,7 @@ class TwoDViewer(wx.Panel):
                         if(self.transposed2D==False):
                             if(self.nmrdata.dic[self.ft2_flg]==1):
                                 data = self.nmrdata.data[
-                                    :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                    :, self.y_index(self.y1 - self.y_movement)
                                 ]
                             else:
                                 data = self.nmrdata.data[
@@ -3183,7 +3216,7 @@ class TwoDViewer(wx.Panel):
                         else:
                             if(self.nmrdata.dic[self.ft1_flg]==1):
                                 data = self.nmrdata.data[
-                                    :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                    :, self.y_index(self.y1 - self.y_movement)
                                 ]
                             else:
                                 data = self.nmrdata.data[
@@ -3202,7 +3235,7 @@ class TwoDViewer(wx.Panel):
                         if(self.transposed2D==False):
                             if(self.nmrdata.dic[self.ft1_flg]==1):
                                 data = self.nmrdata.data[
-                                    self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                    self.x_index(self.x1 - self.x_movement), :
                                 ]
                             else:
                                 data = self.nmrdata.data[
@@ -3211,7 +3244,7 @@ class TwoDViewer(wx.Panel):
                         else:
                             if(self.nmrdata.dic[self.ft2_flg]==1):
                                 data = self.nmrdata.data[
-                                    self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                    self.x_index(self.x1 - self.x_movement), :
                                 ]
                             else:
                                 data = self.nmrdata.data[
@@ -3401,7 +3434,7 @@ class TwoDViewer(wx.Panel):
                             if(self.nmrdata.dic[self.ft2_flg]==1):
                                 data = (
                                     self.nmrdata.data[
-                                        :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                        :, self.y_index(self.y1 - self.y_movement)
                                     ]
                                     * self.multiply_factor
                                 )
@@ -3416,7 +3449,7 @@ class TwoDViewer(wx.Panel):
                             if(self.nmrdata.dic[self.ft1_flg]==1):
                                 data = (
                                     self.nmrdata.data[
-                                        :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
+                                        :, self.y_index(self.y1 - self.y_movement)
                                     ]
                                     * self.multiply_factor
                                 )
@@ -3464,7 +3497,7 @@ class TwoDViewer(wx.Panel):
                             if(self.nmrdata.dic[self.ft1_flg]==1):
                                 data = (
                                     self.nmrdata.data[
-                                        self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                        self.x_index(self.x1 - self.x_movement), :
                                     ]
                                     * self.multiply_factor
                                 )
@@ -3479,7 +3512,7 @@ class TwoDViewer(wx.Panel):
                             if(self.nmrdata.dic[self.ft2_flg]==1):
                                 data = (
                                     self.nmrdata.data[
-                                        self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
+                                        self.x_index(self.x1 - self.x_movement), :
                                     ]
                                     * self.multiply_factor
                                 )

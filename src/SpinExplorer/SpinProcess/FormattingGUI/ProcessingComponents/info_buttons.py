@@ -941,7 +941,9 @@ class InfoButtons:
         (default=1000) and points can be added onto the end of the FID (data extension)\n
         to perform NUS data extrapolation (an alternative to zero-filling or linear prediction). If the data was
         uniformly sampled but you wish to apply NUS extrapolation, click the data extension 
-        only checkbox.\nSpinExplorer IST reconstruction is available only through NMRGlue processing. Please ensure that
+        only checkbox.\nThe reconstruction of a slice stops once the remaining signal falls below the convergence
+        tolerance (default=1e-06) relative to the signal removed in the first iteration. A larger tolerance
+        stops the reconstruction sooner.\nSpinExplorer IST reconstruction is available only through NMRGlue processing. Please ensure that
         the data is correctly phased before performing SpinExplorer IST reconstruction/extension."""
 
         ist_nus_text = " ".join(ist_nus_text.split())

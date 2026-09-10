@@ -400,7 +400,7 @@ class Apodization:
                 self.apodization_first_point_label, 0, wx.ALIGN_CENTER_VERTICAL
             )
             self.apodization_first_point_textcontrol = wx.TextCtrl(
-                self.apodization_box, -1, "0.5", size=(30, 20)
+                self.apodization_box, -1, str(self.apodization_first_point_scaling), size=(30, 20)
             )
             self.apodization_sizer.Add(
                 self.apodization_first_point_textcontrol, 0, wx.ALIGN_CENTER_VERTICAL
@@ -437,6 +437,65 @@ class Apodization:
         if keycode == wx.WXK_RETURN:
             self.update_window_function_plot()
         event.Skip()
+
+    def update_stored_values_from_gui(self):
+        """
+        Copy the values currently shown in the apodization textcontrols into
+        the stored apodization variables. These variables are only updated
+        when the user presses enter in one of the textcontrols, so this is
+        called before the parameters are saved or used for processing to make
+        sure that typed values are not lost.
+        """
+
+        parameters = {
+            1: [
+                (
+                    "apodization_line_broadening_textcontrol",
+                    "exponential_line_broadening",
+                    float,
+                )
+            ],
+            2: [
+                ("apodization_g1_textcontrol", "g1", float),
+                ("apodization_g2_textcontrol", "g2", float),
+                ("apodization_g3_textcontrol", "g3", float),
+            ],
+            3: [
+                ("apodization_offset_textcontrol", "offset", float),
+                ("apodization_end_textcontrol", "end", float),
+                ("apodization_power_textcontrol", "power", float),
+            ],
+            4: [
+                ("apodization_a_textcontrol", "a", float),
+                ("apodization_b_textcontrol", "b", float),
+            ],
+            5: [
+                ("apodization_t1_textcontrol", "t1", int),
+                ("apodization_t2_textcontrol", "t2", int),
+            ],
+            6: [("apodization_loc_textcontrol", "loc", float)],
+        }
+
+        # The first point scaling textcontrol is present for every apodization
+        # function
+        textcontrols = parameters.get(self.apodization_combobox_selection, []) + [
+            (
+                "apodization_first_point_textcontrol",
+                "apodization_first_point_scaling",
+                float,
+            )
+        ]
+
+        for textcontrol_name, variable_name, convert in textcontrols:
+            textcontrol = getattr(self, textcontrol_name, None)
+            if textcontrol is None:
+                continue
+            try:
+                setattr(self, variable_name, convert(textcontrol.GetValue()))
+            except (ValueError, TypeError, RuntimeError, AttributeError):
+                # The value is not valid or the textcontrol is no longer shown,
+                # keep the currently stored value
+                continue
 
     def on_apodization_combobox(self, event):
         """

@@ -61,7 +61,10 @@ class FourierTransform:
         self.fourier_transform_checkbox = wx.CheckBox(
             self.fourier_transform_box, -1, "Apply fourier transform"
         )
-        self.fourier_transform_checkbox.SetValue(True)
+        self.fourier_transform_checkbox.SetValue(self.fourier_transform_checkbox_value)
+        self.fourier_transform_checkbox.Bind(
+            wx.EVT_CHECKBOX, self.on_fourier_transform_checkbox
+        )
         self.fourier_transform_sizer.Add(
             self.fourier_transform_checkbox, 0, wx.ALIGN_CENTER_VERTICAL
         )
@@ -88,6 +91,15 @@ class FourierTransform:
         )
         parent.sizer_1.Add(self.fourier_transform_sizer)
         parent.sizer_1.AddSpacer(10)
+
+    def on_fourier_transform_checkbox(self, event):
+        """
+        When the fourier transform checkbox is pressed, update the stored
+        value so that it is kept when the interface is refreshed.
+        """
+        self.fourier_transform_checkbox_value = (
+            self.fourier_transform_checkbox.GetValue()
+        )
 
     def on_fourier_transform_advanced_options(self, event):
         """

@@ -91,6 +91,7 @@ class DirectDimensionFrame(wx.Panel):
         self.sizer_1.AddSpacer(10)
 
         # Create all the sizers
+        self.dimension_size = p.DimensionSize(self.app, self.nmr_data, self, 0)
         self.solvent_suppression = p.SolventSuppression(
             self.app, self.nmr_data, self, self.info_buttons
         )
@@ -136,6 +137,8 @@ class DirectDimensionFrame(wx.Panel):
             self.info_buttons,
         )
 
+        self.dimension_size.update_dimension_size()
+
         self.main_sizer.Add(self.sizer_1, 0, wx.EXPAND)
 
         self.SetSizerAndFit(self.main_sizer)
@@ -158,6 +161,7 @@ class DirectDimensionFrame(wx.Panel):
         self.sizer_1 = wx.BoxSizer(wx.VERTICAL)
         self.sizer_1.AddSpacer(10)
 
+        self.dimension_size.create_dimension_size_sizer(self)
         self.solvent_suppression.create_solvent_suppression_sizer(self)
         self.linear_prediction.create_linear_prediction_sizer(self)
         self.apodization.create_apodization_sizer(self)
@@ -166,6 +170,8 @@ class DirectDimensionFrame(wx.Panel):
         self.phasing.create_phase_correction_sizer(self)
         self.extraction.create_extraction_sizer(self)
         self.baseline_correction.create_baseline_correction_sizer(self)
+
+        self.dimension_size.update_dimension_size()
 
         self.main_sizer.Add(self.sizer_1, 0, wx.EXPAND)
         self.SetSizerAndFit(self.main_sizer)
@@ -208,6 +214,7 @@ class IndirectDimensionFrame(wx.Panel):
 
         # Add all the processing modules
 
+        self.dimension_size = p.DimensionSize(self.app, self.nmr_data, self, 1)
         self.linear_prediction = p.NonUniformSampling(
             self.app, self.nmr_data, self, self.info_buttons
         )
@@ -252,6 +259,8 @@ class IndirectDimensionFrame(wx.Panel):
             self.info_buttons,
         )
 
+        self.dimension_size.update_dimension_size()
+
         self.main_sizer.Add(self.sizer_1, 0, wx.EXPAND)
 
         self.SetSizerAndFit(self.main_sizer)
@@ -275,6 +284,7 @@ class IndirectDimensionFrame(wx.Panel):
         self.sizer_1 = wx.BoxSizer(wx.VERTICAL)
         self.sizer_1.AddSpacer(10)
 
+        self.dimension_size.create_dimension_size_sizer(self)
         self.linear_prediction.create_linear_prediction_sizer_indirect(self)
         self.apodization.create_apodization_sizer(self)
         self.zero_filling.create_zero_filling_sizer(self)
@@ -282,6 +292,8 @@ class IndirectDimensionFrame(wx.Panel):
         self.phasing.create_phase_correction_sizer_indirect(self)
         self.extraction.create_extraction_sizer(self)
         self.baseline_correction.create_baseline_correction_sizer(self)
+
+        self.dimension_size.update_dimension_size()
 
         self.main_sizer.Add(self.sizer_1, 0, wx.EXPAND)
         self.SetSizerAndFit(self.main_sizer)

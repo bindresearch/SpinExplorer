@@ -25,6 +25,7 @@ SOFTWARE."""
 
 import json
 import pathlib
+import traceback
 import wx
 from typing import Union, Dict, Any
 
@@ -136,19 +137,27 @@ class InputParameters:
         self.notebook = notebook
         self.nmrdata = nmrdata
 
+        self.loading_errors = []
+
         check = self.check_dimensions(parameter_dictionary, dimension_tabs)
         if check == False:
             return
         for i, dimension_tab in enumerate(dimension_tabs):
             # Loading in saved dimension values
-            # try:
             label = (
                 "Dimension {}".format(i) + " (" + str(self.nmrdata.axislabels[i]) + ")"
             )
-            dictionary = parameter_dictionary[label]
+            try:
+                dictionary = parameter_dictionary[label]
+            except KeyError:
+                self.loading_errors.append(
+                    "Dimension {}: no saved parameters found".format(i)
+                )
+                continue
             self.load_dimension(i, dimension_tab, dictionary)
-            # except:
-            #     self.error_dimension_loading(i)
+
+        if len(self.loading_errors) > 0:
+            self.error_dimension_loading()
 
     def check_dimensions(self, parameter_dictionary: Dict, dimension_tabs) -> bool:
         """
@@ -173,18 +182,34 @@ class InputParameters:
 
     def load_dimension(self, dimension: int, dimension_tab, dictionary):
         """
-        Loading in the parameters the the dimension.
+        Loading in the parameters the the dimension. Each section is loaded
+        separately so that a section which cannot be read (for example a
+        parameters.json file saved by an older version of SpinExplorer) only
+        leaves that section at its default values instead of stopping the
+        remaining sections from being loaded.
         """
+        sections = []
         if dimension == 0:
             # Load the solvent suppression values
-            self.load_solvent_suppression(dimension, dimension_tab, dictionary)
-        self.load_linear_prediction(dimension, dimension_tab, dictionary)
-        self.load_apodization(dimension, dimension_tab, dictionary)
-        self.load_zero_filling(dimension, dimension_tab, dictionary)
-        self.load_fourier_transform(dimension, dimension_tab, dictionary)
-        self.load_phasing(dimension, dimension_tab, dictionary)
-        self.load_extraction(dimension, dimension_tab, dictionary)
-        self.load_baseline_correction(dimension, dimension_tab, dictionary)
+            sections.append(("Solvent suppression", self.load_solvent_suppression))
+        sections = sections + [
+            ("Linear prediction/NUS", self.load_linear_prediction),
+            ("Apodization", self.load_apodization),
+            ("Zero filling", self.load_zero_filling),
+            ("Fourier transform", self.load_fourier_transform),
+            ("Phasing", self.load_phasing),
+            ("Extraction", self.load_extraction),
+            ("Baseline correction", self.load_baseline_correction),
+        ]
+
+        for name, load_section in sections:
+            try:
+                load_section(dimension, dimension_tab, dictionary)
+            except Exception as error:
+                reason = traceback.format_exception_only(type(error), error)[-1]
+                self.loading_errors.append(
+                    "Dimension {} ({}): {}".format(dimension, name, reason.strip())
+                )
 
         self.notebook.Refresh()
 
@@ -274,7 +299,7 @@ class InputParameters:
                 predicted_points_selection = int(
                     dictionary["Linear Prediction"][key]["Add predicted points"][0]
                 )
-                dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(
+                dimension_tab.linear_prediction.linear_prediction_combobox_indirect.SetSelection(
                     predicted_points_selection
                 )
 
@@ -320,9 +345,6 @@ class InputParameters:
                 )
                 dimension_tab.linear_prediction.number_of_nus_CPU_indirect = nus_cpu
                 dimension_tab.linear_prediction.nus_iterations_indirect = nus_iterations
-                dimension_tab.linear_prediction.smile_nus_iterations_textcontrol_indirect = (
-                    nus_iterations
-                )
 
                 try:
                     lp_only = int(
@@ -357,22 +379,30 @@ class InputParameters:
                 except:
                     ist_threshold = 0.9
 
+                try:
+                    convergence_tolerance = float(
+                        dictionary["Linear Prediction"][key]["IST convergence tolerance"]
+                    )
+                except:
+                    convergence_tolerance = 1e-6
+
                 dimension_tab.linear_prediction.nuslist_name_indirect = nusfile
                 dimension_tab.linear_prediction.ist_data_extension_number_indirect = (
                     nus_extension
                 )
 
                 dimension_tab.linear_prediction.ist_nus_iterations_indirect = nus_iterations
-                dimension_tab.linear_prediction.ist_nus_iterations_textcontrol_indirect = (
-                    nus_iterations
-                )
                 dimension_tab.linear_prediction.ist_linear_prediction_only_flag = lp_only
+                dimension_tab.linear_prediction.ist_threshold_indirect = ist_threshold
+                dimension_tab.linear_prediction.ist_convergence_tolerance_indirect = (
+                    convergence_tolerance
+                )
+
+                # The interface is rebuilt from the stored values above, so this
+                # is done once all of them have been set
                 dimension_tab.linear_prediction.on_linear_prediction_radio_box_indirect(
                     wx.EVT_RADIOBOX
                 )
-
-                dimension_tab.linear_prediction.ist_threshold_indirect = ist_threshold
-                dimension_tab.linear_prediction.ist_threshold_textcontrol_indirect = (ist_threshold)
 
 
     def load_apodization(self, dimension, dimension_tab, dictionary):
@@ -424,7 +454,7 @@ class InputParameters:
             t2 = dictionary["Apodization"]["Parameters"]["Ramp down points"]
 
             dimension_tab.apodization.t1 = int(t1)
-            dimension_tab.apodization.t2 = int(t1)
+            dimension_tab.apodization.t2 = int(t2)
 
         elif apodization_value == 6:
             # triangle
@@ -481,6 +511,7 @@ class InputParameters:
         )
         dimension_tab.zero_filling.zero_filling_textcontrol.SetValue(str(textbox_value))
         dimension_tab.zero_filling.zero_filling_round_checkbox.SetValue(rounding)
+        dimension_tab.zero_filling.zero_filling_round_checkbox_value = rounding
 
         dimension_tab.zero_filling.on_zero_filling_combobox(wx.EVT_COMBOBOX)
 
@@ -494,6 +525,7 @@ class InputParameters:
             dictionary["Fourier transform"]["Fourier transform method selection"]
         )
         dimension_tab.fourier_transform.fourier_transform_checkbox.SetValue(ft_flag)
+        dimension_tab.fourier_transform.fourier_transform_checkbox_value = ft_flag
         dimension_tab.fourier_transform.ft_method_selection = ft_option
 
     def load_phasing(self, dimension, dimension_tab, dictionary):
@@ -508,9 +540,11 @@ class InputParameters:
             dimension_tab.phasing.phase_correction_checkbox.SetValue(phasing_flag)
             dimension_tab.phasing.phase_correction_checkbox_value = phasing_flag
             dimension_tab.phasing.p0_total = p0
-            dimension_tab.phasing.phase_correction_p0_textcontrol.SetValue(str(p0))
             dimension_tab.phasing.p1_total = p1
-            dimension_tab.phasing.phase_correction_p1_textcontrol.SetValue(str(p1))
+            # ChangeValue is used so that the saved apodization first point
+            # scaling is not overwritten by the phasing textcontrol event
+            dimension_tab.phasing.phase_correction_p0_textcontrol.ChangeValue(str(p0))
+            dimension_tab.phasing.phase_correction_p1_textcontrol.ChangeValue(str(p1))
             magnitude_mode = bool(dictionary["Phasing"]["Magnitude mode"])
             dimension_tab.phasing.magnitude_mode_checkbox.SetValue(magnitude_mode)
             dimension_tab.phasing.magnitude_mode_toggle = magnitude_mode
@@ -519,19 +553,20 @@ class InputParameters:
             dimension_tab.phasing.phase_correction_checkbox_indirect.SetValue(
                 phasing_flag
             )
-            dimension_tab.phasing.phase_correction_checkbox_value_indirect = (
-                phasing_flag
-            )
+            dimension_tab.phasing.phasing_indirect_checkbox_value = phasing_flag
             dimension_tab.phasing.p0_total_indirect = p0
-            dimension_tab.phasing.phase_correction_p0_textcontrol_indirect.SetValue(
+            dimension_tab.phasing.p1_total_indirect = p1
+            # ChangeValue is used so that the saved apodization first point
+            # scaling is not overwritten by the phasing textcontrol event
+            dimension_tab.phasing.phase_correction_p0_textcontrol_indirect.ChangeValue(
                 str(p0)
             )
-            dimension_tab.phasing.p1_total_indirect = p1
-            dimension_tab.phasing.phase_correction_p1_textcontrol_indirect.SetValue(
+            dimension_tab.phasing.phase_correction_p1_textcontrol_indirect.ChangeValue(
                 str(p1)
             )
             f1180 = bool(dictionary["Phasing"]["f1180 flag"])
             dimension_tab.phasing.phase_correction_f1180_button_indirect.SetValue(f1180)
+            dimension_tab.phasing.f1180 = f1180
 
     def load_extraction(self, dimension, dimension_tab, dictionary):
         """
@@ -569,7 +604,13 @@ class InputParameters:
         dimension_tab.baseline_correction.baseline_correction_checkbox.SetValue(
             baseline_correction_flag
         )
+        dimension_tab.baseline_correction.baseline_correction_checkbox_value = (
+            baseline_correction_flag
+        )
         dimension_tab.baseline_correction.baseline_correction_radio_box.SetSelection(
+            selection
+        )
+        dimension_tab.baseline_correction.baseline_correction_radio_box_selection = (
             selection
         )
         dimension_tab.baseline_correction.node_width = node_width
@@ -586,14 +627,15 @@ class InputParameters:
             str(polynomial_order)
         )
 
-    def error_dimension_loading(self, dimension: int):
+    def error_dimension_loading(self):
         """
-        Outputting an error message if the dimension
-        was not loaded correctly saying that some
-        parameters may be default values.
+        Outputting an error message listing the sections which
+        were not loaded correctly and are therefore using
+        default values.
         """
-        message = "Parameters for dimension {} were not read correctly. Parameters may be default values".format(
-            dimension
+        message = (
+            "The following saved parameters were not read correctly and are "
+            "using default values:\n\n" + "\n".join(self.loading_errors)
         )
 
         dlg = wx.MessageDialog(
