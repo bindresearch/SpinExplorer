@@ -219,33 +219,22 @@ class GetData:
 
             self.axislabels = []
 
+            # FDDIMORDER says which dimension of the spectrum each axis of the
+            # data holds: the last axis is FDDIMORDER[0], the one before it is
+            # FDDIMORDER[1] and so on. Taking the labels from it means they
+            # always describe the data, however the spectrum was processed.
+            def label_of_dimension(dimension):
+                return self.dic["FDF{}LABEL".format(int(self.dic["FDDIMORDER"][dimension]))]
 
-            if self.dim == 1:
-                # If 1D take FDF1LABEL
-                self.axislabels.append(self.dic["FDF2LABEL"])
-            elif self.dim == 2:
-                # If 2D take FDF2LABEL as direct and FDF1LABEL as indirect
-                if(self.dic['FDDIMORDER'][0]==1.0):
-                # if(self.pseudo_flag == False):
-                    self.axislabels.append(self.dic["FDF1LABEL"])
-                    self.axislabels.append(self.dic["FDF2LABEL"])
-                else:
-                    self.axislabels.append(self.dic["FDF2LABEL"])
-                    self.axislabels.append(self.dic["FDF1LABEL"])
+            if self.dim == 1 or self.dim == 2:
+                # 1D and 2D data are labelled with the last axis of the data
+                # first (the direct dimension of an ordinary spectrum)
+                for dimension in range(self.dim):
+                    self.axislabels.append(label_of_dimension(dimension))
             else:
-                # If 3D take FDF3LABEL as direct, FDF1LABEL as indirect1 and FDF2LABEL as indirect3
-                if(self.pseudo_flag==True and self.nmrglue_flag==True):
-                    self.axislabels.append(self.dic["FDF3LABEL"])
-                    self.axislabels.append(self.dic["FDF2LABEL"])
-                    self.axislabels.append(self.dic["FDF1LABEL"])
-                elif(self.nmrglue_flag == True):
-                    self.axislabels.append(self.dic["FDF3LABEL"])
-                    self.axislabels.append(self.dic["FDF2LABEL"])
-                    self.axislabels.append(self.dic["FDF1LABEL"])
-                else:
-                    self.axislabels.append(self.dic["FDF1LABEL"])
-                    self.axislabels.append(self.dic["FDF2LABEL"])
-                    self.axislabels.append(self.dic["FDF3LABEL"])
+                # 3D data is labelled in the order of the axes of the data
+                for axis in range(3):
+                    self.axislabels.append(label_of_dimension(2 - axis))
 
     def generic_labels_bruker(self):
         """
