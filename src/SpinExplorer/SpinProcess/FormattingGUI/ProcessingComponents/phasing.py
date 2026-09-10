@@ -423,14 +423,11 @@ class PhasingIndirect:
         try:
             if np.abs(float(self.p1_total_indirect)) > 45:
                 self.apodization_class.apodization_first_point_scaling = 1.0
-                self.apodization_class.apodization_first_point_textcontrol.SetValue(
-                    str(self.apodization_first_point_scaling_indirect)
-                )
             else:
                 self.apodization_class.apodization_first_point_scaling = 0.5
-                self.apodization_class.apodization_first_point_textcontrol_indirect.SetValue(
-                    str(self.apodization_class.apodization_first_point_scaling)
-                )
+            self.apodization_class.apodization_first_point_textcontrol.SetValue(
+                str(self.apodization_class.apodization_first_point_scaling)
+            )
         except:
             pass
 

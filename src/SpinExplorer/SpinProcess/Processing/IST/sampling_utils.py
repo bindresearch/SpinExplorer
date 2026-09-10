@@ -297,8 +297,8 @@ def inflate_spectra_3D_signal(spectrum: NDArray, sample_dict: dict,
 
         if acq_ord == 0:
             inflated[2*sr0,   2*sr1,   :] = spectrum[idx]; idx += 1
-            inflated[2*sr0+1, 2*sr1,   :] = spectrum[idx]; idx += 1
-            inflated[2*sr0,   2*sr1+1, :] = spectrum[idx]; idx += 1
+            inflated[2*sr0, 2*sr1+1,   :] = spectrum[idx]; idx += 1
+            inflated[2*sr0+1,   2*sr1, :] = spectrum[idx]; idx += 1
             inflated[2*sr0+1, 2*sr1+1, :] = spectrum[idx]; idx += 1
         
         if acq_ord == 1: 
@@ -318,6 +318,7 @@ def inflate_spectra_3D_signal(spectrum: NDArray, sample_dict: dict,
 
     inflated_dict['FDSPECNUM']  = float(max_points[1] * 2)  # slowest indirect dim * 2
     inflated_dict['FDDIMCOUNT'] = float(n_indirect_dims + 1)
+    inflated_dict['FDNUSDIM']   = float(n_indirect_dims)
 
     return inflated, inflated_dict
 

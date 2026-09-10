@@ -25,6 +25,8 @@ SOFTWARE."""
 
 import wx
 
+from .dimension_size import update_dimension_size
+
 
 class LinearPrediction:
     def __init__(self, app, nmr_data, parent, info_buttons):
@@ -44,6 +46,7 @@ class LinearPrediction:
         """
         Create a box for the linear prediction options
         """
+        self.parent = parent
         self.linear_prediction_box = wx.StaticBox(parent, -1, "Linear Prediction")
         self.linear_prediction_sizer = wx.StaticBoxSizer(
             self.linear_prediction_box, wx.HORIZONTAL
@@ -137,6 +140,8 @@ class LinearPrediction:
         else:
             self.linear_prediction_checkbox_value = False
 
+        update_dimension_size(self.parent)
+
     def on_linear_prediction_combobox_options(self, event):
         """
         Change the current linear prediction option when the
@@ -146,6 +151,8 @@ class LinearPrediction:
             self.linear_prediction_combobox.GetSelection()
         )
 
+        update_dimension_size(self.parent)
+
     def on_linear_prediction_coefficients_combobox(self, event):
         """
         Change the linear prediction coefficient selection when
@@ -154,3 +161,5 @@ class LinearPrediction:
         self.linear_prediction_coefficients_selection = (
             self.linear_prediction_coefficients_combobox.GetSelection()
         )
+
+        update_dimension_size(self.parent)

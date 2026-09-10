@@ -24,6 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 import wx
+
+from .dimension_size import update_dimension_size
 import os
 import json
 
@@ -73,6 +75,7 @@ class NonUniformSampling:
         self.ist_linear_prediction_only_flag = self.find_ist_linear_prediction_only_flag()
         self.ist_nus_iterations_indirect = 1000
         self.ist_threshold_indirect = 0.9
+        self.ist_convergence_tolerance_indirect = 1e-6
 
     def find_ist_linear_prediction_only_flag(self):
         """
@@ -363,6 +366,29 @@ class NonUniformSampling:
 
             self.linear_prediction_sizer_indirect.AddSpacer(10)
 
+            # Convergence tolerance
+            self.ist_convergence_tolerance_text = wx.StaticText(
+                self.linear_prediction_sizer_indirect_label, -1, "Convergence Tolerance:"
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_convergence_tolerance_text, 0, wx.ALIGN_CENTER_VERTICAL
+            )
+            self.linear_prediction_sizer_indirect.AddSpacer(5)
+
+            self.ist_convergence_tolerance_textcontrol_indirect = wx.TextCtrl(
+                self.linear_prediction_sizer_indirect_label, -1, str(self.ist_convergence_tolerance_indirect), size=(60, 20), style=wx.TE_PROCESS_ENTER
+            )
+            self.ist_convergence_tolerance_textcontrol_indirect.Bind(
+                wx.EVT_TEXT_ENTER, self.on_ist_convergence_tolerance_textcontrol_indirect
+            )
+            self.linear_prediction_sizer_indirect.Add(
+                self.ist_convergence_tolerance_textcontrol_indirect,
+                0,
+                wx.ALIGN_CENTER_VERTICAL,
+            )
+
+            self.linear_prediction_sizer_indirect.AddSpacer(10)
+
             # Checkbox to determine if NUS reconstruction is to be applied or if IST is to be used
             # for only NUS extrapolation
             self.ist_linear_prediction_only = wx.CheckBox(self.linear_prediction_sizer_indirect_label, -1, label='Data extension only')
@@ -384,6 +410,103 @@ class NonUniformSampling:
         parent.sizer_1.AddSpacer(10)
 
     
+    def update_stored_values_from_gui(self):
+        """
+        Copy the values currently shown in the linear prediction/NUS
+        textcontrols into the stored variables. These variables are only
+        updated when the user presses enter in a textcontrol, so this is
+        called before the parameters are saved or used for processing to make
+        sure that typed values are not lost.
+        """
+
+        selection = self.linear_prediction_radio_box_indirect_selection
+
+        if selection == 1:
+            comboboxes = [
+                (
+                    "linear_prediction_combobox_indirect",
+                    "linear_prediction_indirect_options_selection",
+                ),
+                (
+                    "linear_prediction_coefficients_combobox_indirect",
+                    "linear_prediction_indirect_coefficients_selection",
+                ),
+            ]
+            for combobox_name, variable_name in comboboxes:
+                combobox = getattr(self, combobox_name, None)
+                if combobox is None:
+                    continue
+                try:
+                    setattr(self, variable_name, combobox.GetSelection())
+                except (RuntimeError, AttributeError):
+                    continue
+            return
+
+        if selection == 2:
+            textcontrols = [
+                ("smile_nus_file_textcontrol_indirect", "nuslist_name_indirect", str),
+                (
+                    "smile_nus_extension_textcontrol_indirect",
+                    "smile_data_extension_number_indirect",
+                    int,
+                ),
+                (
+                    "smile_nus_cpu_textcontrol_indirect",
+                    "number_of_nus_CPU_indirect",
+                    int,
+                ),
+                (
+                    "smile_nus_iterations_textcontrol_indirect",
+                    "nus_iterations_indirect",
+                    int,
+                ),
+            ]
+        elif selection == 3:
+            textcontrols = [
+                ("ist_nus_file_textcontrol_indirect", "nuslist_name_indirect", str),
+                (
+                    "ist_nus_extension_textcontrol_indirect",
+                    "ist_data_extension_number_indirect",
+                    int,
+                ),
+                (
+                    "ist_nus_iterations_textcontrol_indirect",
+                    "ist_nus_iterations_indirect",
+                    int,
+                ),
+                (
+                    "ist_threshold_textcontrol_indirect",
+                    "ist_threshold_indirect",
+                    float,
+                ),
+                (
+                    "ist_convergence_tolerance_textcontrol_indirect",
+                    "ist_convergence_tolerance_indirect",
+                    float,
+                ),
+            ]
+        else:
+            return
+
+        for textcontrol_name, variable_name, convert in textcontrols:
+            textcontrol = getattr(self, textcontrol_name, None)
+            if textcontrol is None:
+                continue
+            try:
+                setattr(self, variable_name, convert(textcontrol.GetValue()))
+            except (ValueError, TypeError, RuntimeError, AttributeError):
+                # The value is not valid or the textcontrol is no longer shown,
+                # keep the currently stored value
+                continue
+
+        if selection == 3:
+            try:
+                self.ist_linear_prediction_only_flag = (
+                    self.ist_linear_prediction_only.GetValue()
+                )
+            except (RuntimeError, AttributeError):
+                pass
+
     def on_linear_prediction_combobox_indirect(self, event):
         """
         When the linear prediction combobox is changed, update the
@@ -394,6 +517,8 @@ class NonUniformSampling:
             self.linear_prediction_combobox_indirect.GetSelection()
         )
 
+        update_dimension_size(self.parent)
+
     def on_linear_prediction_combobox_coefficients_indirect(self, event):
         """
         Get the selection from the combobox and update the linear prediction options
@@ -401,6 +526,8 @@ class NonUniformSampling:
         self.linear_prediction_indirect_coefficients_selection = (
             self.linear_prediction_coefficients_combobox_indirect.GetSelection()
         )
+
+        update_dimension_size(self.parent)
 
     def on_smile_nus_file_textcontrol_indirect(self, event):
         """
@@ -480,6 +607,8 @@ class NonUniformSampling:
                 self.smile_nus_extension_textcontrol_indirect.GetValue()
             )
 
+        update_dimension_size(self.parent)
+
     def on_ist_nus_extension_textcontrol_indirect(self, event):
         """
         When changing the nus extension number, this function checks
@@ -508,6 +637,8 @@ class NonUniformSampling:
             self.ist_data_extension_number_indirect = (
                 self.ist_nus_extension_textcontrol_indirect.GetValue()
             )
+
+        update_dimension_size(self.parent)
 
     def on_smile_nus_cpu_textcontrol_indirect(self, event):
         """
@@ -645,6 +776,40 @@ class NonUniformSampling:
                     msg.Destroy()
                     self.ist_threshold_textcontrol_indirect.SetValue(
                         str(self.ist_threshold_indirect)
+                    )
+                    return
+
+    def on_ist_convergence_tolerance_textcontrol_indirect(self, event):
+            """
+            When changing the IST convergence tolerance, this function checks
+            the parameter validity (must be a number) and updates the stored
+            value.
+            """
+            if self.ist_convergence_tolerance_textcontrol_indirect.GetValue() != "":
+                try:
+                    self.ist_convergence_tolerance_indirect = float(
+                        self.ist_convergence_tolerance_textcontrol_indirect.GetValue()
+                    )
+
+                    if(self.parent.parent.nmr_data.dim == 3 and self.parent.parent.nmr_data.pseudo_axis == False):
+                        # If IST NUS is selected and there are more than 1 complex indirect dimensions, change the tolerance to the same for both indirect dimensions
+                        if(self.parent.parent.tabDim2!=self):
+                            self.parent.parent.tabDim2.linear_prediction.ist_convergence_tolerance_indirect = self.ist_convergence_tolerance_indirect
+                            self.parent.parent.tabDim2.linear_prediction.ist_convergence_tolerance_textcontrol_indirect.SetValue(str(self.ist_convergence_tolerance_indirect))
+                        if(self.parent.parent.tabDim3!=self):
+                            self.parent.parent.tabDim3.linear_prediction.ist_convergence_tolerance_indirect = self.ist_convergence_tolerance_indirect
+                            self.parent.parent.tabDim3.linear_prediction.ist_convergence_tolerance_textcontrol_indirect.SetValue(str(self.ist_convergence_tolerance_indirect))
+                except:
+                    msg = wx.MessageDialog(
+                        self.parent,
+                        "The value entered for the IST convergence tolerance is not a valid number",
+                        "Error",
+                        wx.OK | wx.ICON_ERROR,
+                    )
+                    msg.ShowModal()
+                    msg.Destroy()
+                    self.ist_convergence_tolerance_textcontrol_indirect.SetValue(
+                        str(self.ist_convergence_tolerance_indirect)
                     )
                     return
 

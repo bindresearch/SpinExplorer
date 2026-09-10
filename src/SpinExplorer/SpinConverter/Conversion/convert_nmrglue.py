@@ -29,8 +29,11 @@ from typing import Dict
 from numpy.typing import NDArray
 import wx
 import traceback
-from SpinExplorer.SpinProcess.Processing.ist import inflate_spectra_nd_signal_ist
-from SpinExplorer.SpinProcess.Processing.ist import read_sched
+from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import (
+    inflate_spectra_2D_signal,
+    inflate_spectra_3D_signal,
+    read_sched,
+)
 
 
 class Convert_nmrglue:
@@ -160,6 +163,8 @@ class Convert_nmrglue:
                     p0_only=True
                 dic, data = self.remove_digital_filter_fid(dic, data,p0_only)
 
+            print('hello there...')
+            print(u)
             C.from_bruker(dic, data, u)
         else:
             C.from_varian(dic, data, u)
@@ -181,6 +186,13 @@ class Convert_nmrglue:
             pdic["FD2DPHASE"] = 0
 
         pdic['FDCOMMENT'] = 'nmrglue'
+
+        # pdic["FD2DPHASE"] = 2
+        # pdic["FDF1AQSIGN"] = 2
+        # pdic["FDF2AQSIGN"] = 0
+        # pdic["FDF3AQSIGN"] = 2
+
+
 
         ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
 
@@ -359,7 +371,9 @@ class Convert_nmrglue:
         else:
             max_points = [int(self.app.format.N_real_boxes[-1].GetValue()), int(self.app.format.N_real_boxes[-2].GetValue())]
 
-        data, dic = inflate_spectra_nd_signal_ist(data, dic, sampling_schedule=schedule, max_points=max_points)
+
+        data, dic = inflate_spectra_3D_signal(data, dic, sampling_schedule=schedule, max_points=max_points, acq_ord = 0)
+        #data, dic = inflate_spectra_nd_signal_ist(data, dic, sampling_schedule=schedule, max_points=max_points)
 
         return dic, data
             

@@ -83,6 +83,7 @@ target/
 # IPython
 profile_default/
 ipython_config.py
+generate_third_party_licenses.py
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is
@@ -194,3 +195,13 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+src/SpinExplorer/SpinProcess/Processing/IST/benchmark_2D/*
+src/SpinExplorer/SpinProcess/Processing/IST/benchmark_3D/*
+*.ft1
+*.ft2
+*.ft3
+*.fid
+*.com
+nuslist
+sched

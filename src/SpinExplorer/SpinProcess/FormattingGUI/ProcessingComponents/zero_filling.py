@@ -25,6 +25,8 @@ SOFTWARE."""
 
 import wx
 
+from .dimension_size import update_dimension_size
+
 
 class ZeroFilling:
 
@@ -54,7 +56,6 @@ class ZeroFilling:
         """
         self.zero_filling_checkbox_value = True
         self.zero_filling_combobox_selection = 0
-        self.zero_filling_combobox_selection_old = 0
         self.zero_filling_value_doubling_times = 1
         self.zero_filling_value_zeros_to_add = 0
         self.zero_filling_value_final_data_size = (
@@ -66,6 +67,7 @@ class ZeroFilling:
         """
         Create a box for zero filling options
         """
+        self.parent = parent
         self.zero_filling_box = wx.StaticBox(parent, -1, "Zero Filling")
         self.zero_filling_sizer = wx.StaticBoxSizer(
             self.zero_filling_box, wx.HORIZONTAL
@@ -154,7 +156,10 @@ class ZeroFilling:
         self.zero_filling_round_checkbox = wx.CheckBox(
             self.zero_filling_box, -1, "Round to nearest power of 2"
         )
-        self.zero_filling_round_checkbox.SetValue(True)
+        self.zero_filling_round_checkbox.SetValue(self.zero_filling_round_checkbox_value)
+        self.zero_filling_round_checkbox.Bind(
+            wx.EVT_CHECKBOX, self.on_zero_filling_round_checkbox
+        )
         self.zero_filling_sizer.Add(
             self.zero_filling_round_checkbox, 0, wx.ALIGN_CENTER_VERTICAL
         )
@@ -178,6 +183,20 @@ class ZeroFilling:
             self.zero_filling_checkbox_value = True
         else:
             self.zero_filling_checkbox_value = False
+
+        update_dimension_size(self.parent)
+
+    def on_zero_filling_round_checkbox(self, event):
+        """
+        When the round to nearest power of 2 checkbox is clicked, update
+        the current stored value so that it is kept when the interface is
+        refreshed.
+        """
+        self.zero_filling_round_checkbox_value = (
+            self.zero_filling_round_checkbox.GetValue()
+        )
+
+        update_dimension_size(self.parent)
 
     def on_zero_filling_textcontrol_doubling_times(self, event):
         """
@@ -204,6 +223,8 @@ class ZeroFilling:
                 style = wx.OK | wx.ICON_ERROR
                 wx.MessageBox(message, title, style)
 
+        update_dimension_size(self.parent)
+
     def on_zero_filling_textcontrol_zeros_to_add(self, event):
         """
         When a new value is typed into the zeros to add box, check that
@@ -228,6 +249,8 @@ class ZeroFilling:
                 title = "Invalid value"
                 style = wx.OK | wx.ICON_ERROR
                 wx.MessageBox(message, title, style)
+
+        update_dimension_size(self.parent)
 
     def on_zero_filling_textcontrol_final_size(self, event):
         """
@@ -261,6 +284,8 @@ class ZeroFilling:
                 style = wx.OK | wx.ICON_ERROR
                 wx.MessageBox(message, title, style)
 
+        update_dimension_size(self.parent)
+
     def on_zero_filling_combobox(self, event):
         """
         When the zero fill combobox option is changed, need to clear
@@ -277,8 +302,6 @@ class ZeroFilling:
         # Within this apodization function is the necessary functionality
         # to refresh the sizes to the new values.
         self.apodization_class.on_apodization_combobox(wx.EVT_COMBOBOX)
-
-        self.zero_filling_combobox_selection = self.zero_filling_combobox_selection_old
 
     def clear_zero_filling_sizer(self):
         """
