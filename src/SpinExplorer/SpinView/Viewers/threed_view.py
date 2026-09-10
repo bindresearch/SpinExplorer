@@ -501,6 +501,14 @@ class ThreeDViewer(wx.Panel):
 
 
 
+    def axis_name(self, label) -> str:
+        """
+        The name of a dimension without the units which are added to the axis
+        labels, for finding the projection files which are named after the
+        dimensions they hold.
+        """
+        return str(label).split(" (")[0].strip()
+
     def OnShowBoreButton(self, event):
         # Open a SpinBore frame
 
@@ -508,32 +516,50 @@ class ThreeDViewer(wx.Panel):
         if self.orientation_chooser.GetSelection() == 0:
             # projection is x_name.y_name.dat
             projection = (
-                self.nmrdata.axislabels[1] + "." + self.nmrdata.axislabels[2] + ".dat"
+                self.axis_name(self.nmrdata.axislabels[1])
+                + "."
+                + self.axis_name(self.nmrdata.axislabels[2])
+                + ".dat"
             )
         elif self.orientation_chooser.GetSelection() == 1:
             # projection is y_name.x_name.dat
             projection = (
-                self.nmrdata.axislabels[2] + "." + self.nmrdata.axislabels[1] + ".dat"
+                self.axis_name(self.nmrdata.axislabels[2])
+                + "."
+                + self.axis_name(self.nmrdata.axislabels[1])
+                + ".dat"
             )
         elif self.orientation_chooser.GetSelection() == 2:
             # projection is x_name.z_name.dat
             projection = (
-                self.nmrdata.axislabels[1] + "." + self.nmrdata.axislabels[0] + ".dat"
+                self.axis_name(self.nmrdata.axislabels[1])
+                + "."
+                + self.axis_name(self.nmrdata.axislabels[0])
+                + ".dat"
             )
         elif self.orientation_chooser.GetSelection() == 3:
             # projection is z_name.x_name.dat
             projection = (
-                self.nmrdata.axislabels[0] + "." + self.nmrdata.axislabels[1] + ".dat"
+                self.axis_name(self.nmrdata.axislabels[0])
+                + "."
+                + self.axis_name(self.nmrdata.axislabels[1])
+                + ".dat"
             )
         elif self.orientation_chooser.GetSelection() == 4:
             # projection is z_name.y_name.dat
             projection = (
-                self.nmrdata.axislabels[0] + "." + self.nmrdata.axislabels[2] + ".dat"
+                self.axis_name(self.nmrdata.axislabels[0])
+                + "."
+                + self.axis_name(self.nmrdata.axislabels[2])
+                + ".dat"
             )
         elif self.orientation_chooser.GetSelection() == 5:
             # projection is y_name.z_name.dat
             projection = (
-                self.nmrdata.axislabels[2] + "." + self.nmrdata.axislabels[0] + ".dat"
+                self.axis_name(self.nmrdata.axislabels[2])
+                + "."
+                + self.axis_name(self.nmrdata.axislabels[0])
+                + ".dat"
             )
 
         # Check to see if the projection file exists
@@ -4368,13 +4394,11 @@ class Projection3DNotebook(wx.Notebook):
         if self.parent.parent.parent.path != "":
             os.chdir(self.parent.parent.parent.path)
         # Search for the projections in the current directory (.dat files)
-        self.projection_files = []
-        for file in os.listdir():
-            if file.endswith(".dat"):
-                self.projection_files.append(file)
-        for file in self.projection_files:
-            if "prof" in file:
-                self.projection_files.remove(file)
+        self.projection_files = sorted(
+            file
+            for file in os.listdir()
+            if file.endswith(".dat") and "prof" not in file
+        )
 
         self.nmrdata = []
         for file in self.projection_files:

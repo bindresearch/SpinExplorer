@@ -192,6 +192,80 @@ class ProcessNMRGlue:
 
         return selection == 3
 
+    def nus_phasing_selected(self, dimension_tab) -> bool:
+        """
+        Check whether a phase correction is to be applied to an indirect
+        dimension before the NUS reconstruction is performed.
+        """
+        try:
+            if dimension_tab.linear_prediction.nus_phasing_flag_indirect == False:
+                return False
+        except AttributeError:
+            return False
+
+        # The correction is applied to the spectrum, so the dimension has to be
+        # fourier transformed
+        return (
+            dimension_tab.fourier_transform.fourier_transform_checkbox.GetValue()
+            == True
+        )
+
+    def add_nus_phasing(self, dic, data, dimension, dimension_tab, reverse=False):
+        """
+        Apply the phase correction given in the NUS panel to the current
+        (last) dimension of the data. The data is fourier transformed, phased
+        and transformed back so that the reconstruction is performed on in
+        phase data. The correction is reversed once the reconstruction is
+        complete so that the phasing section applies it to the final spectrum
+        in the usual way.
+        """
+        p0 = float(dimension_tab.linear_prediction.nus_phasing_p0_indirect)
+        p1 = float(dimension_tab.linear_prediction.nus_phasing_p1_indirect)
+
+        if reverse == True:
+            p0, p1 = -p0, -p1
+
+        dic, data = self.add_fourier_transform(dic, data, dimension, dimension_tab)
+        dic, data = ng.pipe_proc.ps(dic, data, p0=p0, p1=p1)
+        dic, data = self.add_fourier_transform(
+            dic, data, dimension, dimension_tab, inv=True
+        )
+
+        return dic, data
+
+    def apply_nus_phasing(self, dic, data, ndim, reverse=False):
+        """
+        Apply (or reverse) the phase corrections given in the NUS panels of the
+        indirect dimensions. Each dimension is transposed so that it is the
+        current dimension while it is phased.
+        """
+        if ndim == 2:
+            if self.nus_phasing_selected(self.dimension_tabs[1]):
+                dic, data = self.add_nus_phasing(
+                    dic, data, 1, self.dimension_tabs[1], reverse
+                )
+            return dic, data
+
+        # First indirect dimension
+        if self.nus_phasing_selected(self.dimension_tabs[1]):
+            dic, data = self.transpose_3d(dic, data, auto=True)
+            dic, data = self.add_nus_phasing(
+                dic, data, 1, self.dimension_tabs[1], reverse
+            )
+            data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
+            dic, data = self.transpose_3d(dic, data, auto=True, nohyper=True)
+
+        # Second indirect dimension
+        if self.nus_phasing_selected(self.dimension_tabs[2]):
+            dic, data = self.zero_transpose_3d(dic, data)
+            dic, data = self.add_nus_phasing(
+                dic, data, 2, self.dimension_tabs[2], reverse
+            )
+            data = np.array(ng.proc_base.interleave_complex(data), dtype=np.float64)
+            dic, data = self.zero_transpose_3d(dic, data, nohyper=True)
+
+        return dic, data
+
     def apply_processing_parameters(self):
         # Process the data according to the user inputted processing parameters
 
@@ -224,12 +298,14 @@ class ProcessNMRGlue:
                 # 2D dataset, IST is applied to the single indirect dimension
                 dic, data = ng.pipe_proc.tp(dic, data, auto=True)
                 if self.ist_selected(self.dimension_tabs[1]):
+                    dic, data = self.apply_nus_phasing(dic, data, ndim=2)
                     dic, data = self.apply_ist_reconstruction(
                         dic,
                         data,
                         ndim=len(self.dimension_tabs),
                         dimension_tab=self.dimension_tabs[1],
                     )
+                    dic, data = self.apply_nus_phasing(dic, data, ndim=2, reverse=True)
 
             elif self.nmr_data.pseudo_axis == True:
                 # Pseudo 3D dataset (NUS reconstruction is not supported)
@@ -246,6 +322,8 @@ class ProcessNMRGlue:
             else:
                 # 3D dataset, IST is applied to both indirect dimensions at once
                 if self.ist_selected(self.dimension_tabs[1]):
+                    dic, data = self.apply_nus_phasing(dic, data, ndim=3)
+
                     # The reconstruction expects the direct dimension to be the
                     # first axis, so transpose into (direct, F1, F3) and back again
                     dic, data = self.zero_transpose_3d(dic, data, nohyper=True)
@@ -256,6 +334,8 @@ class ProcessNMRGlue:
                         dimension_tab=self.dimension_tabs[1],
                     )
                     dic, data = self.zero_transpose_3d(dic, data, nohyper=True)
+
+                    dic, data = self.apply_nus_phasing(dic, data, ndim=3, reverse=True)
 
                 dic, data = self.transpose_3d(dic, data, auto=True)
 
@@ -648,6 +728,18 @@ class ProcessNMRGlue:
             app.cwd = cwd
         
 
+    def projection_name(self, dic) -> str:
+        """
+        The file name for a projection. Once the first axis of the data has
+        been collapsed, the remaining axes of the plane are FDDIMORDER[1]
+        (rows) and FDDIMORDER[0] (columns). The labels are written in that
+        order so that they match the data when the projection is displayed.
+        """
+        rows = "FDF" + str(int(dic["FDDIMORDER"][1])) + "LABEL"
+        columns = "FDF" + str(int(dic["FDDIMORDER"][0])) + "LABEL"
+
+        return dic[rows] + "." + dic[columns] + ".dat"
+
     def create_3D_projections(self, dic, data):
         """
         This function will form skyline projections over the data along a given
@@ -684,7 +776,7 @@ class ProcessNMRGlue:
         dic0[fn + "CENTER"] = 0
         # dic0[fn + "LABEL"] = ""
 
-        name = dic0["FDF1LABEL"] + "." + dic0["FDF2LABEL"] + ".dat"
+        name = self.projection_name(dic0)
 
         ng.pipe.write(name, dic0, data0+data0_1, overwrite=True)
 
@@ -705,7 +797,7 @@ class ProcessNMRGlue:
         dic1[fn + "CENTER"] = 0
         # dic1[fn + "LABEL"] = ""
 
-        name = dic1["FDF3LABEL"] + "." + dic1["FDF2LABEL"] + ".dat"
+        name = self.projection_name(dic1)
 
         ng.pipe.write(name, dic1, data1_1+data1_2, overwrite=True)
 
@@ -728,7 +820,7 @@ class ProcessNMRGlue:
         dic2[fn + "CENTER"] = 0
         # dic2[fn + "LABEL"] = ""
 
-        name = dic2["FDF1LABEL"] + "." + dic2["FDF3LABEL"] + ".dat"
+        name = self.projection_name(dic2)
 
         ng.pipe.write(name, dic2, data2_1+data2_2, overwrite=True)
 

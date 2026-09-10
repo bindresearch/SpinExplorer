@@ -1300,7 +1300,26 @@ class ReadProjection:
             return 3
 
     def get_axislabels(self):
-        self.axislabels = []
-        file_split = self.filename.split(".dat")[0].split(".")
-        for i in range(len(file_split)):
-            self.axislabels.append(file_split[i])
+        """
+        The axis labels of the projection, read from the file so that they
+        always match the data it holds. They are given in the same order as
+        for a spectrum read in normally (the label of the last axis of the
+        data first), which is the order the viewers expect: axislabels[0] is
+        shown on the y axis and axislabels[1] on the x axis.
+        """
+        try:
+            labels = []
+            for i in range(self.dim):
+                label = self.dic["FDF{}LABEL".format(int(self.dic["FDDIMORDER"][i]))]
+                if str(label).strip() == "":
+                    raise ValueError
+                labels.append(str(label))
+            self.axislabels = labels
+            return
+        except (KeyError, ValueError, TypeError):
+            pass
+
+        # The file does not name its dimensions, so use the names in the file
+        # name instead. These are given as x.y, which is the reverse of the
+        # order used above.
+        self.axislabels = self.filename.split(".dat")[0].split(".")[::-1]

@@ -309,7 +309,18 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "Predicted coefficients"
                 ] = [value2, options[value2]]
-            elif value == 2:
+            if value in [2, 3]:
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Phasing before reconstruction"
+                ] = dimension_tab.linear_prediction.nus_phasing_flag_indirect
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Phasing before reconstruction P0"
+                ] = dimension_tab.linear_prediction.nus_phasing_p0_indirect
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Phasing before reconstruction P1"
+                ] = dimension_tab.linear_prediction.nus_phasing_p1_indirect
+
+            if value == 2:
                 nusfile = dimension_tab.linear_prediction.nuslist_name_indirect
                 nus_extension = (
                     dimension_tab.linear_prediction.smile_data_extension_number_indirect

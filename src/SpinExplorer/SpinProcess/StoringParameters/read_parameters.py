@@ -322,7 +322,10 @@ class InputParameters:
                     wx.EVT_COMBOBOX
                 )
 
-            elif key == "SMILE NUS Reconstruction":
+            elif key in ["SMILE NUS Reconstruction", "SpinExplorer IST NUS Reconstruction"]:
+                self.load_nus_phasing(dimension_tab, dictionary["Linear Prediction"][key])
+
+            if key == "SMILE NUS Reconstruction":
                 dimension_tab.linear_prediction.linear_prediction_radio_box_indirect.SetSelection(
                     2
                 )
@@ -404,6 +407,23 @@ class InputParameters:
                     wx.EVT_RADIOBOX
                 )
 
+
+    def load_nus_phasing(self, dimension_tab, dictionary):
+        """
+        Reading in the saved phase correction which is applied to the indirect
+        dimension before the NUS reconstruction.
+        """
+        try:
+            flag = bool(dictionary["Phasing before reconstruction"])
+            p0 = float(dictionary["Phasing before reconstruction P0"])
+            p1 = float(dictionary["Phasing before reconstruction P1"])
+        except (KeyError, TypeError, ValueError):
+            # Saved by a version of SpinExplorer without this option
+            return
+
+        dimension_tab.linear_prediction.nus_phasing_flag_indirect = flag
+        dimension_tab.linear_prediction.nus_phasing_p0_indirect = p0
+        dimension_tab.linear_prediction.nus_phasing_p1_indirect = p1
 
     def load_apodization(self, dimension, dimension_tab, dictionary):
         """

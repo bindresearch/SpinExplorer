@@ -77,6 +77,11 @@ class NonUniformSampling:
         self.ist_threshold_indirect = 0.9
         self.ist_convergence_tolerance_indirect = 1e-6
 
+        # Phasing applied to the indirect dimension before NUS reconstruction
+        self.nus_phasing_flag_indirect = False
+        self.nus_phasing_p0_indirect = 0.0
+        self.nus_phasing_p1_indirect = 0.0
+
     def find_ist_linear_prediction_only_flag(self):
         """
         Read through the parameters file and see if NUS reshuffling was performed
@@ -409,7 +414,154 @@ class NonUniformSampling:
         parent.sizer_1.Add(self.linear_prediction_sizer_indirect)
         parent.sizer_1.AddSpacer(10)
 
+        if self.linear_prediction_radio_box_indirect.GetSelection() in [2, 3]:
+            self.create_nus_phasing_sizer_indirect(parent)
+
     
+    def create_nus_phasing_sizer_indirect(self, parent):
+        """
+        Creating a sizer holding the phase correction which is applied to the
+        indirect dimension before the NUS reconstruction is performed. Some
+        datasets need to be phased before reconstruction so that the peaks
+        are in phase when the reconstruction is applied.
+        """
+        self.nus_phasing_sizer_indirect_label = wx.StaticBox(
+            parent, -1, "Phasing Before NUS Reconstruction"
+        )
+        self.nus_phasing_sizer_indirect = wx.StaticBoxSizer(
+            self.nus_phasing_sizer_indirect_label, wx.HORIZONTAL
+        )
+        self.nus_phasing_sizer_indirect.AddSpacer(10)
+
+        self.nus_phasing_checkbox_indirect = wx.CheckBox(
+            self.nus_phasing_sizer_indirect_label,
+            -1,
+            "Phase indirect dimension before reconstruction",
+        )
+        self.nus_phasing_checkbox_indirect.SetValue(self.nus_phasing_flag_indirect)
+        self.nus_phasing_checkbox_indirect.Bind(
+            wx.EVT_CHECKBOX, self.on_nus_phasing_checkbox_indirect
+        )
+        self.nus_phasing_sizer_indirect.Add(
+            self.nus_phasing_checkbox_indirect, 0, wx.ALIGN_CENTER_VERTICAL
+        )
+        self.nus_phasing_sizer_indirect.AddSpacer(10)
+
+        self.nus_phasing_p0_text = wx.StaticText(
+            self.nus_phasing_sizer_indirect_label, -1, "P0:"
+        )
+        self.nus_phasing_sizer_indirect.Add(
+            self.nus_phasing_p0_text, 0, wx.ALIGN_CENTER_VERTICAL
+        )
+        self.nus_phasing_sizer_indirect.AddSpacer(5)
+        self.nus_phasing_p0_textcontrol_indirect = wx.TextCtrl(
+            self.nus_phasing_sizer_indirect_label, -1, str(self.nus_phasing_p0_indirect), size=(60, 20), style=wx.TE_PROCESS_ENTER
+        )
+        self.nus_phasing_p0_textcontrol_indirect.Bind(
+            wx.EVT_TEXT_ENTER, self.on_nus_phasing_textcontrol_indirect
+        )
+        self.nus_phasing_sizer_indirect.Add(
+            self.nus_phasing_p0_textcontrol_indirect, 0, wx.ALIGN_CENTER_VERTICAL
+        )
+        self.nus_phasing_sizer_indirect.AddSpacer(10)
+
+        self.nus_phasing_p1_text = wx.StaticText(
+            self.nus_phasing_sizer_indirect_label, -1, "P1:"
+        )
+        self.nus_phasing_sizer_indirect.Add(
+            self.nus_phasing_p1_text, 0, wx.ALIGN_CENTER_VERTICAL
+        )
+        self.nus_phasing_sizer_indirect.AddSpacer(5)
+        self.nus_phasing_p1_textcontrol_indirect = wx.TextCtrl(
+            self.nus_phasing_sizer_indirect_label, -1, str(self.nus_phasing_p1_indirect), size=(60, 20), style=wx.TE_PROCESS_ENTER
+        )
+        self.nus_phasing_p1_textcontrol_indirect.Bind(
+            wx.EVT_TEXT_ENTER, self.on_nus_phasing_textcontrol_indirect
+        )
+        self.nus_phasing_sizer_indirect.Add(
+            self.nus_phasing_p1_textcontrol_indirect, 0, wx.ALIGN_CENTER_VERTICAL
+        )
+        self.nus_phasing_sizer_indirect.AddSpacer(10)
+
+        parent.sizer_1.Add(self.nus_phasing_sizer_indirect)
+        parent.sizer_1.AddSpacer(10)
+
+    def on_nus_phasing_checkbox_indirect(self, event):
+        """
+        When the phasing before reconstruction checkbox is clicked, update the
+        stored value and copy the phase correction into the phasing section
+        below.
+        """
+        self.nus_phasing_flag_indirect = (
+            self.nus_phasing_checkbox_indirect.GetValue()
+        )
+
+        if self.nus_phasing_flag_indirect == True:
+            self.copy_nus_phasing_to_phasing_sizer()
+
+    def on_nus_phasing_textcontrol_indirect(self, event):
+        """
+        When a phase correction value is changed, check that the values are
+        valid numbers, update the stored values and copy them into the phasing
+        section below.
+        """
+        values = []
+        for textcontrol, stored in [
+            (self.nus_phasing_p0_textcontrol_indirect, self.nus_phasing_p0_indirect),
+            (self.nus_phasing_p1_textcontrol_indirect, self.nus_phasing_p1_indirect),
+        ]:
+            try:
+                values.append(float(textcontrol.GetValue()))
+            except:
+                msg = wx.MessageDialog(
+                    self.parent,
+                    "The values entered for the phase correction before NUS reconstruction are not valid numbers",
+                    "Error",
+                    wx.OK | wx.ICON_ERROR,
+                )
+                msg.ShowModal()
+                msg.Destroy()
+                self.nus_phasing_p0_textcontrol_indirect.SetValue(
+                    str(self.nus_phasing_p0_indirect)
+                )
+                self.nus_phasing_p1_textcontrol_indirect.SetValue(
+                    str(self.nus_phasing_p1_indirect)
+                )
+                return
+
+        self.nus_phasing_p0_indirect, self.nus_phasing_p1_indirect = values
+
+        self.copy_nus_phasing_to_phasing_sizer()
+
+    def copy_nus_phasing_to_phasing_sizer(self):
+        """
+        Copy the phase correction given for the NUS reconstruction into the
+        phasing section below so that the same values are used when the
+        reconstructed spectrum is phased.
+        """
+        phasing = getattr(self.parent, "phasing", None)
+        if phasing == None:
+            return
+
+        phasing.p0_total_indirect = self.nus_phasing_p0_indirect
+        phasing.p1_total_indirect = self.nus_phasing_p1_indirect
+        phasing.phasing_indirect_checkbox_value = True
+
+        try:
+            # ChangeValue is used so that the apodization first point scaling
+            # is not altered by the phasing textcontrol event
+            phasing.phase_correction_p0_textcontrol_indirect.ChangeValue(
+                str(self.nus_phasing_p0_indirect)
+            )
+            phasing.phase_correction_p1_textcontrol_indirect.ChangeValue(
+                str(self.nus_phasing_p1_indirect)
+            )
+            phasing.phase_correction_checkbox_indirect.SetValue(True)
+        except (RuntimeError, AttributeError):
+            # The phasing section is being rebuilt, the stored values above are
+            # used when it is created again
+            pass
+
     def update_stored_values_from_gui(self):
         """
         Copy the values currently shown in the linear prediction/NUS
@@ -506,6 +658,25 @@ class NonUniformSampling:
                 )
             except (RuntimeError, AttributeError):
                 pass
+
+        for textcontrol_name, variable_name in [
+            ("nus_phasing_p0_textcontrol_indirect", "nus_phasing_p0_indirect"),
+            ("nus_phasing_p1_textcontrol_indirect", "nus_phasing_p1_indirect"),
+        ]:
+            textcontrol = getattr(self, textcontrol_name, None)
+            if textcontrol == None:
+                continue
+            try:
+                setattr(self, variable_name, float(textcontrol.GetValue()))
+            except (ValueError, TypeError, RuntimeError, AttributeError):
+                continue
+
+        try:
+            self.nus_phasing_flag_indirect = (
+                self.nus_phasing_checkbox_indirect.GetValue()
+            )
+        except (RuntimeError, AttributeError):
+            pass
 
     def on_linear_prediction_combobox_indirect(self, event):
         """
