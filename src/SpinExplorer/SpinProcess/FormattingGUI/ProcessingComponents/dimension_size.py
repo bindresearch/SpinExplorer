@@ -117,6 +117,28 @@ class DimensionSize:
 
         return int(points / 2)
 
+    def find_truncation_size(self, size: int):
+        """
+        The number of complex points after truncation, where fewer points are
+        processed than were recorded.
+        """
+        truncation = getattr(self.parent, "truncation", None)
+        if truncation == None:
+            return size, False
+
+        if truncation.truncation_checkbox_value == False:
+            return size, False
+
+        try:
+            points = int(truncation.find_truncation_points())
+        except (ValueError, TypeError):
+            return size, False
+
+        if points < 1 or points >= size:
+            return size, False
+
+        return points, True
+
     def find_linear_prediction_size(self, size: int):
         """
         The number of complex points after linear prediction. Predicting
@@ -225,14 +247,16 @@ class DimensionSize:
         current_size = self.find_current_size()
 
         try:
-            size, linear_prediction = self.find_linear_prediction_size(current_size)
+            size, truncation = self.find_truncation_size(current_size)
+            size, linear_prediction = self.find_linear_prediction_size(size)
             size, extension = self.find_extension_size(size)
             size, zero_filling = self.find_zero_filling_size(size)
         except (RuntimeError, AttributeError):
             # A processing section is in the middle of being rebuilt, the text
             # is updated again once the interface has been recreated
-            size, linear_prediction, extension, zero_filling = (
+            size, truncation, linear_prediction, extension, zero_filling = (
                 current_size,
+                False,
                 False,
                 False,
                 False,
@@ -243,6 +267,8 @@ class DimensionSize:
         )
 
         applied = []
+        if truncation == True:
+            applied.append("truncation")
         if linear_prediction == True:
             applied.append("linear prediction")
         if extension == True:

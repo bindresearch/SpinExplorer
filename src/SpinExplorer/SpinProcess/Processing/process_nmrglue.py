@@ -374,6 +374,7 @@ class ProcessNMRGlue:
         functions. May need to be altered for 3D datasets
         """
 
+        dic, data = self.add_truncation(dic, data, dimension, dimension_tab)
         if dimension == 0:
             dic, data = self.add_solvent_suppression(
                 dic, data, dimension, dimension_tab
@@ -826,6 +827,31 @@ class ProcessNMRGlue:
 
         # front = np.max(data, axis=1)
         # side = np.max(data, axis=2)
+
+    def add_truncation(self, dic, data, dimension, dimension_tab):
+        """
+        1 - checking if the truncation checkbox is ticked
+        2 - if it is ticked, keep only the first points of the dimension so
+            that fewer points are processed than were recorded
+        """
+
+        tab = getattr(dimension_tab, "truncation", None)
+        if tab == None:
+            return dic, data
+
+        if tab.truncation_checkbox_value != True:
+            return dic, data
+
+        try:
+            points = int(tab.find_truncation_points())
+        except (ValueError, TypeError):
+            return dic, data
+
+        if points < 1 or points >= data.shape[-1]:
+            # There are no points to remove
+            return dic, data
+
+        return self.ext(dic, data, x1=1, xn=points, sw=True)
 
     def add_solvent_suppression(self, dic, data, dimension, dimension_tab):
         """

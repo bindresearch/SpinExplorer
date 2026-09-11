@@ -671,6 +671,43 @@ class InfoButtons:
         )
         self.phase_correction_info_window.Show()
 
+    def on_truncation_info(self, event):
+        """
+        Creating a popout with information on truncating the data
+        """
+        truncation_text = """Truncation processes only the first points of a
+        dimension and discards the points recorded after them. This can be
+        used to see the effect of recording fewer points, for example when
+        the later points of an indirect dimension contain mostly noise. The
+        points are removed before any other processing is applied, so linear
+        prediction, NUS data extension and zero filling all start from the
+        truncated data. By default all of the recorded points are used."""
+
+        truncation_text = " ".join(truncation_text.split())
+
+        # Create a popup window with the information
+        self.truncation_info_window = wx.Frame(
+            self.app, -1, "Truncation Information", size=(450, 200)
+        )
+
+        self.truncation_info_window_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.truncation_info_window.SetSizer(self.truncation_info_window_sizer)
+        self.truncation_info_window_sizer.AddSpacer(10)
+        self.truncation_info_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.truncation_info_sizer.AddSpacer(10)
+        self.truncation_info_sizer.Add(
+            wx.StaticText(
+                self.truncation_info_window, -1, truncation_text, size=(400, 120)
+            ),
+            0,
+            wx.ALIGN_CENTER,
+        )
+        self.truncation_info_sizer.AddSpacer(10)
+        self.truncation_info_window_sizer.Add(
+            self.truncation_info_sizer, 0, wx.ALIGN_CENTER
+        )
+        self.truncation_info_window.Show()
+
     def on_extraction_info(self, event):
         """
         Creating a popout with information on data extraction

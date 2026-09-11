@@ -92,6 +92,9 @@ class DirectDimensionFrame(wx.Panel):
 
         # Create all the sizers
         self.dimension_size = p.DimensionSize(self.app, self.nmr_data, self, 0)
+        self.truncation = p.Truncation(
+            self.app, self.nmr_data, self, self.info_buttons
+        )
         self.solvent_suppression = p.SolventSuppression(
             self.app, self.nmr_data, self, self.info_buttons
         )
@@ -162,6 +165,7 @@ class DirectDimensionFrame(wx.Panel):
         self.sizer_1.AddSpacer(10)
 
         self.dimension_size.create_dimension_size_sizer(self)
+        self.truncation.create_truncation_sizer(self)
         self.solvent_suppression.create_solvent_suppression_sizer(self)
         self.linear_prediction.create_linear_prediction_sizer(self)
         self.apodization.create_apodization_sizer(self)
@@ -215,6 +219,9 @@ class IndirectDimensionFrame(wx.Panel):
         # Add all the processing modules
 
         self.dimension_size = p.DimensionSize(self.app, self.nmr_data, self, 1)
+        self.truncation = p.Truncation(
+            self.app, self.nmr_data, self, self.info_buttons
+        )
         self.linear_prediction = p.NonUniformSampling(
             self.app, self.nmr_data, self, self.info_buttons
         )
@@ -285,6 +292,7 @@ class IndirectDimensionFrame(wx.Panel):
         self.sizer_1.AddSpacer(10)
 
         self.dimension_size.create_dimension_size_sizer(self)
+        self.truncation.create_truncation_sizer(self)
         self.linear_prediction.create_linear_prediction_sizer_indirect(self)
         self.apodization.create_apodization_sizer(self)
         self.zero_filling.create_zero_filling_sizer(self)

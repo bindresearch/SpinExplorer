@@ -193,6 +193,9 @@ class Populate_dictionary_global:
         This function will add all the current processing parameters for the
         dimension to the dictionary.
         """
+        dimension_dictionary = self.add_truncation_parameters(
+            dimension_dictionary, dimension, dimension_tab
+        )
         if dimension == 0:
             dimension_dictionary = self.add_solvent_suppression_parameters(
                 dimension_dictionary, dimension, dimension_tab
@@ -251,6 +254,24 @@ class Populate_dictionary_global:
             lowpass_index,
             lowpass_choices[lowpass_index],
         ]
+
+        return dimension_dictionary
+
+    def add_truncation_parameters(
+        self, dimension_dictionary: Dict[str, Any], dimension: int, dimension_tab
+    ) -> Dict[str, Any]:
+        """
+        Adding the current truncation parameters in SpinProcess
+        to the dictionary for dimension.
+        """
+
+        dimension_dictionary["Truncation"] = {}
+        dimension_dictionary["Truncation"][
+            "Truncation flag"
+        ] = dimension_tab.truncation.truncation_checkbox_value
+        dimension_dictionary["Truncation"][
+            "Number of points"
+        ] = dimension_tab.truncation.find_truncation_points()
 
         return dimension_dictionary
 

@@ -188,7 +188,7 @@ class InputParameters:
         leaves that section at its default values instead of stopping the
         remaining sections from being loaded.
         """
-        sections = []
+        sections = [("Truncation", self.load_truncation)]
         if dimension == 0:
             # Load the solvent suppression values
             sections.append(("Solvent suppression", self.load_solvent_suppression))
@@ -212,6 +212,24 @@ class InputParameters:
                 )
 
         self.notebook.Refresh()
+
+    def load_truncation(self, dimension, dimension_tab, dictionary):
+        """
+        Reading in the saved parameters associated with truncating the
+        number of points which are processed.
+        """
+        try:
+            truncation_flag = bool(dictionary["Truncation"]["Truncation flag"])
+            points = int(dictionary["Truncation"]["Number of points"])
+        except (KeyError, TypeError, ValueError):
+            # Saved by a version of SpinExplorer without this option
+            return
+
+        dimension_tab.truncation.truncation_checkbox_value = truncation_flag
+        dimension_tab.truncation.truncation_points = points
+
+        dimension_tab.truncation.truncation_checkbox.SetValue(truncation_flag)
+        dimension_tab.truncation.truncation_points_textcontrol.SetValue(str(points))
 
     def load_solvent_suppression(self, dimension, dimension_tab, dictionary):
         """
