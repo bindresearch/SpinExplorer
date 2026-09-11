@@ -72,35 +72,31 @@ class InteractivePhasingFrame(wx.Frame):
         self.total_P0 = 0.0
         self.total_P1 = 0.0
 
-        try:
-            if len(self.nmr_spectrum[0]) > 1:
-                try:
-                    len(self.nmr_spectrum[0][0])
-                    self.nmr_spectrum = self.nmr_spectrum[0][0]
-                except:
-                    max_value = 0
-                    max_index = 0
-                    for index, slice in enumerate(self.nmr_spectrum):
-                        # Find the index of around water chemical shifts and remove these values from the slice
-                        indexes = []
-                        for i, ppm in enumerate(ppms):
-                            if(ppm>4.6 and ppm<5.0):
-                                indexes.append(i)
-                        
-                        slice = np.delete(slice, indexes)
-
-
-                        if np.max(np.abs(slice)) > max_value:
-                            max_value = np.max(np.abs(slice))
-                            max_index = index
-                    self.nmr_spectrum = self.nmr_spectrum[max_index]
-
-        except:
-            pass
-
         self.nmr_d = nmr_d
 
+        # Keep all of the FIDs so that the user can choose which one to phase
+        # on. 2D and 3D data are flattened into a list of FIDs in the order
+        # they were recorded and the first one is shown to begin with.
+        self.fids = self.find_fids(self.nmr_spectrum)
+
+        self.fid_index = 0
+        self.nmr_spectrum = self.fids[self.fid_index]
+
         self.create_canvas()
+
+    def find_fids(self, spectrum):
+        """
+        The FIDs which can be phased, as a list of 1D slices in the order that
+        they were recorded. The indirect dimensions are held as interleaved
+        real and imaginary points and both are listed, so a 2D with 16 complex
+        indirect points gives 32 FIDs.
+        """
+        spectrum = np.asarray(spectrum)
+
+        if spectrum.ndim == 1:
+            return spectrum.reshape(1, -1)
+
+        return spectrum.reshape(-1, spectrum.shape[-1])
 
     def create_canvas(self):
 
@@ -216,6 +212,28 @@ class InteractivePhasingFrame(wx.Frame):
         self.zoom_sizer.AddSpacer(5)
         self.zoom_sizer.Add(self.intensity_slider)
 
+        # Create a sizer for choosing which FID to phase on
+        self.fid_label = wx.StaticBox(self, -1, "FID Number:")
+        self.fid_number_sizer = wx.StaticBoxSizer(self.fid_label, wx.HORIZONTAL)
+        self.fid_number = wx.SpinCtrl(
+            self.fid_label,
+            -1,
+            value="1",
+            min=1,
+            max=len(self.fids),
+            initial=1,
+            size=(80, -1),
+        )
+        self.fid_number.Bind(wx.EVT_SPINCTRL, self.OnFIDNumber)
+        self.fid_number_total = wx.StaticText(
+            self.fid_label, label="of {}".format(len(self.fids))
+        )
+        self.fid_number_sizer.AddSpacer(10)
+        self.fid_number_sizer.Add(self.fid_number, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.fid_number_sizer.AddSpacer(10)
+        self.fid_number_sizer.Add(self.fid_number_total, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.fid_number_sizer.AddSpacer(10)
+
         # Have a save and close button
         self.save_button = wx.Button(self, label="Save and Close")
         self.save_button.Bind(wx.EVT_BUTTON, self.OnSavePhasing)
@@ -226,6 +244,10 @@ class InteractivePhasingFrame(wx.Frame):
         self.sizer2.Add(self.phasing_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
         self.sizer2.AddSpacer(20)
         self.sizer2.Add(self.zoom_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
+        if len(self.fids) > 1:
+            # 1D data only has the one FID to phase on
+            self.sizer2.AddSpacer(20)
+            self.sizer2.Add(self.fid_number_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
         self.sizer1.Add(self.sizer2, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.sizer1.AddSpacer(20)
         self.sizer1.Add(self.save_button, 0, wx.ALIGN_CENTER_HORIZONTAL)
@@ -242,6 +264,17 @@ class InteractivePhasingFrame(wx.Frame):
         self.main_frame.phase_correction_p0_textcontrol.SetValue(str(self.total_P0))
         self.main_frame.phase_correction_p1_textcontrol.SetValue(str(self.total_P1))
         self.Close()
+
+    def OnFIDNumber(self, event):
+        """
+        Change the FID which is being phased. The current phase correction is
+        kept so that it can be checked against several FIDs.
+        """
+        self.fid_index = int(self.fid_number.GetValue()) - 1
+        self.nmr_spectrum = self.fids[self.fid_index]
+
+        self.phase1D()
+        self.OnIntensityScroll1D(event)
 
     def OnIntensityScroll1D(self, event):
         # Function to change the y axis limits

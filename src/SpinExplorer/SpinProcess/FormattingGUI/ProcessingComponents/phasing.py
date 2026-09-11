@@ -250,11 +250,8 @@ class PhasingDirect:
             )
         dic, data = ng.pipe_proc.di(dic, data)
 
-        if len(self.parent.parent.tabs) == 2:
-            dic, data = ng.pipe_proc.tp(dic, data)
-            dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-            dic, data = ng.pipe_proc.tp(dic, data)
-
+        # The indirect dimensions are left as recorded so that the phasing is
+        # performed on the FIDs themselves, both real and imaginary
 
         self.nmr_d, self.nmr_spectrum = dic, data
 
