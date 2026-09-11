@@ -174,9 +174,6 @@ class Convert_nmrglue:
                 else:
                     p0_only=True
                 dic, data = self.remove_digital_filter_fid(dic, data,p0_only)
-
-            print('hello there...')
-            print(u)
             C.from_bruker(dic, data, u)
         else:
             C.from_varian(dic, data, u)
