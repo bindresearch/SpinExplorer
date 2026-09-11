@@ -69,6 +69,16 @@ class NotebookProcess(wx.Notebook):
 
         self.nmr_data = nmr_data
 
+        # In developer mode any processing can be used whatever the data was
+        # converted with. It can also be turned on before starting SpinExplorer
+        # by setting the SPINEXPLORER_DEVELOPER environment variable
+        self.developer_mode = os.environ.get("SPINEXPLORER_DEVELOPER", "") not in [
+            "",
+            "0",
+            "false",
+            "False",
+        ]
+
         # Information buttons class
         info_buttons = InfoButtons(self)
 
@@ -171,9 +181,159 @@ class NotebookProcess(wx.Notebook):
         self.processing_button_glue.Bind(wx.EVT_BUTTON, self.on_process_nmrglue)
         self.button_sizer.Add(self.processing_button_glue, 0, wx.ALIGN_CENTER_VERTICAL)
 
+        self.button_sizer.AddSpacer(10)
+        self.developer_mode_checkbox = wx.CheckBox(parent, -1, "Developer mode")
+        self.developer_mode_checkbox.SetValue(self.developer_mode)
+        self.developer_mode_checkbox.SetToolTip(
+            "Allow any processing and reconstruction whatever the data was "
+            "converted with. Processing which does not match the conversion "
+            "can fail or give incorrect spectra."
+        )
+        self.developer_mode_checkbox.Bind(wx.EVT_CHECKBOX, self.on_developer_mode)
+        self.button_sizer.Add(
+            self.developer_mode_checkbox, 0, wx.ALIGN_CENTER_VERTICAL
+        )
+
+        # Only the processing which matches the conversion can be used
+        self.update_processing_buttons()
+
         self.parent.main_sizer.AddSpacer(20)
         self.parent.main_sizer.Add(self.button_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.parent.main_sizer.AddSpacer(10)
+
+    def find_conversion_method(self) -> str:
+        """
+        Whether the fid being processed was converted using nmrglue or using
+        nmrPipe. The nmrglue conversion records this in the comment of the
+        NMRPipe header, so anything else has come from the nmrPipe conversion.
+        """
+        try:
+            comment = str(self.nmr_data.dic["FDCOMMENT"])
+        except (KeyError, AttributeError, TypeError):
+            return "nmrPipe"
+
+        if "nmrglue" in comment:
+            return "nmrglue"
+
+        return "nmrPipe"
+
+    def find_developer_mode(self) -> bool:
+        """
+        Whether developer mode is on, where any processing can be used whatever
+        the data was converted with.
+        """
+        return getattr(self, "developer_mode", False)
+
+    def on_developer_mode(self, event):
+        """
+        The user has turned developer mode on or off. The processing which is
+        available is updated to match.
+        """
+        self.developer_mode = self.developer_mode_checkbox.GetValue()
+
+        self.update_processing_buttons()
+        self.update_nus_options()
+
+    def update_nus_options(self):
+        """
+        Update the NUS reconstruction options of every indirect dimension, as
+        SMILE reconstruction is part of nmrPipe and so cannot be used with data
+        converted using nmrglue.
+        """
+        for tab in self.tabs:
+            linear_prediction = getattr(tab, "linear_prediction", None)
+            update_smile = getattr(linear_prediction, "update_smile_option", None)
+            if update_smile != None:
+                update_smile()
+
+    def find_smile_allowed(self) -> bool:
+        """
+        SMILE NUS reconstruction is part of nmrPipe, so it can only be used
+        with data which was converted using nmrPipe.
+        """
+        if self.find_developer_mode() == True:
+            return True
+
+        return self.find_conversion_method() == "nmrPipe"
+
+    def find_smile_message(self) -> str:
+        """
+        The message telling the user why SMILE reconstruction is not possible
+        for this data.
+        """
+        return (
+            "SMILE NUS reconstruction is part of nmrPipe, and this data was "
+            "converted using nmrglue. To use SMILE, convert the data again "
+            "using nmrPipe in SpinConverter. SpinExplorer IST NUS "
+            "reconstruction can be used with this data."
+        )
+
+    def find_conversion_message(self, method: str) -> str:
+        """
+        The message telling the user why processing using a method is not
+        possible for this data.
+        """
+        return (
+            "This data was converted using {0}, so it can only be processed "
+            "using {0}. To process it using {1}, convert the data again using "
+            "{1} in SpinConverter.".format(self.find_conversion_method(), method)
+        )
+
+    def update_processing_buttons(self):
+        """
+        Data converted using nmrPipe has to be processed using nmrPipe and
+        data converted using nmrglue has to be processed using nmrglue, so
+        the button for the processing which does not match the conversion is
+        greyed out.
+        """
+        conversion = self.find_conversion_method()
+
+        buttons = [
+            (self.processing_button_pipe, "nmrPipe"),
+            (self.processing_button_glue, "nmrglue"),
+        ]
+
+        for button, method in buttons:
+            if method == conversion:
+                button.Enable(True)
+                button.SetToolTip(
+                    "Process the data using {}, which it was converted with.".format(
+                        method
+                    )
+                )
+            elif self.find_developer_mode() == True:
+                button.Enable(True)
+                button.SetToolTip(
+                    "Developer mode: process the data using {}, which it was "
+                    "not converted with.".format(method)
+                )
+            else:
+                button.Enable(False)
+                button.SetToolTip(self.find_conversion_message(method))
+
+    def check_conversion_method(self, method: str) -> bool:
+        """
+        Check that the processing which has been asked for matches the way the
+        data was converted, telling the user when it does not.
+        """
+        if self.find_conversion_method() == method:
+            return True
+
+        if self.find_developer_mode() == True:
+            return True
+
+        dlg = wx.MessageDialog(
+            self,
+            self.find_conversion_message(method),
+            "Processing not possible",
+            wx.OK | wx.ICON_INFORMATION,
+        )
+        self.Raise()
+        self.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
+        return False
 
     def change_to_path(self):
         if self.parent.path != "":
@@ -233,6 +393,9 @@ class NotebookProcess(wx.Notebook):
         or potential long reconstruction times if direct dimension
         data extraction is not selected.
         """
+        if self.check_conversion_method("nmrPipe") == False:
+            return
+
         try:
             if (self.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==2):
                 # SMILE processing is selected, asking the user to confirm SMILE is installed as part of nmrPipe
@@ -284,6 +447,9 @@ class NotebookProcess(wx.Notebook):
         NUS reconstruction using FID-Net will be added as a possibility
         to remove the requirement of SMILE from nmrPipe.
         """
+        if self.check_conversion_method("nmrglue") == False:
+            return
+
         try:
             if (self.tabDim2.linear_prediction.linear_prediction_radio_box_indirect.GetSelection()==2):
                 # SMILE processing is selected, asking the user to confirm SMILE is installed as part of nmrPipe

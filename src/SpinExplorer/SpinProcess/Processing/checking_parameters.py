@@ -44,62 +44,90 @@ class CheckingParameters:
         # self.check_parameter_validity()
 
 
+    def find_conversion_method(self, nmr_data) -> str:
+        """
+        Whether the fid file was made using the nmrglue conversion or the
+        nmrPipe conversion. The nmrglue conversion records this in the comment
+        of the NMRPipe header.
+        """
+        try:
+            comment = str(nmr_data.dic["FDCOMMENT"])
+        except (KeyError, AttributeError, TypeError):
+            return "nmrPipe"
+
+        if "nmrglue" in comment:
+            return "nmrglue"
+
+        return "nmrPipe"
+
+    def find_developer_mode(self) -> bool:
+        """
+        Whether developer mode is on, where any processing can be used whatever
+        the data was converted with.
+        """
+        find_developer_mode = getattr(self.notebook, "find_developer_mode", None)
+        if find_developer_mode == None:
+            return False
+
+        return find_developer_mode()
+
+    def conversion_message(self, nmr_data, method: str):
+        """
+        Tell the user that the data cannot be processed using this method as
+        it was converted using the other one.
+        """
+        dlg = wx.MessageDialog(
+            None,
+            "This data was converted using {0}, so it can only be processed "
+            "using {0}. To process it using {1}, convert the data again using "
+            "{1} in SpinConverter.".format(
+                self.find_conversion_method(nmr_data), method
+            ),
+            "Processing not possible",
+            wx.OK | wx.ICON_INFORMATION,
+        )
+        self.notebook.Raise()
+        self.notebook.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+
     def check_nmrglue_fid(self, nmr_data):
         """
-        This function will check to make sure that if the fid file was made
-        using nmrglue conversion. If the user has pressed nmrglue processing 
-        with an nmrpipe converted fid it will give a warning.
+        This function will check to make sure that the fid file was made using
+        the nmrglue conversion. Data converted using nmrPipe cannot be
+        processed using nmrglue, so the user is told and the processing stops.
         """
 
         # Read the fid
-        if(nmr_data.dic['FDCOMMENT'] == 'nmrglue'):
+        if self.find_conversion_method(nmr_data) == "nmrglue":
             return True
-        else:
-            # Inform the user that an fid made using nmrglue conversion is not detected and the user is trying to use nmrglue processing
-            dlg = wx.MessageDialog(
-                    None,
-                    "The .fid file was detected to have not been converted using nmrglue. It is advisable to re-convert the data using nmrglue (SpinConverter) and try again. Would you like to continue processing?",
-                    "Continue processing",
-                    wx.YES_NO | wx.ICON_INFORMATION,
-                )
-            self.notebook.Raise()
-            self.notebook.SetFocus()
-            result = dlg.ShowModal()
-            if result == wx.ID_YES:
-                dlg.Destroy()
-                return True
-            else:
-                dlg.Destroy()
-                return False
-            
+
+        if self.find_developer_mode() == True:
+            return True
+
+        self.conversion_message(nmr_data, "nmrglue")
+
+        return False
+
+
 
     def check_nmrpipe_fid(self, nmr_data):
         """
-        This function will check to make sure that if the fid file was made
-        using nmrpipe conversion, if the user has pressed nmrpipe processing 
-        with an nmrglue converted fid it will give a warning.
+        This function will check to make sure that the fid file was made using
+        the nmrPipe conversion. Data converted using nmrglue cannot be
+        processed using nmrPipe, so the user is told and the processing stops.
         """
 
         # Read the fid
-        if(nmr_data.dic['FDCOMMENT'] != 'nmrglue'):
+        if self.find_conversion_method(nmr_data) == "nmrPipe":
             return True
-        else:
-            # Inform the user that an fid made using nmrglue conversion is not detected and the user is trying to use nmrglue processing
-            dlg = wx.MessageDialog(
-                    None,
-                    "The .fid file was detected to have not been converted using nmrpipe. It is advisable to re-convert the data using nmrpipe (SpinConverter) and try again. Would you like to continue processing?",
-                    "Continue processing",
-                    wx.YES_NO | wx.ICON_INFORMATION,
-                )
-            self.notebook.Raise()
-            self.notebook.SetFocus()
-            result = dlg.ShowModal()
-            if result == wx.ID_YES:
-                dlg.Destroy()
-                return True
-            else:
-                dlg.Destroy()
-                return False
+
+        if self.find_developer_mode() == True:
+            return True
+
+        self.conversion_message(nmr_data, "nmrPipe")
+
+        return False
 
 
 

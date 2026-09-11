@@ -101,6 +101,77 @@ class NonUniformSampling:
         except:
             return False
 
+    def find_notebook(self):
+        """
+        The notebook holding the processing tabs, which knows how the data was
+        converted and whether developer mode is on.
+        """
+        try:
+            return self.parent.parent
+        except AttributeError:
+            return None
+
+    def find_smile_allowed(self) -> bool:
+        """
+        SMILE NUS reconstruction is part of nmrPipe, so it can only be used
+        with data which was converted using nmrPipe. It is always allowed in
+        developer mode.
+        """
+        notebook = self.find_notebook()
+        find_smile_allowed = getattr(notebook, "find_smile_allowed", None)
+        if find_smile_allowed == None:
+            return True
+
+        return find_smile_allowed()
+
+    def show_smile_message(self):
+        """
+        Tell the user that SMILE reconstruction cannot be used with this data.
+        This is only shown once, as every indirect dimension holds the same
+        reconstruction options.
+        """
+        notebook = self.find_notebook()
+        if notebook == None:
+            return
+
+        if getattr(notebook, "smile_message_shown", False) == True:
+            return
+
+        notebook.smile_message_shown = True
+
+        dlg = wx.MessageDialog(
+            None,
+            notebook.find_smile_message(),
+            "Reconstruction not possible",
+            wx.OK | wx.ICON_INFORMATION,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def update_smile_option(self):
+        """
+        Grey out SMILE NUS reconstruction when it cannot be used with this
+        data, and offer it again when it can (developer mode being turned on).
+        """
+        radio_box = getattr(self, "linear_prediction_radio_box_indirect", None)
+        if radio_box == None:
+            return
+
+        allowed = self.find_smile_allowed()
+
+        try:
+            radio_box.EnableItem(2, allowed)
+            if allowed == False:
+                radio_box.SetToolTip(self.find_notebook().find_smile_message())
+            else:
+                radio_box.UnsetToolTip()
+            if allowed == False and radio_box.GetSelection() == 2:
+                radio_box.SetSelection(0)
+                self.on_linear_prediction_radio_box_indirect(wx.EVT_RADIOBOX)
+        except (RuntimeError, AttributeError):
+            # The radio box is no longer shown (the interface is being rebuilt)
+            pass
+
     def create_linear_prediction_sizer_indirect(self, parent):
         """
         Creating a sizer for the linear prediction options with a radio box to
@@ -129,9 +200,17 @@ class NonUniformSampling:
         self.linear_prediction_radio_box_indirect.Bind(
             wx.EVT_RADIOBOX, self.on_linear_prediction_radio_box_indirect
         )
+
+        # SMILE reconstruction is part of nmrPipe, so it is greyed out for data
+        # which was converted using nmrglue
+        if self.find_smile_allowed() == False:
+            if self.linear_prediction_radio_box_indirect_selection == 2:
+                self.linear_prediction_radio_box_indirect_selection = 0
+
         self.linear_prediction_radio_box_indirect.SetSelection(
             self.linear_prediction_radio_box_indirect_selection
         )
+        self.update_smile_option()
 
         self.linear_prediction_sizer_indirect.Add(
             self.linear_prediction_radio_box_indirect, 0, wx.ALIGN_CENTER_VERTICAL
@@ -989,6 +1068,16 @@ class NonUniformSampling:
         Get the selection from the radio box and update the
         linear prediction options.
         """
+        if (
+            self.linear_prediction_radio_box_indirect.GetSelection() == 2
+            and self.find_smile_allowed() == False
+        ):
+            # SMILE reconstruction cannot be used with this data, so no
+            # reconstruction is selected instead. This happens when a
+            # parameters.json file saved for nmrPipe converted data is read
+            self.show_smile_message()
+            self.linear_prediction_radio_box_indirect.SetSelection(0)
+
         self.linear_prediction_radio_box_indirect_selection = (
             self.linear_prediction_radio_box_indirect.GetSelection()
         )
