@@ -131,7 +131,9 @@ class SpinExplorer(wx.Frame):
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 840
-        self.height = 800
+        # Tall enough to show the whole window, without making it taller than
+        # the screen (and never smaller than it used to be)
+        self.height = max(800, min(850, self.monitorHeight - 80))
 
 
         # Setup the dock/task bar with the logo
@@ -166,6 +168,9 @@ class SpinExplorer(wx.Frame):
         
         bmp = SpinExplorerHeader.GetBitmap()
         img = bmp.ConvertToImage()
+        img = img.Scale(
+            int(img.GetWidth() * 0.8), int(img.GetHeight() * 0.8), wx.IMAGE_QUALITY_HIGH
+        )
         bmp = wx.Bitmap(img)
         bmp.SetScaleFactor(2)
         top = wx.StaticBitmap(self, -1, bitmap=bmp)
@@ -244,10 +249,10 @@ class SpinExplorer(wx.Frame):
         
         self.rightbox.Add(self.text3)
 
-        self.title_text = wx.TextCtrl(self.load_spectra_box_label, id=-1, value="", style=wx.TE_MULTILINE | wx.CB_READONLY, size=(300,25))
+        self.title_text = wx.TextCtrl(self.load_spectra_box_label, id=-1, value="", style=wx.TE_MULTILINE | wx.TE_READONLY, size=(300,75))
 
         self.rightbox.AddSpacer(5)
-        self.rightbox.Add(self.title_text, wx.ALIGN_CENTER_VERTICAL)
+        self.rightbox.Add(self.title_text, 0, wx.EXPAND)
 
 
         self.load_spectra_box.Add(self.rightbox, 1, wx.ALIGN_CENTER_VERTICAL)
@@ -330,6 +335,9 @@ class SpinExplorer(wx.Frame):
 
         bmp = Logo.GetBitmap()
         img = bmp.ConvertToImage()
+        img = img.Scale(
+            int(img.GetWidth() * 0.8), int(img.GetHeight() * 0.8), wx.IMAGE_QUALITY_HIGH
+        )
         bmp = wx.Bitmap(img)
         bmp.SetScaleFactor(2)
         logo = wx.StaticBitmap(self, -1, bitmap=bmp)
