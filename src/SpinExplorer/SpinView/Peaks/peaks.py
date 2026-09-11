@@ -15,7 +15,393 @@ from SpinExplorer.SpinView.Peaks.fit_peaks import fit_peaks
 from SpinExplorer.SpinView.Peaks.fit_peaks import fit_peaks_2D_window
 from SpinExplorer.SpinView.Peaks.analysis import analysis_frame
 
-class PeakListWindow2D(wx.Frame):
+# Shown in front of the name of the peak mode which is selected
+PEAK_MODE_MARK = "\u25cf "
+
+
+class PeakModeButtons:
+    """
+    Shared behaviour for the buttons which put the spectrum into a peak
+    picking mode (adding, selecting and moving peaks).
+
+    Only one of these modes can be used at a time, and none of them can be
+    used while the pan or zoom tools are on, as those take the mouse clicks
+    for themselves. Selecting a mode therefore turns the navigation tools
+    off, and selecting pan or zoom turns the peak modes off.
+    """
+
+    # The buttons which turn on a peak mode, with the value which says
+    # whether that mode is currently active. A window only has some of these.
+    peak_mode_buttons = [
+        ("add_peaks_button", "active_add", "Adding peaks"),
+        ("select_peak_button", "active_select_peak", "Selecting a peak"),
+        ("select_peaks_button", "active_select_peaks", "Selecting a peak group"),
+        ("move_peaks_button", "active_move", "Moving peaks"),
+        ("move_peaks_bore_button", "active_movez", "Moving peaks in z"),
+    ]
+
+    def find_peak_mode_buttons(self):
+        """
+        The peak mode buttons which this window has, as (button, value name,
+        description).
+        """
+        found = []
+        for button_name, flag_name, description in self.peak_mode_buttons:
+            button = getattr(self, button_name, None)
+            if button == None or hasattr(self, flag_name) == False:
+                continue
+            found.append((button, flag_name, description))
+
+        return found
+
+    def find_active_peak_mode(self):
+        """
+        The description of the peak mode which is currently on, or None when
+        the spectrum is not in a peak mode.
+        """
+        for button, flag_name, description in self.find_peak_mode_buttons():
+            if getattr(self, flag_name) == True:
+                return description
+
+        return None
+
+    def find_peak_mode_label(self, button):
+        """
+        The name of a mode button without its mark. The button is also made
+        wide enough to hold its name with the mark in front of it, so that
+        marking it does not push the name onto a second line.
+        """
+        if button in self.peak_mode_labels:
+            return self.peak_mode_labels[button]
+
+        label = button.GetLabel()
+        self.peak_mode_labels[button] = label
+
+        button.SetLabel(PEAK_MODE_MARK + label)
+        button.SetMinSize(button.GetBestSize())
+        button.SetLabel(label)
+
+        return label
+
+    def update_mode_buttons(self):
+        """
+        Show which peak mode is selected. The button of the active mode is
+        pressed in and marked, so that it is obvious what clicking on the
+        spectrum will do.
+        """
+        changed = False
+        for button, flag_name, description in self.find_peak_mode_buttons():
+            active = getattr(self, flag_name) == True
+
+            try:
+                label = self.find_peak_mode_label(button)
+                button.SetValue(active)
+                button.SetLabel(PEAK_MODE_MARK + label if active else label)
+                changed = True
+            except RuntimeError:
+                # The button has been destroyed
+                continue
+
+        if changed == True:
+            try:
+                self.Layout()
+            except RuntimeError:
+                pass
+
+    def find_dataset_choices(self):
+        """
+        The spectra which a peaklist can belong to, named as they are in the
+        spectrum window.
+        """
+        try:
+            choices = list(self.main_frame.plot_combobox.GetItems())
+        except (RuntimeError, AttributeError):
+            choices = []
+
+        if len(choices) == 0:
+            choices = ["Main Plot"]
+
+        return choices
+
+    def find_peaklist_dataset(self, peaklist=None) -> int:
+        """
+        The spectrum which a peaklist belongs to, as an index into the list of
+        spectra. A peaklist belongs to the spectrum which was selected when it
+        was loaded until it is given a different one.
+        """
+        if peaklist == None:
+            peaklist = self.current_peaklist_box.GetValue()
+
+        index = self.peaklist_datasets.get(peaklist)
+
+        if index == None or index >= len(self.find_dataset_choices()):
+            return int(getattr(self.main_frame, "active_plot_index", 0))
+
+        return int(index)
+
+    def set_peaklist_dataset(self, peaklist, index):
+        """
+        Record which spectrum a peaklist belongs to.
+        """
+        if peaklist == "" or peaklist == None:
+            return
+
+        self.peaklist_datasets[peaklist] = int(index)
+
+    def update_dataset_box(self):
+        """
+        Show which spectrum the selected peaklist belongs to.
+        """
+        dataset_box = getattr(self, "dataset_box", None)
+        if dataset_box == None:
+            return
+
+        try:
+            choices = self.find_dataset_choices()
+            if list(dataset_box.GetItems()) != choices:
+                dataset_box.SetItems(choices)
+
+            peaklist = self.current_peaklist_box.GetValue()
+            if peaklist == "":
+                dataset_box.SetSelection(wx.NOT_FOUND)
+                dataset_box.Enable(False)
+                return
+
+            dataset_box.Enable(True)
+            dataset_box.SetSelection(self.find_peaklist_dataset(peaklist))
+        except (RuntimeError, AttributeError):
+            pass
+
+    def update_peaklist_intensities(self, peaklist=None) -> bool:
+        """
+        Read the intensity of every peak of a peaklist from the spectrum the
+        peaklist belongs to, returning whether the intensities were updated.
+        This is needed when a peaklist is given a different spectrum, as the
+        intensities it holds were read from the spectrum it belonged to before.
+        """
+        if peaklist == None:
+            peaklist = self.current_peaklist_box.GetValue()
+
+        if peaklist not in self.peak_list_dictionary:
+            return False
+
+        # Only the 2D window reads intensities from the spectrum
+        find_new_intensity = getattr(self, "find_new_intensity", None)
+        if find_new_intensity == None:
+            return False
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        intensities = []
+
+        try:
+            for i, peak_name in enumerate(dictionary["peak_name"]):
+                intensities.append(
+                    find_new_intensity(
+                        dictionary["shift1"][i], dictionary["shift2"][i], peaklist
+                    )
+                )
+        except (KeyError, IndexError, AttributeError, TypeError):
+            # The spectrum cannot be read, the intensities are left as they were
+            return False
+
+        dictionary["intensity"] = intensities
+
+        return True
+
+    def OnDatasetSelection(self, event):
+        """
+        The user has chosen which spectrum the selected peaklist belongs to.
+        The intensities of its peaks are read again from the new spectrum.
+        """
+        peaklist = self.current_peaklist_box.GetValue()
+        selection = self.dataset_box.GetSelection()
+
+        if selection < 0 or selection == self.find_peaklist_dataset(peaklist):
+            # The peaklist already belongs to this spectrum
+            return
+
+        self.set_peaklist_dataset(peaklist, selection)
+
+        if self.update_peaklist_intensities(peaklist) == True:
+            self.AddToTable()
+
+    def find_current_peaklist(self):
+        """
+        The peaklist which is currently selected, or None if the selection
+        does not name one of the peaklists which are loaded.
+        """
+        try:
+            peaklist = self.current_peaklist_box.GetValue()
+        except (RuntimeError, AttributeError):
+            return None
+
+        if peaklist in self.peak_list_dictionary:
+            return peaklist
+
+        return None
+
+    def no_peaklist_message(self, title="Peak lists"):
+        """
+        Tell the user that the selected peaklist cannot be used.
+        """
+        dlg = wx.MessageDialog(
+            None,
+            "No peaklist is selected. Please choose one of the loaded peaklists and try again.",
+            title,
+            wx.OK | wx.ICON_WARNING,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def find_navigation_toolbar(self):
+        """
+        The pan/zoom toolbar of the spectrum this peak window belongs to.
+        """
+        return getattr(getattr(self, "main_frame", None), "toolbar", None)
+
+    def find_navigation_mode(self) -> str:
+        """
+        Whether the spectrum is currently in pan or zoom mode.
+        """
+        toolbar = self.find_navigation_toolbar()
+        if toolbar == None:
+            return ""
+
+        return str(getattr(toolbar, "mode", "")).lower()
+
+    def turn_off_navigation(self):
+        """
+        Turn off the pan and zoom tools so that clicking on the spectrum
+        picks peaks rather than moving the spectrum.
+        """
+        toolbar = self.find_navigation_toolbar()
+        if toolbar == None:
+            return
+
+        mode = self.find_navigation_mode()
+
+        # The tools are turned off by selecting them again, which is noticed
+        # by the watcher below, so it is told to ignore this one
+        self.changing_peak_mode = True
+        try:
+            if "pan" in mode:
+                toolbar.pan()
+            elif "zoom" in mode:
+                toolbar.zoom()
+        except Exception:
+            pass
+        finally:
+            self.changing_peak_mode = False
+
+    def on_navigation_selected(self):
+        """
+        Pan or zoom has been selected, so the peak modes are turned off.
+        """
+        if getattr(self, "changing_peak_mode", False) == True:
+            return
+
+        if self.find_navigation_mode() in ["", "none"]:
+            # The tool has been turned off rather than selected
+            return
+
+        if self.find_active_peak_mode() == None:
+            return
+
+        self.turn_off_togglebuttons()
+        self.update_mode_buttons()
+
+    def watch_navigation_toolbar(self):
+        """
+        Follow the pan and zoom tools so that selecting one of them turns off
+        any peak mode. The tools are followed by wrapping them, which covers
+        both their buttons and their keyboard shortcuts.
+        """
+        toolbar = self.find_navigation_toolbar()
+        if toolbar == None:
+            return
+
+        # The window the tools report to, so that a peak window which has been
+        # closed and opened again is the one which is told
+        toolbar.peak_modes_window = self
+
+        if getattr(toolbar, "peak_modes_watched", False) == True:
+            return
+
+        def watched(tool):
+            def use_tool(*args, **kwargs):
+                result = tool(*args, **kwargs)
+                window = getattr(toolbar, "peak_modes_window", None)
+                if window != None:
+                    try:
+                        window.on_navigation_selected()
+                    except RuntimeError:
+                        # The peak window has been closed
+                        toolbar.peak_modes_window = None
+                return result
+
+            return use_tool
+
+        toolbar.pan = watched(toolbar.pan)
+        toolbar.zoom = watched(toolbar.zoom)
+
+        # The buttons of the toolbar are connected to the functions above when
+        # the toolbar is made, so they are connected again here to make them
+        # use the followed versions rather than the originals
+        for name, tool in [("Pan", "pan"), ("Zoom", "zoom")]:
+            tool_id = getattr(toolbar, "wx_ids", {}).get(name)
+            if tool_id == None:
+                continue
+            toolbar.Bind(wx.EVT_TOOL, getattr(toolbar, tool), id=tool_id)
+
+        toolbar.peak_modes_watched = True
+
+    def follow_peak_modes(self):
+        """
+        Make the peak mode buttons turn the pan and zoom tools off, and keep
+        the buttons showing which mode is selected. This is done by wrapping
+        the functions the buttons and their shortcuts use, so that it applies
+        however the mode was changed.
+        """
+        self.peak_mode_labels = {}
+        self.changing_peak_mode = False
+
+        handlers = [
+            "OnAddPeaks",
+            "OnSelectPeak",
+            "OnSelectPeaks",
+            "OnMovePeaks",
+            "OnMovePeak",
+            "OnMovePeakBore",
+            "OnRemovePeaks",
+            "OnFindPeaks",
+        ]
+
+        for name in handlers:
+            handler = getattr(self, name, None)
+            if handler == None:
+                continue
+            setattr(self, name, self.with_peak_mode(handler))
+
+    def with_peak_mode(self, handler):
+        """
+        Turn the navigation tools off whenever a peak mode is turned on, and
+        show which mode is selected once the mode has changed.
+        """
+
+        def use_handler(event, *args, **kwargs):
+            result = handler(event, *args, **kwargs)
+
+            if self.find_active_peak_mode() != None:
+                self.turn_off_navigation()
+
+            self.update_mode_buttons()
+
+            return result
+
+        return use_handler
+
+
+class PeakListWindow2D(PeakModeButtons, wx.Frame):
     def __init__(self, title, parent):
         """
         This class contains all the information relating to loading in
@@ -33,7 +419,11 @@ class PeakListWindow2D(wx.Frame):
 
 
         self.set_initial_values()
+        self.follow_peak_modes()
         self.make_peaklist_window()
+        self.watch_navigation_toolbar()
+        self.update_mode_buttons()
+        self.update_dataset_box()
         self.Show()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -57,6 +447,9 @@ class PeakListWindow2D(wx.Frame):
         self.active_remove = False
         self.active_move = False
         self.active_find = False
+
+        # The spectrum each peaklist belongs to, by peaklist name
+        self.peaklist_datasets = {}
 
         self.rect = None
         self.start_point = None
@@ -96,10 +489,21 @@ class PeakListWindow2D(wx.Frame):
         self.peaklist_selection_text = wx.StaticText(self.row1_label, -1, "Selected Peaklist:")
 
         self.current_peaklist_box = wx.ComboBox(
-            self.row1_label, choices=self.peak_list_choices, size=(250, 20)
+            self.row1_label, choices=self.peak_list_choices, size=(250, 20),
+            style=wx.CB_READONLY
         )
         
         self.current_peaklist_box.Bind(wx.EVT_COMBOBOX, self.OnPeakListSelection)
+
+        self.remove_peaklist_button = wx.Button(self.row1_label, label="Remove Peaklist")
+        self.remove_peaklist_button.Bind(wx.EVT_BUTTON, self.OnRemovePeakList)
+
+        self.dataset_text = wx.StaticText(self.row1_label, -1, "Spectrum:")
+        self.dataset_box = wx.ComboBox(
+            self.row1_label, choices=self.find_dataset_choices(), size=(200, 20),
+            style=wx.CB_READONLY
+        )
+        self.dataset_box.Bind(wx.EVT_COMBOBOX, self.OnDatasetSelection)
 
 
 
@@ -143,6 +547,11 @@ class PeakListWindow2D(wx.Frame):
 
         self.hide_peaklist = wx.CheckBox(self.other_box_label, -1, 'Hide Peaklist')
         self.hide_peaklist.SetValue(False)
+
+        self.add_at_local_max_box = wx.CheckBox(
+            self.other_box_label, -1, 'Add peaks at local maximum'
+        )
+        self.add_at_local_max_box.SetValue(False)
         self.hide_peaklist.Bind(wx.EVT_CHECKBOX, self.OnHidePeaklist)
 
         self.undo_button = wx.Button(self.other_box_label, label='Undo (u)')
@@ -259,6 +668,12 @@ class PeakListWindow2D(wx.Frame):
         self.row1.Add(self.peaklist_selection_text)
         self.row1.AddSpacer(5)
         self.row1.Add(self.current_peaklist_box)
+        self.row1.AddSpacer(10)
+        self.row1.Add(self.remove_peaklist_button)
+        self.row1.AddSpacer(15)
+        self.row1.Add(self.dataset_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.dataset_box)
 
         self.row2_1 = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -299,6 +714,8 @@ class PeakListWindow2D(wx.Frame):
         self.other_sizer.Add(self.duplicate_peaklist_button)
         self.other_sizer.AddSpacer(10)
         self.other_sizer.Add(self.save_peaks_button)
+        self.other_sizer.AddSpacer(10)
+        self.other_sizer.Add(self.add_at_local_max_box)
 
         self.analysis_sizer_label = wx.StaticBox(
             self, -1, "Analysis options:"
@@ -306,9 +723,9 @@ class PeakListWindow2D(wx.Frame):
         self.analysis_sizer = wx.StaticBoxSizer(self.analysis_sizer_label, wx.HORIZONTAL)
 
         self.peaklist1_text = wx.StaticText(self.analysis_sizer_label, -1, label = 'Peaklist 1:')
-        self.select_peaklist1 = wx.ComboBox(self.analysis_sizer_label, choices=self.peak_list_choices, size=(250, 20))
+        self.select_peaklist1 = wx.ComboBox(self.analysis_sizer_label, choices=self.peak_list_choices, size=(250, 20), style=wx.CB_READONLY)
         self.peaklist2_text = wx.StaticText(self.analysis_sizer_label, -1, label = 'Peaklist 2:')
-        self.select_peaklist2 = wx.ComboBox(self.analysis_sizer_label, choices=self.peak_list_choices, size=(250, 20))
+        self.select_peaklist2 = wx.ComboBox(self.analysis_sizer_label, choices=self.peak_list_choices, size=(250, 20), style=wx.CB_READONLY)
 
         self.analyse_button = wx.Button(self.analysis_sizer_label, label="Plot CSPs + Intensities")
         self.analyse_button.Bind(wx.EVT_BUTTON, self.OnAnalyse)
@@ -708,18 +1125,39 @@ class PeakListWindow2D(wx.Frame):
         self.current_peaklist_box.SetItems(self.peak_list_choices)
         self.current_peaklist_box.SetSelection(len(self.peak_list_choices) - 1)
 
+        # The peaklist belongs to the spectrum which is currently selected
+        self.set_peaklist_dataset(
+            last_directories_path, getattr(self.main_frame, "active_plot_index", 0)
+        )
+        self.update_dataset_box()
+
         self.turn_off_togglebuttons()
 
         self.AddToTable()
 
         self.peaklist_paths.append(p)
 
-        self.select_peaklist1.SetItems(self.peak_list_choices)
-        self.select_peaklist2.SetItems(self.peak_list_choices)
-        self.select_peaklist1.SetSelection(0)
-        self.select_peaklist2.SetSelection(0)
+        self.update_comparison_boxes()
 
         self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
+
+    def update_comparison_boxes(self):
+        """
+        Show every loaded peaklist in the boxes used to compare two peaklists.
+        A box keeps the peaklist it is showing when that peaklist is still
+        loaded, so that loading another peaklist does not undo a comparison
+        which has been set up.
+        """
+        for box in [self.select_peaklist1, self.select_peaklist2]:
+            try:
+                peaklist = box.GetValue()
+                box.SetItems(self.peak_list_choices)
+                if peaklist in self.peak_list_choices:
+                    box.SetSelection(self.peak_list_choices.index(peaklist))
+                else:
+                    box.SetSelection(0)
+            except (RuntimeError, AttributeError):
+                pass
 
     def AddToTable(self):
         """
@@ -730,6 +1168,10 @@ class PeakListWindow2D(wx.Frame):
             self.grid.DeleteRows(0, row_count)
         peaklist = self.current_peaklist_box.GetValue()
         data = []
+
+        if peaklist not in self.peak_list_dictionary:
+            # No peaklist is loaded, the table is left empty
+            return
 
         def extract_number(s):
             match = re.match(r"(\d+)", s)
@@ -1061,7 +1503,63 @@ class PeakListWindow2D(wx.Frame):
         else:
             self.hide_peaklist.SetValue(False)
 
+        self.update_dataset_box()
 
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
+
+    def OnRemovePeakList(self, event):
+        """
+        Remove the selected peaklist from the peak window. The peaklist file
+        itself is left alone, it is only removed from this session.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            self.no_peaklist_message("Removing a peaklist")
+            return
+
+        dlg = wx.MessageDialog(
+            self,
+            "Remove the peaklist {} from this window? The peaklist file itself will not be deleted.".format(
+                peaklist
+            ),
+            "Removing a peaklist",
+            wx.YES_NO | wx.ICON_QUESTION,
+        )
+        result = dlg.ShowModal()
+        dlg.Destroy()
+        if result != wx.ID_YES:
+            return
+
+        self.turn_off_togglebuttons()
+
+        index = self.peak_list_choices.index(peaklist)
+
+        # Forget everything which was held for this peaklist
+        self.peak_list_dictionary.pop(peaklist, None)
+        self.peaklist_datasets.pop(peaklist, None)
+        self.names.pop(peaklist, None)
+        self.peak_list_choices.pop(index)
+        if peaklist in self.hidden_peaklists:
+            self.hidden_peaklists.remove(peaklist)
+        if index < len(self.peaklist_paths):
+            self.peaklist_paths.pop(index)
+
+        self.selected_peaklist = ""
+        self.selected_peakname = ""
+        self.selected_peak_indexes = []
+
+        if len(self.peak_list_choices) == 0:
+            self.peak_list_choices = [""]
+
+        for box in [self.current_peaklist_box, self.select_peaklist1, self.select_peaklist2]:
+            box.SetItems(self.peak_list_choices)
+            box.SetSelection(min(index, len(self.peak_list_choices) - 1))
+
+        if self.current_peaklist_box.GetValue() != "":
+            self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        self.update_dataset_box()
+        self.AddToTable()
         self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
 
     def turn_off_togglebuttons(self):
@@ -1071,6 +1569,7 @@ class PeakListWindow2D(wx.Frame):
             self.add_peaks_button.SetValue(False)
             self.main_frame.fig.canvas.mpl_disconnect(self.add_peak_connect)
         if self.active_move:
+            self.active_move = False
             self.move_peaks_button.SetValue(False)
             if self.active_select_peak:
                 self.main_frame.fig.canvas.mpl_disconnect(self.move_peak_connect)
@@ -1093,6 +1592,8 @@ class PeakListWindow2D(wx.Frame):
             self.main_frame.fig.canvas.mpl_disconnect(self.select_release)
             self.main_frame.fig.canvas.mpl_disconnect(self.select_motion)
             self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
+
+        self.update_mode_buttons()
 
     def OnAddPeaks(self, event):
         """
@@ -1208,7 +1709,10 @@ class PeakListWindow2D(wx.Frame):
             self.previous_peaklists.append(copy.deepcopy(self.peak_list_dictionary))
 
             # Current peaklist
-            current_peaklist = self.current_peaklist_box.GetValue()
+            current_peaklist = self.find_current_peaklist()
+            if current_peaklist == None:
+                self.no_peaklist_message("Adding Peaks")
+                return
 
             part = ""
             number = 1
@@ -1237,12 +1741,24 @@ class PeakListWindow2D(wx.Frame):
             else:
                 peakname = str(number) + part
 
+            intensity = None
+            if self.add_at_local_max_box.GetValue() == True:
+                # Put the peak on the nearest maximum of the spectrum rather
+                # than exactly where it was clicked
+                x, y, intensity = self.find_local_maximum(x, y, current_peaklist)
+
+            if intensity == None:
+                intensity = self.find_new_intensity(x, y, current_peaklist)
+
+            if self.check_duplicate_peak(x, y, current_peaklist) == False:
+                # The user has chosen not to have two peaks on top of one
+                # another, so the peaklist is left as it was
+                self.previous_peaklists.pop()
+                return
+
             self.peak_list_dictionary[current_peaklist]["peak_name"].append(peakname)
             self.peak_list_dictionary[current_peaklist]["shift1"].append(x)
             self.peak_list_dictionary[current_peaklist]["shift2"].append(y)
-
-            intensity = self.find_new_intensity(x,y)
-
             self.peak_list_dictionary[current_peaklist]["intensity"].append(intensity)
 
             self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
@@ -1325,9 +1841,10 @@ class PeakListWindow2D(wx.Frame):
             dlg.Destroy()
             return
 
-        # Find the index of the currently selected peaklist
-        peaklist_index = self.current_peaklist_box.GetSelection()
-        points = self.main_frame.points[peaklist_index]
+        # Find the markers drawn for the currently selected peaklist
+        points = self.find_peak_markers()
+        if points == None:
+            return
 
         cont, ind = points.contains(event)
         if cont:
@@ -1731,7 +2248,7 @@ class PeakListWindow2D(wx.Frame):
                 self.selected_peak_indexes[0]
             ] = y
 
-            intensity = self.find_new_intensity(x,y)
+            intensity = self.find_new_intensity(x, y, self.selected_peaklist)
 
             self.peak_list_dictionary[self.selected_peaklist]["intensity"][
                 self.selected_peak_indexes[0]
@@ -1739,21 +2256,7 @@ class PeakListWindow2D(wx.Frame):
 
             
 
-            index = 0
-            for i, [peaklist, dictionary] in enumerate(
-                self.peak_list_dictionary.items()
-            ):
-                if peaklist == self.selected_peaklist:
-                    index = i
-
-            self.main_frame.points[index].set_offsets(
-                np.c_[
-                    self.peak_list_dictionary[self.selected_peaklist]["shift1"],
-                    self.peak_list_dictionary[self.selected_peaklist]["shift2"],
-                ]
-            )
-            # self.main_frame.points[index].set_ydata(self.peak_list_dictionary[self.selected_peaklist]['shift2'])
-            self.main_frame.UpdateFrame()
+            self.update_peak_markers(self.selected_peaklist)
             self.AddToTable()
 
             self.active_move = False
@@ -1801,29 +2304,17 @@ class PeakListWindow2D(wx.Frame):
                     self.y_init[index] + y_change
                 )
 
-                intensity = self.find_new_intensity(self.x_init[index] + x_change,self.y_init[index] + y_change)
+                intensity = self.find_new_intensity(
+                    self.x_init[index] + x_change,
+                    self.y_init[index] + y_change,
+                    self.selected_peaklist,
+                )
 
                 self.peak_list_dictionary[self.selected_peaklist]["intensity"][
                     index
                 ] = intensity
 
-            # update the intensities too
-
-            ind = 0
-            for i, [peaklist, dictionary] in enumerate(
-                self.peak_list_dictionary.items()
-            ):
-                if peaklist == self.selected_peaklist:
-                    ind = i
-
-            self.main_frame.points[ind].set_offsets(
-                np.c_[
-                    self.peak_list_dictionary[self.selected_peaklist]["shift1"],
-                    self.peak_list_dictionary[self.selected_peaklist]["shift2"],
-                ]
-            )
-            # self.main_frame.points[index].set_ydata(self.peak_list_dictionary[self.selected_peaklist]['shift2'])
-            self.main_frame.UpdateFrame()
+            self.update_peak_markers(self.selected_peaklist)
 
     def on_release_movepeak(self, event):
         # self.on_motion_movepeak(event)
@@ -1843,17 +2334,13 @@ class PeakListWindow2D(wx.Frame):
             self.current_x_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_x_ppms"]
             self.current_y_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_y_ppms"]
 
-    def find_new_intensity(self, x, y):
+    def find_new_intensity(self, x, y, peaklist=None):
 
-        if(self.main_frame.multiplot_mode==False):
-            self.current_data = self.main_frame.nmrdata.data * self.main_frame.multiply_factor
-            self.current_x_values = self.main_frame.new_x_ppms
-            self.current_y_values = self.main_frame.new_y_ppms
-        
-        else:
-            self.current_data = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["z_data"] * self.main_frame.values_dictionary[self.main_frame.active_plot_index]["multiply factor"]
-            self.current_x_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_x_ppms"]
-            self.current_y_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_y_ppms"]
+        (
+            self.current_data,
+            self.current_x_values,
+            self.current_y_values,
+        ) = self.find_plot_data(peaklist)
 
         x_index = np.argmin(np.abs(self.current_x_values - x))
         y_index = np.argmin(np.abs(self.current_y_values - y))
@@ -1967,6 +2454,35 @@ class PeakListWindow2D(wx.Frame):
 
         self.AddPeaklist(peaklist_file, new_peaklist=True)
 
+    def find_save_location(self):
+        """
+        The folder and file name shown when saving the current peaklist, taken
+        from the file the peaklist was read from. The current directory and an
+        untitled file are used when the peaklist did not come from a file.
+        """
+        directory = pathlib.Path(os.getcwd())
+        file_name = "Untitled.tab"
+
+        selection = self.current_peaklist_box.GetSelection()
+        if selection < 0 or selection >= len(self.peaklist_paths):
+            return directory, file_name
+
+        try:
+            peaklist_path = pathlib.Path(self.peaklist_paths[selection]).expanduser()
+        except TypeError:
+            return directory, file_name
+
+        if peaklist_path.name != "":
+            file_name = peaklist_path.name
+
+        # absolute rather than parent so that a peaklist given by name alone
+        # is saved in the current directory
+        parent = peaklist_path.absolute().parent
+        if parent.is_dir() == True:
+            directory = parent
+
+        return directory, file_name
+
     def OnSave(self, event, save_after_picking=False):
         """
         Provide a FileDialog where the user can chose the name for
@@ -1974,16 +2490,11 @@ class PeakListWindow2D(wx.Frame):
         The peaklist will then be saved.
         """
 
-        try:
-            current_peaklist_path = pathlib.Path(self.peaklist_paths[self.current_peaklist_box.GetSelection()])
-            file_name = current_peaklist_path.parts[-1]
-        except:
-            current_peaklist_path = os.getcwd()
-            file_name = 'Untitled.tab'
+        directory, file_name = self.find_save_location()
 
         if(save_after_picking==False):
             dlg = wx.FileDialog(self, "Select the folder and name to save the peaklist as.", wildcard="", style=wx.FD_SAVE)
-            dlg.SetDirectory(str(current_peaklist_path.parents[0]))
+            dlg.SetDirectory(str(directory))
             dlg.SetFilename(str(file_name))
             if dlg.ShowModal() == wx.ID_OK:
                 peaklist_file = dlg.GetPath()
@@ -2085,8 +2596,9 @@ class PeakListWindow2D(wx.Frame):
             x = self.main_frame.uc0.ppm(peaks["Y_AXIS"]) + self.main_frame.x_movement
             y = self.main_frame.uc1.ppm(peaks["X_AXIS"]) + self.main_frame.y_movement
         else:
-            x = self.main_frame.values_dictionary[self.main_frame.active_plot_index]['uc0'].ppm(peaks["Y_AXIS"]) + self.main_frame.values_dictionary[self.main_frame.active_plot_index]['move_x']
-            y = self.main_frame.values_dictionary[self.main_frame.active_plot_index]['uc1'].ppm(peaks["X_AXIS"]) + self.main_frame.values_dictionary[self.main_frame.active_plot_index]['move_y']
+            values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]
+            x = values['uc0'].ppm(peaks["Y_AXIS"]) + values['move x']
+            y = values['uc1'].ppm(peaks["X_AXIS"]) + values['move y']
 
         picked_peak_array = []
         for i, xval in enumerate(x):
@@ -2122,6 +2634,19 @@ class PeakListWindow2D(wx.Frame):
         self.current_peaklist_box.SetSelection(len(self.peak_list_choices) - 1)
 
         self.names[last_directories_path] = [self.xlabel, self.ylabel]
+
+        # The picked peaklist can be compared with the other peaklists
+        self.update_comparison_boxes()
+
+        # Remember where the picked peaklist is saved so that it stays in step
+        # with the list of peaklists
+        self.peaklist_paths.append(p)
+
+        # The peaklist belongs to the spectrum which is currently selected
+        self.set_peaklist_dataset(
+            last_directories_path, getattr(self.main_frame, "active_plot_index", 0)
+        )
+        self.update_dataset_box()
 
 
         # self.include_2d_fit = True
@@ -2204,16 +2729,180 @@ class PeakListWindow2D(wx.Frame):
 
         
 
+    def find_plot_data(self, peaklist=None):
+        """
+        The data of the spectrum which a peaklist belongs to, along with the
+        chemical shifts of its two axes.
+        """
+        if self.main_frame.multiplot_mode == False:
+            data = self.main_frame.nmrdata.data * self.main_frame.multiply_factor
+
+            return data, self.main_frame.new_x_ppms, self.main_frame.new_y_ppms
+
+        index = self.find_peaklist_dataset(peaklist)
+        values = self.main_frame.values_dictionary[index]
+
+        return (
+            values["z_data"] * values["multiply factor"],
+            values["new_x_ppms"],
+            values["new_y_ppms"],
+        )
+
+    def find_peak_markers(self, peaklist=None):
+        """
+        The markers drawn on the spectrum for a peaklist. Hidden peaklists are
+        not drawn, so the markers are found by the name of the peaklist rather
+        than by where the peaklist comes in the list of peaklists. None is
+        returned when the peaklist is not currently drawn.
+        """
+        if peaklist == None:
+            peaklist = self.current_peaklist_box.GetValue()
+
+        names = getattr(self.main_frame, "point_names", [])
+        points = getattr(self.main_frame, "points", [])
+
+        if peaklist not in names:
+            return None
+
+        index = names.index(peaklist)
+        if index >= len(points):
+            return None
+
+        return points[index]
+
+    def update_peak_markers(self, peaklist):
+        """
+        Move the markers drawn on the spectrum onto the positions the peaks of
+        a peaklist now have, so that peaks follow the cursor as they are moved.
+        """
+        markers = self.find_peak_markers(peaklist)
+        if markers == None:
+            return
+
+        markers.set_offsets(
+            np.c_[
+                self.peak_list_dictionary[peaklist]["shift1"],
+                self.peak_list_dictionary[peaklist]["shift2"],
+            ]
+        )
+        self.main_frame.UpdateFrame()
+
+    def find_peak_index(self, x, y, peaklist=None):
+        """
+        The point of the spectrum (row, column) which a chemical shift
+        position falls on. None is returned when the spectrum cannot be read.
+        """
+        try:
+            data, x_values, y_values = self.find_plot_data(peaklist)
+        except (KeyError, IndexError, AttributeError, TypeError):
+            return None
+
+        try:
+            return (
+                int(np.argmin(np.abs(x_values - x))),
+                int(np.argmin(np.abs(y_values - y))),
+            )
+        except (ValueError, TypeError):
+            return None
+
+    def find_duplicate_peak(self, x, y, peaklist):
+        """
+        The name of a peak which is already in the peaklist at the position
+        given, or None when there is no peak there. Two peaks are at the same
+        position when they fall on the same point of the spectrum. Moving a
+        new peak to its local maximum can put it on top of a peak which has
+        already been picked.
+        """
+        if peaklist not in self.peak_list_dictionary:
+            return None
+
+        peaks = self.peak_list_dictionary[peaklist]
+        new_index = self.find_peak_index(x, y, peaklist)
+
+        for i, peakname in enumerate(peaks["peak_name"]):
+            try:
+                shift1 = peaks["shift1"][i]
+                shift2 = peaks["shift2"][i]
+            except IndexError:
+                continue
+
+            if new_index == None:
+                # The spectrum cannot be read so only peaks at exactly the
+                # same chemical shifts are treated as being on top of one another
+                if shift1 == x and shift2 == y:
+                    return peakname
+                continue
+
+            if self.find_peak_index(shift1, shift2, peaklist) == new_index:
+                return peakname
+
+        return None
+
+    def check_duplicate_peak(self, x, y, peaklist) -> bool:
+        """
+        Warn the user when a new peak would be added on top of a peak which is
+        already in the peaklist, returning whether the peak should be added.
+        """
+        duplicate = self.find_duplicate_peak(x, y, peaklist)
+        if duplicate == None:
+            return True
+
+        dlg = wx.MessageDialog(
+            None,
+            "The peak {} in the peaklist {} is already at this position. Adding this peak will give two peaks on top of each other. Do you want to add it anyway?".format(
+                duplicate, peaklist
+            ),
+            "Peaks at the Same Position",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+        )
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        return result == wx.ID_YES
+
+    def find_local_maximum(self, x, y, peaklist=None):
+        """
+        Walk uphill from a position to the nearest local maximum of the
+        spectrum, returning the chemical shifts of the maximum and the
+        intensity there. The starting position is returned if the spectrum
+        cannot be read.
+        """
+        try:
+            data, x_values, y_values = self.find_plot_data(peaklist)
+            rows, cols = data.shape
+        except (KeyError, IndexError, AttributeError, TypeError):
+            return x, y, None
+
+        r = int(np.argmin(np.abs(x_values - x)))
+        c = int(np.argmin(np.abs(y_values - y)))
+
+        while True:
+            # Get all 8 neighbors (including diagonals)
+            neighbors = [
+                (nr, nc)
+                for nr in range(r - 1, r + 2)
+                for nc in range(c - 1, c + 2)
+                if (0 <= nr < rows and 0 <= nc < cols and (nr, nc) != (r, c))
+            ]
+
+            if len(neighbors) == 0:
+                break
+
+            # Find the neighbor with the highest value
+            best_neighbor = max(neighbors, key=lambda pos: np.abs(data[pos[0], pos[1]]))
+
+            # If the best neighbor is higher, move there
+            if np.abs(data[best_neighbor[0], best_neighbor[1]]) > np.abs(data[r, c]):
+                r, c = best_neighbor
+            else:
+                # No neighbor is higher local maximum reached
+                break
+
+        return x_values[r], y_values[c], data[r][c]
+
     def OnFindLocalMaximum(self, event):
         """
-        Moves a point to its nearest local maximum in 2D data.
-
-        start = Starting point peak values
-
-        Returns
-        -------
-        (row, col) : tuple
-            Coordinates of the local maximum reached.
+        Moves the selected peaks to their nearest local maximum in 2D data.
         """
 
         if(len(self.previous_peaklists)>10):
@@ -2221,26 +2910,10 @@ class PeakListWindow2D(wx.Frame):
         self.previous_peaklists.append(copy.deepcopy(self.peak_list_dictionary))
 
         if(self.main_frame.multiplot_mode==False):
-            data = self.main_frame.nmrdata.data * self.main_frame.multiply_factor
-            x_values = self.main_frame.new_x_ppms
-            y_values = self.main_frame.new_y_ppms
-
             # Check to see if the current selected plot is hidden or not
             continue_function = self.check_hidden_plot()
             if(continue_function==False):
                 return
-
-            # if(self.main_frame.transposed2D==True):
-            #     x_values = self.main_frame.new_y_ppms
-            #     y_values = self.main_frame.new_x_ppms
-        
-        else:
-            data = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["z_data"] * self.main_frame.values_dictionary[self.main_frame.active_plot_index]["multiply factor"]
-            x_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_x_ppms"]
-            y_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_y_ppms"]
-            # if(self.main_frame.transposed2D==True):
-            #     x_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_y_ppms"]
-            #     y_values = self.main_frame.values_dictionary[self.main_frame.active_plot_index]["new_x_ppms"]
 
         for k, peak_index in enumerate(self.selected_peak_indexes):
 
@@ -2250,34 +2923,12 @@ class PeakListWindow2D(wx.Frame):
             y = self.peak_list_dictionary[self.selected_peaklist]["shift2"][
                 self.selected_peak_indexes[k]
             ]
-            rows, cols = data.shape
-            x_index = np.argmin(np.abs(x_values - x))
-            y_index = np.argmin(np.abs(y_values - y))
-            c, r = y_index, x_index
 
-            while True:
-                # Get all 8 neighbors (including diagonals)
-                neighbors = [
-                    (nr, nc)
-                    for nr in range(r - 1, r + 2)
-                    for nc in range(c - 1, c + 2)
-                    if (0 <= nr < rows and 0 <= nc < cols and (nr, nc) != (r, c))
-                ]
-
-                # Find the neighbor with the highest value
-                best_neighbor = max(neighbors, key=lambda pos: np.abs(data[pos[0], pos[1]]))
-
-                # If the best neighbor is higher, move there
-                if np.abs(data[best_neighbor[0], best_neighbor[1]]) > np.abs(data[r, c]):
-                    r, c = best_neighbor
-                else:
-                    # No neighbor is higher local maximum reached
-                    break
-
-            # New shifts
-            xvalue = x_values[r]
-            yvalue = y_values[c]
-            intensity = data[r][c]
+            xvalue, yvalue, intensity = self.find_local_maximum(
+                x, y, self.selected_peaklist
+            )
+            if intensity == None:
+                continue
 
             self.peak_list_dictionary[self.selected_peaklist]["shift1"][
                 self.selected_peak_indexes[k]
@@ -2297,7 +2948,7 @@ class PeakListWindow2D(wx.Frame):
 
 
 
-class PeakListWindow3D(wx.Frame):
+class PeakListWindow3D(PeakModeButtons, wx.Frame):
     def __init__(self, title, parent):
         """
         This class contains all the information relating to loading in
@@ -2313,7 +2964,10 @@ class PeakListWindow3D(wx.Frame):
         self.SetSizer(self.main_peaklist_sizer)
 
         self.set_initial_values()
+        self.follow_peak_modes()
         self.make_peaklist_window()
+        self.watch_navigation_toolbar()
+        self.update_mode_buttons()
         self.Show()
         # self.AddPeakListBrowser()
 
@@ -3505,6 +4159,7 @@ class PeakListWindow3D(wx.Frame):
             self.add_peaks_button.SetValue(False)
             self.main_frame.fig_bore.canvas.mpl_disconnect(self.add_peak_connect)
         if self.active_move:
+            self.active_move = False
             if self.active_select_peak:
                 self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_connect)
             if self.active_select_peaks:
@@ -3517,7 +4172,8 @@ class PeakListWindow3D(wx.Frame):
             self.selected_peakname = ""
             self.main_frame.fig_bore.canvas.mpl_disconnect(self.select_peak_connect)
             self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
-        
+
+        self.update_mode_buttons()
 
     def OnLoadReferencePlane(self, event):
         """
