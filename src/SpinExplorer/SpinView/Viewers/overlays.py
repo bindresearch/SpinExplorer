@@ -150,7 +150,7 @@ class FileDrop(wx.FileDropTarget):
         self.custom_labels = []
         self.parent.active_plot_index = 0
 
-    def OnDropFiles(self, x, y, filenames):
+    def OnDropFiles(self, x, y, filenames, title='', multiplot_stack=False):
 
         if len(filenames)==1 and ".session" in filenames[0]:
             # Loading a new session
@@ -1044,7 +1044,7 @@ class FileDrop(wx.FileDropTarget):
                         else:
                             uc0 = ng.pipe.make_uc(dic, data_original, dim=0)
                             data_original = data_original.T
-                        self.color_list = [self.color_list[0]]+self.color_list[2:]+ [self.color_list[1]]
+                        self.color_list = colours
                         while len(data_original) > len(self.color_list):
                             self.color_list = self.color_list * 2
                         x0, x1 = uc0.ppm_limits()
@@ -1052,12 +1052,16 @@ class FileDrop(wx.FileDropTarget):
                         uc0_ppms = uc0.ppm_scale()
                         data = []
                         data.append(data_original[0])
-                        self.stackfirstpoint()
-                        self.parent.multiplot_mode = True
+
+                        if(multiplot_stack==False):
+                            self.stackfirstpoint(title)
+                            self.parent.multiplot_mode = True
                         for i in range(len(data_original)):
-                            if i == 0:
-                                continue
-                            else:
+                            add_plot=True
+                            if(multiplot_stack==False):
+                                if i == 0:
+                                    add_plot=False
+                            if(add_plot==True):
                                 self.data.append(data_original[i])
                                 # Add default values for the new plot to the values dictionary
                                 self.parent.values_dictionary[
@@ -1065,7 +1069,7 @@ class FileDrop(wx.FileDropTarget):
                                 ] = {}
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
-                                ]["title"] = str(i + 1)
+                                ]["title"] = title+' ' + str(i + 1)
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
                                 ]["linewidth"] = self.linewidth
@@ -1115,25 +1119,31 @@ class FileDrop(wx.FileDropTarget):
                                     len(self.parent.extra_plots) + 1
                                 ]["dictionary"] = dic
                                 # Add labels of the extra plots to the select plot box
-                                self.choices.append(str(i + 1))
+                                self.choices.append(title+' ' + str(i + 1))
                                 self.parent.plot_combobox.Clear()
                                 self.parent.plot_combobox.AppendItems(self.choices)
                                 self.parent.plot_combobox.SetSelection(0)
                                 if len(self.parent.extra_plots) + 1 < len(self.color_list):
+                                    self.parent.values_dictionary[
+                                        len(self.parent.extra_plots) + 1
+                                    ]["color index"] = (
+                                        len(self.parent.extra_plots)
+                                        + 1
+                                    )
                                     self.parent.extra_plots.append(
                                         self.axis.plot(
                                             uc0_ppms,
                                             data_original[i],
                                             color=self.color_list[
-                                                len(self.parent.extra_plots)
+                                                len(self.parent.extra_plots)+1
                                             ],
-                                            label=str(i + 1),
+                                            label=title+' ' + str(i + 1),
                                             linewidth=self.linewidth,
                                         )
                                     )
                                 else:
                                     self.parent.values_dictionary[
-                                        len(self.extra_plots) + 1
+                                        len(self.parent.extra_plots) + 1
                                     ]["color index"] = (
                                         len(self.parent.extra_plots)
                                         + 1
@@ -1144,10 +1154,10 @@ class FileDrop(wx.FileDropTarget):
                                             uc0_ppms,
                                             data_original[i],
                                             color=self.color_list[
-                                                len(self.parent.extra_plots)
+                                                len(self.parent.extra_plots)+1
                                                 - len(self.color_list)
                                             ],
-                                            label=str(i + 1),
+                                            label=title+' ' + str(i + 1),
                                             linewidth=self.linewidth,
                                         )
                                     )
@@ -1166,9 +1176,9 @@ class FileDrop(wx.FileDropTarget):
 
         return True
 
-    def stackfirstpoint(self):
+    def stackfirstpoint(self, title):
         self.parent.values_dictionary[0] = {}
-        self.parent.values_dictionary[0]["title"] = "1"
+        self.parent.values_dictionary[0]["title"] = title + ' 1'
         self.parent.values_dictionary[0][
             "linewidth"
         ] = self.parent.line1.get_linewidth()
@@ -1206,10 +1216,10 @@ class FileDrop(wx.FileDropTarget):
             self.parent.P1_slider_fine.GetValue()
         )
         self.parent.values_dictionary[0]["dictionary"] = self.parent.nmrdata.dic
-        self.parent.line1.set_label("1")
+        self.parent.line1.set_label(self.parent.values_dictionary[0]["title"])
         self.linewidth = self.parent.line1.get_linewidth()
         self.choices = []
-        self.choices.append("1")
+        self.choices.append(self.parent.values_dictionary[0]["title"])
         self.first_drop = False
 
         try:

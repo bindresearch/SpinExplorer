@@ -2143,40 +2143,55 @@ class TwoDViewer(wx.Panel):
 
     def OnStackButton(self, event):
 
-        if self.multiplot_mode == False:
-            # If the number of slices is greater than 30, pop up a window to ask the user if they want to continue
-            if len(self.nmrdata.data.T) > 30:
-                self.continue_window = wx.MessageDialog(
-                    self,
-                    "There are "
-                    + str(len(self.nmrdata.data.T))
-                    + " slices along y axis. Stacking may take a long time. Consider transposing the spectrum and trying again. Do you want to continue?",
-                    "Warning",
-                    wx.YES_NO | wx.ICON_WARNING,
-                )
-                if self.continue_window.ShowModal() == wx.ID_NO:
-                    self.continue_window.Destroy()
-                    return
-                else:
-                    self.continue_window.Destroy()
-            if self.transposed2D == False:
-                self.stacks = Stack2D(
-                    title="Stacked Slices - " + self.parent.title, parent=self
-                )
-            else:
-                self.stacks = Stack2D(
-                    title="Stacked Slices - " + self.parent.title, parent=self
-                )
+        
+        # If the number of slices is greater than 30, pop up a window to ask the user if they want to continue
+        
+        if(self.multiplot_mode==False):
+            size = len(self.nmrdata.data.T)
         else:
-            # Pop up a window to say that this feature is not available in multiplot mode
-            self.error_window = wx.MessageDialog(
+            size = len(self.values_dictionary[0]["z_data"].T)
+        if size > 30:
+            self.continue_window = wx.MessageDialog(
                 self,
-                "Stacking is not available in multiplot mode",
-                "Error",
-                wx.OK | wx.ICON_ERROR,
+                "There are "
+                + str(size)
+                + " slices along y axis. Stacking may take a long time. Consider transposing the spectrum and trying again. Do you want to continue?",
+                "Warning",
+                wx.YES_NO | wx.ICON_WARNING,
             )
-            self.error_window.ShowModal()
-            self.error_window.Destroy()
+            if self.continue_window.ShowModal() == wx.ID_NO:
+                self.continue_window.Destroy()
+                return
+            else:
+                self.continue_window.Destroy()
+
+        titles = []
+        multiplot_paths = []
+        if(self.multiplot_mode):
+            # Add the file paths of all spectra
+            for k in range(len(list(self.values_dictionary.keys()))):
+                multiplot_paths.append(self.values_dictionary[k]['path'])
+                titles.append(self.values_dictionary[k]['title'])
+
+
+        if self.transposed2D == False:
+            self.stacks = Stack2D(
+                title="Stacked Slices - " + self.parent.title, parent=self, multiplot_paths=multiplot_paths, titles=titles
+            )
+        else:
+            self.stacks = Stack2D(
+                title="Stacked Slices - " + self.parent.title, parent=self, multiplot_paths=multiplot_paths, titles=titles
+            )
+        # else:
+        #     # Pop up a window to say that this feature is not available in multiplot mode
+        #     self.error_window = wx.MessageDialog(
+        #         self,
+        #         "Stacking is not available in multiplot mode",
+        #         "Error",
+        #         wx.OK | wx.ICON_ERROR,
+        #     )
+        #     self.error_window.ShowModal()
+        #     self.error_window.Destroy()
 
     def OnFitDiffusionButton(self, event):
         if self.multiplot_mode == False:
@@ -3211,7 +3226,7 @@ class TwoDViewer(wx.Panel):
                                 ]
                             else:
                                 data = self.nmrdata.data[
-                                                            :, int(self.y1 - self.y_movement)
+                                                            :, round(self.y1 - self.y_movement)
                                                         ]
                         else:
                             if(self.nmrdata.dic[self.ft1_flg]==1):
@@ -3220,11 +3235,11 @@ class TwoDViewer(wx.Panel):
                                 ]
                             else:
                                 data = self.nmrdata.data[
-                                                            :, int(self.y1 - self.y_movement)
+                                                            :, round(self.y1 - self.y_movement)
                                                         ]
                     else:
                         data = self.nmrdata.data[
-                            :, int(self.y1 - self.y_movement)]
+                            :, round(self.y1 - self.y_movement)]
                     self.line1.set_ydata(data*self.multiply_factor)
                     self.line2.set_ydata([self.y1])
                     self.line1.set_xdata(self.ppms_0 + self.x_movement)
@@ -3239,7 +3254,7 @@ class TwoDViewer(wx.Panel):
                                 ]
                             else:
                                 data = self.nmrdata.data[
-                                                            int(self.x1 - self.x_movement), :
+                                                            round(self.x1 - self.x_movement), :
                                                         ]
                         else:
                             if(self.nmrdata.dic[self.ft2_flg]==1):
@@ -3248,11 +3263,11 @@ class TwoDViewer(wx.Panel):
                                 ]
                             else:
                                 data = self.nmrdata.data[
-                                                            int(self.x1 - self.x_movement), :
+                                                            round(self.x1 - self.x_movement), :
                                                         ]
                     else:
                         data = self.nmrdata.data[
-                            int(self.x1 - self.x_movement), :
+                            round(self.x1 - self.x_movement), :
                         ]
                     self.line3.set_xdata(
                         data
@@ -3272,11 +3287,11 @@ class TwoDViewer(wx.Panel):
                         try:
                             if self.transposed2D == False:
                                 if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
-                                    slice_index = int(self.values_dictionary[i]["uc1"](
+                                    slice_index = round(self.values_dictionary[i]["uc1"](
                                                                                 str(self.y1 - self.y_difference) + "ppm"
                                                                             ))
                                 else:
-                                    slice_index = int(self.y1 - self.y_difference)
+                                    slice_index = round(self.y1 - self.y_difference)
                                                             
                                                                 
                                 self.twoD_slices_horizontal[i][0].set_ydata(
@@ -3292,11 +3307,11 @@ class TwoDViewer(wx.Panel):
         
                             else:
                                 if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
-                                    slice_index = int(self.values_dictionary[i]["uc0"](
+                                    slice_index = round(self.values_dictionary[i]["uc0"](
                                                                                 str(self.y1 - self.y_difference) + "ppm"
                                                                             ))
                                 else:
-                                    slice_index = int(self.y1 - self.y_difference)
+                                    slice_index = round(self.y1 - self.y_difference)
                                 self.twoD_slices_horizontal[i][0].set_ydata(
                                     self.values_dictionary[i]["z_data"][
                                         :,
@@ -3342,11 +3357,11 @@ class TwoDViewer(wx.Panel):
                         try:
                             if self.transposed2D == False:
                                 if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
-                                    slice_index = int(self.values_dictionary[i]["uc0"](
+                                    slice_index = round(self.values_dictionary[i]["uc0"](
                                                                                 str(self.x1 - self.x_difference) + "ppm"
                                                                             ))
                                 else:
-                                    slice_index = int(self.x1 - self.x_difference)
+                                    slice_index = round(self.x1 - self.x_difference)
                                 self.twoD_slices_vertical[i][0].set_xdata(
                                     self.values_dictionary[i]["z_data"][
                                         slice_index,
@@ -3359,11 +3374,11 @@ class TwoDViewer(wx.Panel):
                                 )
                             else:
                                 if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
-                                    slice_index = int(self.values_dictionary[i]["uc1"](
+                                    slice_index = round(self.values_dictionary[i]["uc1"](
                                                                                 str(self.x1 - self.x_difference) + "ppm"
                                                                             ))
                                 else:
-                                    slice_index = int(self.x1 - self.x_difference)
+                                    slice_index = round(self.x1 - self.x_difference)
                                 self.twoD_slices_vertical[i][0].set_xdata(
                                     self.values_dictionary[i]["z_data"][
                                         slice_index,
@@ -3441,7 +3456,7 @@ class TwoDViewer(wx.Panel):
                             else:
                                 data = (
                                         self.nmrdata.data[
-                                            :, int(self.y1 - self.y_movement)
+                                            :, round(self.y1 - self.y_movement)
                                         ]
                                         * self.multiply_factor
                                 )
@@ -3456,14 +3471,14 @@ class TwoDViewer(wx.Panel):
                             else:
                                 data = (
                                         self.nmrdata.data[
-                                            :, int(self.y1 - self.y_movement)
+                                            :, round(self.y1 - self.y_movement)
                                         ]
                                         * self.multiply_factor
                                 )
                     else:
                         data = (
                             self.nmrdata.data[
-                                :, int(self.y1 - self.y_movement)
+                                :, round(self.y1 - self.y_movement)
                             ]
                             * self.multiply_factor
                         )
@@ -3504,7 +3519,7 @@ class TwoDViewer(wx.Panel):
                             else:
                                 data = (
                                          self.nmrdata.data[
-                                            int(self.x1 - self.x_movement), :
+                                            round(self.x1 - self.x_movement), :
                                         ]
                                         * self.multiply_factor
                                     )
@@ -3519,7 +3534,7 @@ class TwoDViewer(wx.Panel):
                             else:
                                 data = (
                                          self.nmrdata.data[
-                                            int(self.x1 - self.x_movement), :
+                                            round(self.x1 - self.x_movement), :
                                         ]
                                         * self.multiply_factor
                                     )
@@ -3527,7 +3542,7 @@ class TwoDViewer(wx.Panel):
                     else:
                         data = (
                             self.nmrdata.data[
-                                int(self.x1 - self.x_movement), :
+                                round(self.x1 - self.x_movement), :
                             ]
                             * self.multiply_factor
                         )
@@ -3589,11 +3604,11 @@ class TwoDViewer(wx.Panel):
                     self.y_difference = self.values_dictionary[self.active_plot_index]["move y"]
                     if self.transposed2D == False:
                         if(self.values_dictionary[self.active_plot_index]['dic'][self.ft2_flg]==1):
-                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc1"](
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc1"](
                                                                         str(self.y1 - self.y_difference) + "ppm"
                                                                     ))
                         else:
-                            slice_index = int(self.y1 - self.y_difference)
+                            slice_index = round(self.y1 - self.y_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 :,
@@ -3603,17 +3618,16 @@ class TwoDViewer(wx.Panel):
                         )
                     else:
                         if(self.values_dictionary[self.active_plot_index]['dic'][self.ft1_flg]==1):
-                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc0"](
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc0"](
                                                                         str(self.y1 - self.y_difference) + "ppm"
                                                                     ))
                         else:
-                            slice_index = int(self.y1 - self.y_difference)
+                            slice_index = round(self.y1 - self.y_difference)
+                        
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 :,
-                                self.values_dictionary[self.active_plot_index]["uc0"](
-                                    str(self.y1 - self.y_difference) + "ppm"
-                                ),
+                                slice_index
                             ]
                             * multiply_factor
                         )
@@ -3656,11 +3670,11 @@ class TwoDViewer(wx.Panel):
                         self.y_difference = self.values_dictionary[i]["move y"]
                         if self.transposed2D == False:
                             if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
-                                slice_index = int(self.values_dictionary[i]["uc1"](
+                                slice_index = round(self.values_dictionary[i]["uc1"](
                                                                             str(self.y1 - self.y_difference) + "ppm"
                                                                         ))
                             else:
-                                slice_index = int(self.y1 - self.y_difference)
+                                slice_index = round(self.y1 - self.y_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     :,
@@ -3670,11 +3684,11 @@ class TwoDViewer(wx.Panel):
                             )
                         else:
                             if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
-                                slice_index = int(self.values_dictionary[i]["uc0"](
+                                slice_index = round(self.values_dictionary[i]["uc0"](
                                                             str(self.y1 - self.y_difference) + "ppm"
                                                                                                     ))
                             else:
-                                slice_index = int(self.y1 - self.y_difference)
+                                slice_index = round(self.y1 - self.y_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     :,
@@ -3707,11 +3721,11 @@ class TwoDViewer(wx.Panel):
                     ]
                     if self.transposed2D == False:
                         if(self.values_dictionary[self.active_plot_index]['dic'][self.ft1_flg]==1):
-                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc0"](
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc0"](
                                                                         str(self.x1 - self.x_difference) + "ppm"
                                                                     ))
                         else:
-                            slice_index = int(self.x1 - self.x_difference)
+                            slice_index = round(self.x1 - self.x_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 slice_index,
@@ -3721,11 +3735,11 @@ class TwoDViewer(wx.Panel):
                         )
                     else:
                         if(self.values_dictionary[self.active_plot_index]['dic'][self.ft2_flg]==1):
-                            slice_index = int(self.values_dictionary[self.active_plot_index]["uc1"](
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc1"](
                                                                         str(self.x1 - self.x_difference) + "ppm"
                                                                     ))
                         else:
-                            slice_index = int(self.x1 - self.x_difference)
+                            slice_index = round(self.x1 - self.x_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 slice_index,
@@ -3769,11 +3783,11 @@ class TwoDViewer(wx.Panel):
                         self.x_difference = self.values_dictionary[i]["move x"]
                         if self.transposed2D == False:
                             if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
-                                slice_index = int(self.values_dictionary[i]["uc0"](
+                                slice_index = round(self.values_dictionary[i]["uc0"](
                                                                             str(self.x1 - self.x_difference) + "ppm"
                                                                         ))
                             else:
-                                slice_index = int(self.x1 - self.x_difference)
+                                slice_index = round(self.x1 - self.x_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     slice_index,
@@ -3783,11 +3797,11 @@ class TwoDViewer(wx.Panel):
                             )
                         else:
                             if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
-                                slice_index = int(self.values_dictionary[i]["uc1"](
+                                slice_index = round(self.values_dictionary[i]["uc1"](
                                                                             str(self.x1 - self.x_difference) + "ppm"
                                                                         ))
                             else:
-                                slice_index = int(self.x1 - self.x_difference)
+                                slice_index = round(self.x1 - self.x_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     slice_index,
@@ -3843,7 +3857,7 @@ class TwoDViewer(wx.Panel):
                 self.UpdateFrame()
 
 class Stack2D(wx.Frame):
-    def __init__(self, title, parent):
+    def __init__(self, title, parent, multiplot_paths=[], titles=[]):
         self.main_frame = parent
         self.width = wx.GetDisplaySize()[0]
         try:
@@ -3851,6 +3865,7 @@ class Stack2D(wx.Frame):
                 os.chdir(self.main_frame.parent.path)
         except:
             pass
+
         if self.main_frame.parent.nmrdata.dim == 2:
             nmr_data_0 = GetData(self, file=self.main_frame.parent.nmrdata.file)
         else:
@@ -3868,6 +3883,8 @@ class Stack2D(wx.Frame):
         else:
             nmr_data_0.data = nmr_data_0.data.T[0]
             nmr_data_0.axislabels[0] = nmr_data_0.axislabels[1]
+
+
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -3904,10 +3921,14 @@ class Stack2D(wx.Frame):
         if parent.transposed2D == True:
             self.viewer_oneD.files.transposed_stack = True
         self.viewer_oneD.files.nmrdata_original = parent.nmrdata
-        try:
-            self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.file])
-        except:
-            self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.filename])
+        if multiplot_paths == []:
+            try:
+                self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.file], '')
+            except:
+                self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.filename], '')
+        else:
+            for p, path in enumerate(multiplot_paths):
+                self.viewer_oneD.files.OnDropFiles(0, 0, [path], titles[p])
         self.viewer_oneD.files.stackmode = False
 
         
