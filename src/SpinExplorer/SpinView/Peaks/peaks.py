@@ -18,6 +18,24 @@ from SpinExplorer.SpinView.Peaks.analysis import analysis_frame
 # Shown in front of the name of the peak mode which is selected
 PEAK_MODE_MARK = "\u25cf "
 
+# The linewidths of a peak, found by fitting, in each dimension. They are held
+# both in Hz and in ppm
+PEAK_LINEWIDTH_KEYS = [
+    "linewidth1_hz",
+    "linewidth1_ppm",
+    "linewidth2_hz",
+    "linewidth2_ppm",
+]
+
+# Everything which is held for each peak of a 2D peaklist, so that the lists
+# stay the same length as peaks are added and removed
+PEAK_ENTRY_KEYS = [
+    "peak_name",
+    "shift1",
+    "shift2",
+    "intensity",
+] + PEAK_LINEWIDTH_KEYS
+
 
 class PeakModeButtons:
     """
@@ -770,12 +788,16 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
 
         self.grid = gridlib.Grid(self.row3_label)
-        self.grid.CreateGrid(5, 4)
+        self.grid.CreateGrid(5, 8)
 
         self.grid.SetColLabelValue(0, "Peak name")
         self.grid.SetColLabelValue(1, "Shift 1 (ppm)")
         self.grid.SetColLabelValue(2, "Shift 2 (ppm)")
         self.grid.SetColLabelValue(3, "Intensity")
+        self.grid.SetColLabelValue(4, "Linewidth 1 (Hz)")
+        self.grid.SetColLabelValue(5, "Linewidth 1 (ppm)")
+        self.grid.SetColLabelValue(6, "Linewidth 2 (Hz)")
+        self.grid.SetColLabelValue(7, "Linewidth 2 (ppm)")
 
         # Bind event when cell value changes
         self.grid.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.on_begin_edit)
@@ -1159,6 +1181,161 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
             except (RuntimeError, AttributeError):
                 pass
 
+    def find_table_order(self, peaklist):
+        """
+        The peaks of a peaklist in the order the table shows them, as indexes
+        into the lists of the peaklist. The table is sorted by the number in
+        the peak name, so this is not always the order the peaks were added in.
+        """
+        if peaklist not in self.peak_list_dictionary:
+            return []
+
+        def extract_number(name):
+            match = re.match(r"(\d+)", name)
+            return int(match.group(1)) if match else float("inf")
+
+        names = self.peak_list_dictionary[peaklist]["peak_name"]
+
+        return [
+            index
+            for index, name in sorted(enumerate(names), key=lambda pair: extract_number(pair[1]))
+        ]
+
+    def find_linewidths_written(self, peaklist) -> bool:
+        """
+        Whether any peak of a peaklist has been fitted, so that the linewidth
+        columns are worth writing into the peaklist file.
+        """
+        for key in PEAK_LINEWIDTH_KEYS:
+            for index in range(len(self.peak_list_dictionary[peaklist]["peak_name"])):
+                if self.find_linewidth(peaklist, key, index) != None:
+                    return True
+
+        return False
+
+    def find_linewidth_columns(self, peaklist, index) -> str:
+        """
+        The fitted linewidths of one peak as they are written into a peaklist
+        file. A peak which has not been fitted is written as nan.
+        """
+        values = []
+        for key in PEAK_LINEWIDTH_KEYS:
+            value = self.find_linewidth(peaklist, key, index)
+            if value == None:
+                values.append("nan")
+            else:
+                values.append("{:.5f}".format(value))
+
+        return " \t ".join(values)
+
+    def pad_peaklist(self, peaklist):
+        """
+        Make sure that every peak of a peaklist has an entry in every one of
+        its lists. A peak which has not been fitted has no linewidths, and a
+        peaklist read from a file has none at all.
+        """
+        if peaklist not in self.peak_list_dictionary:
+            return
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        number_of_peaks = len(dictionary.get("peak_name", []))
+
+        for key in PEAK_ENTRY_KEYS:
+            if key not in dictionary:
+                dictionary[key] = []
+            while len(dictionary[key]) < number_of_peaks:
+                dictionary[key].append(None)
+
+    def set_peak_linewidths(self, peaklist, index, linewidths1, linewidths2):
+        """
+        Record the fitted linewidths of one peak. Each pair is the linewidth in
+        that dimension in Hz and in ppm, either of which can be None when it
+        could not be found.
+        """
+        if peaklist not in self.peak_list_dictionary:
+            return
+
+        self.pad_peaklist(peaklist)
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        for key, linewidth in zip(
+            PEAK_LINEWIDTH_KEYS, list(linewidths1) + list(linewidths2)
+        ):
+            try:
+                dictionary[key][index] = linewidth
+            except (KeyError, IndexError):
+                pass
+
+    def find_linewidth(self, peaklist, key: str, index: int):
+        """
+        One fitted linewidth of one peak, or None when the peak has not been
+        fitted.
+        """
+        try:
+            value = self.peak_list_dictionary[peaklist][key][index]
+        except (KeyError, IndexError, TypeError):
+            return None
+
+        if value == None:
+            return None
+
+        try:
+            value = float(value)
+        except (ValueError, TypeError):
+            return None
+
+        if value != value:
+            # A linewidth which was saved as nan, so the peak was not fitted
+            return None
+
+        return value
+
+    def find_linewidth_text(self, value, key: str) -> str:
+        """
+        How a linewidth is shown in the table. Peaks which have not been fitted
+        are left blank.
+        """
+        if value == None:
+            return ""
+
+        if key.endswith("_ppm") == True:
+            return "{:.4f}".format(value)
+
+        return "{:.2f}".format(value)
+
+    def find_hz_per_ppm(self, peaklist=None):
+        """
+        How many Hz there are in one ppm in each dimension of the spectrum a
+        peaklist belongs to, used to give fitted linewidths in both units.
+        None is returned for a dimension which cannot be read.
+        """
+        main_frame = self.main_frame
+
+        try:
+            if main_frame.multiplot_mode == False:
+                unit_conversions = [main_frame.uc0, main_frame.uc1]
+            else:
+                values = main_frame.values_dictionary[
+                    self.find_peaklist_dataset(peaklist)
+                ]
+                unit_conversions = [values["uc0"], values["uc1"]]
+        except (KeyError, IndexError, AttributeError, TypeError):
+            return [None, None]
+
+        hz_per_ppm = []
+        for unit_conversion in unit_conversions:
+            try:
+                ppm = unit_conversion.ppm(1) - unit_conversion.ppm(0)
+                hz = unit_conversion.hz(1) - unit_conversion.hz(0)
+                if ppm == 0:
+                    hz_per_ppm.append(None)
+                else:
+                    hz_per_ppm.append(abs(hz / ppm))
+            except (AttributeError, TypeError, ZeroDivisionError):
+                hz_per_ppm.append(None)
+
+        return hz_per_ppm
+
     def AddToTable(self):
         """
         Adding the peaklist just entered into the peaklist table
@@ -1173,35 +1350,36 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
             # No peaklist is loaded, the table is left empty
             return
 
-        def extract_number(s):
-            match = re.match(r"(\d+)", s)
-            return int(match.group(1)) if match else float("inf")
+        # Every peak has an entry in every list, whether or not it has been fitted
+        self.pad_peaklist(peaklist)
 
-        # Pair each item with its original index
-        indexed_arr = list(enumerate(self.peak_list_dictionary[peaklist]["peak_name"]))
-
-        # Sort by number while keeping track of original indices
-        sorted_indexed = sorted(indexed_arr, key=lambda x: extract_number(x[1]))
-
-        # Extract sorted values and index mapping
-        sorted_values = [val for _, val in sorted_indexed]
-        index_mapping = {
-            new_idx: old_idx for new_idx, (old_idx, _) in enumerate(sorted_indexed)
-        }
-
-        for i, peak_name in enumerate(self.peak_list_dictionary[peaklist]["peak_name"]):
-            index = index_mapping[i]
+        for index in self.find_table_order(peaklist):
             peak = self.peak_list_dictionary[peaklist]["peak_name"][index]
             shift1 = self.peak_list_dictionary[peaklist]["shift1"][index]
             shift2 = self.peak_list_dictionary[peaklist]["shift2"][index]
             intensity = self.peak_list_dictionary[peaklist]["intensity"][index]
-            data.append([peak, "{:.5f}".format(shift1), "{:.5f}".format(shift2), "{:.5e}".format(intensity)])
+            row = [
+                peak,
+                "{:.5f}".format(shift1),
+                "{:.5f}".format(shift2),
+                "{:.5e}".format(intensity),
+            ]
+            for key in PEAK_LINEWIDTH_KEYS:
+                row.append(
+                    self.find_linewidth_text(
+                        self.find_linewidth(peaklist, key, index), key
+                    )
+                )
+            data.append(row)
 
         num_rows = self.grid.GetNumberRows()
         self.grid.AppendRows(len(data) - num_rows)
         for row, rowData in enumerate(data):
             for col, value in enumerate(rowData):
                 self.grid.SetCellValue(row, col, str(value))
+                if col >= 4:
+                    # The linewidths come from fitting the peaks
+                    self.grid.SetReadOnly(row, col, True)
 
     def on_begin_edit(self, event):
         """
@@ -1285,6 +1463,24 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
         self.AddToTable()
 
+    def read_linewidths(self, dictionary, line):
+        """
+        Read the fitted linewidths of a peak from a line of a peaklist file.
+        Peaklists written before the linewidths were fitted do not have these
+        columns, and a peak which has not been fitted has nan in them.
+        """
+        for i, key in enumerate(PEAK_LINEWIDTH_KEYS):
+            value = None
+            try:
+                value = float(line[4 + i])
+                if value != value:
+                    # nan, the peak was not fitted
+                    value = None
+            except (IndexError, ValueError, TypeError):
+                value = None
+
+            dictionary[key].append(value)
+
     def ReadPeakList(self, peaklist_file, new_peaklist, last_directories_path=''):
         """
         Read the selected peaklist to obtain the chemical shifts in each dimension
@@ -1296,6 +1492,8 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         dictionary["shift1"] = []
         dictionary["shift2"] = []
         dictionary['intensity'] = []
+        for key in PEAK_LINEWIDTH_KEYS:
+            dictionary[key] = []
         
         # Placeholder names for each axis
         name1 = ''
@@ -1320,6 +1518,7 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                                         dictionary["intensity"].append(float(line[3]))
                                     except:
                                         dictionary["intensity"].append(0)
+                                    self.read_linewidths(dictionary, line)
                                 except:
                                     name1 = line[1]
                                     name2 = line[2]
@@ -1337,6 +1536,7 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                                         dictionary["intensity"].append(float(line[3]))
                                     except:
                                         dictionary["intensity"].append(0)
+                                    self.read_linewidths(dictionary, line)
                                 except:
                                     pass
 
@@ -2087,16 +2287,18 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                     if(len(self.previous_peaklists)>10):
                         self.previous_peaklists.pop(0)
                     self.previous_peaklists.append(copy.deepcopy(self.peak_list_dictionary))
+                    peaklist = self.current_peaklist_box.GetValue()
+                    self.pad_peaklist(peaklist)
                     for peak_index in self.selected_peak_indexes:
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["peak_name"][peak_index - count]
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["shift1"][peak_index - count]
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["shift2"][peak_index - count]
+                        # Everything held for the peak is removed, so that the
+                        # lists stay in step with one another
+                        for key in PEAK_ENTRY_KEYS:
+                            try:
+                                del self.peak_list_dictionary[peaklist][key][
+                                    peak_index - count
+                                ]
+                            except (KeyError, IndexError):
+                                pass
 
                         count += 1
 
@@ -2435,24 +2637,50 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
             return
 
 
-        with open(peaklist_file, "w") as file:
-            current_peaklist = self.current_peaklist_box.GetValue()
-            if(self.names[current_peaklist] != ['', '']):
-                file.write("Peak \t {} \t {} \t {}\n".format(self.names[current_peaklist][0], self.names[current_peaklist][1], 'Intensity'))
-
-            shifts1 = self.peak_list_dictionary[current_peaklist]["shift1"]
-            shifts2 = self.peak_list_dictionary[current_peaklist]["shift2"]
-            intensities = self.peak_list_dictionary[current_peaklist]["intensity"]
-            # Save all elements in the grid
-            num_rows = self.grid.GetNumberRows()
-            for i in range(num_rows):
-                peak = self.grid.GetCellValue(i, 0)
-                shift1 = shifts1[i]
-                shift2 = shifts2[i]
-                intensity = intensities[i]
-                file.write("{} \t {} \t {} \t{}\n".format(peak, shift1, shift2, intensity))
+        self.write_peaklist(peaklist_file)
 
         self.AddPeaklist(peaklist_file, new_peaklist=True)
+
+    def write_peaklist(self, peaklist_file):
+        """
+        Write the current peaklist into a file, in the order the table shows
+        the peaks. The fitted linewidths are written as extra columns when any
+        of the peaks have been fitted.
+        """
+        current_peaklist = self.current_peaklist_box.GetValue()
+        if current_peaklist not in self.peak_list_dictionary:
+            self.no_peaklist_message("Saving a peaklist")
+            return
+
+        self.pad_peaklist(current_peaklist)
+
+        dictionary = self.peak_list_dictionary[current_peaklist]
+        linewidths = self.find_linewidths_written(current_peaklist)
+
+        with open(peaklist_file, "w") as file:
+            if self.names[current_peaklist] != ["", ""]:
+                header = "Peak \t {} \t {} \t {}".format(
+                    self.names[current_peaklist][0],
+                    self.names[current_peaklist][1],
+                    "Intensity",
+                )
+                if linewidths == True:
+                    header += " \t Linewidth1(Hz) \t Linewidth1(ppm)"
+                    header += " \t Linewidth2(Hz) \t Linewidth2(ppm)"
+                file.write(header + "\n")
+
+            for index in self.find_table_order(current_peaklist):
+                line = "{} \t {} \t {} \t{}".format(
+                    dictionary["peak_name"][index],
+                    dictionary["shift1"][index],
+                    dictionary["shift2"][index],
+                    dictionary["intensity"][index],
+                )
+                if linewidths == True:
+                    line += " \t " + self.find_linewidth_columns(
+                        current_peaklist, index
+                    )
+                file.write(line + "\n")
 
     def find_save_location(self):
         """
@@ -2504,22 +2732,7 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         else:
             peaklist_file = self.peaklist_name_box.GetValue()
 
-        with open(peaklist_file, "w") as file:
-            current_peaklist = self.current_peaklist_box.GetValue()
-            if(self.names[current_peaklist] != ['', '']):
-                file.write("Peak \t {} \t {}\n".format(self.names[current_peaklist][0], self.names[current_peaklist][1]))
-
-            shifts1 = self.peak_list_dictionary[current_peaklist]["shift1"]
-            shifts2 = self.peak_list_dictionary[current_peaklist]["shift2"]
-            intensities = self.peak_list_dictionary[current_peaklist]["intensity"]
-            # Save all elements in the grid
-            num_rows = self.grid.GetNumberRows()
-            for i in range(num_rows):
-                peak = self.grid.GetCellValue(i, 0)
-                shift1 = shifts1[i]
-                shift2 = shifts2[i]
-                intensity = intensities[i]
-                file.write("{} \t {} \t {} \t{}\n".format(peak, shift1, shift2, intensity))
+        self.write_peaklist(peaklist_file)
 
     def OnPickPeaks(self, event):
         """

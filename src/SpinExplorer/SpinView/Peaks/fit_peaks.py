@@ -652,6 +652,22 @@ class fit_peaks_2D_window(wx.Frame):
         self.main_fit_sizer.Add(self.options_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
     
+    def find_linewidth(self, sigma, hz_per_ppm):
+        """
+        The linewidth of a fitted peak in Hz and in ppm. The fit gives the
+        standard deviation of a Gaussian in ppm, and the linewidth is its full
+        width at half maximum.
+        """
+        try:
+            linewidth_ppm = abs(float(sigma)) * 2 * np.sqrt(2 * np.log(2))
+        except (ValueError, TypeError):
+            return [None, None]
+
+        if hz_per_ppm == None:
+            return [None, linewidth_ppm]
+
+        return [linewidth_ppm * hz_per_ppm, linewidth_ppm]
+
     def OnAcceptButton(self, event):
         """
         Accept changes from the fit (peak locations and intensities) into the
@@ -666,20 +682,36 @@ class fit_peaks_2D_window(wx.Frame):
 
 
         try:
+            # Every peak has an entry in every list of the peaklist, including
+            # the linewidths which are being filled in here
+            self.peaklist_frame.pad_peaklist(self.current_peaklist)
+            dictionary = self.peaklist_frame.peak_list_dictionary[self.current_peaklist]
+
+            peak_names = []
             for j in range(len(self.selected_peak_indexes)):
                 selected_peak_index = self.selected_peak_indexes[j]
                 shift1 = self.shifts1[j]
                 shift2 = self.shifts2[j]
                 intensity = self.intensities[j]
-                
 
-                self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['shift1'][selected_peak_index] = shift1
-                self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['shift2'][selected_peak_index] = shift2
-                self.peaklist_frame.peak_list_dictionary[self.current_peaklist]['intensity'][selected_peak_index] = intensity
+                dictionary['shift1'][selected_peak_index] = shift1
+                dictionary['shift2'][selected_peak_index] = shift2
+                dictionary['intensity'][selected_peak_index] = intensity
+
+                # The fitted linewidth of the peak in each dimension
+                self.peaklist_frame.set_peak_linewidths(
+                    self.current_peaklist,
+                    selected_peak_index,
+                    self.linewidths1[j],
+                    self.linewidths2[j],
+                )
+
+                peak_names.append(dictionary['peak_name'][selected_peak_index])
 
             self.peaklist_frame.AddToTable()
             self.peaklist_frame.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
-            
+
+            self.acknowledge_fit(peak_names)
 
         except:
             # Peak positions and intensities were not updated correctly
@@ -693,6 +725,35 @@ class fit_peaks_2D_window(wx.Frame):
             dlg.ShowModal()
             dlg.Destroy()
             return None
+
+    def acknowledge_fit(self, peak_names):
+        """
+        Make it clear that the fitted positions, intensities and linewidths
+        have been put into the peaklist, as the peaklist window can be behind
+        this one.
+        """
+        self.accept_button.SetLabel("Updated positions/intensities accepted")
+        self.accept_button.Enable(False)
+        self.SetTitle(self.GetTitle() + " (accepted)")
+        self.options_sizer.Layout()
+
+        if len(peak_names) == 1:
+            peaks = "peak {}".format(peak_names[0])
+        else:
+            peaks = "{} peaks ({})".format(len(peak_names), ", ".join(peak_names))
+
+        dlg = wx.MessageDialog(
+            self,
+            "The positions, intensities and linewidths of {} in the peaklist "
+            "{} have been updated from the fit. The linewidths are shown in "
+            "the peaklist table in Hz and in ppm.".format(
+                peaks, self.current_peaklist
+            ),
+            "Fit accepted",
+            wx.OK | wx.ICON_INFORMATION,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def OnMinContourFit(self, event):
         self.x_val = 10 ** float(self.contour_slider.GetValue())
@@ -744,10 +805,19 @@ class fit_peaks_2D_window(wx.Frame):
         self.shifts1 = []
         self.shifts2 = []
         self.intensities = []
+        self.linewidths1 = []
+        self.linewidths2 = []
+        hz_per_ppm = self.peaklist_frame.find_hz_per_ppm(self.current_peaklist)
         for j, peak_index in enumerate(self.selected_peak_indexes):
             self.shifts1.append(self.popt[j*5+1])
             self.shifts2.append(self.popt[j*5+2])
             self.intensities.append(self.popt[j*5])
+            self.linewidths1.append(
+                self.find_linewidth(self.popt[j*5+3], hz_per_ppm[0])
+            )
+            self.linewidths2.append(
+                self.find_linewidth(self.popt[j*5+4], hz_per_ppm[1])
+            )
 
         self.points = self.ax.scatter(
                 self.shifts1,
