@@ -3434,6 +3434,30 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                 self.grid.SetColSize(c, col_width)
 
 
+    def find_picked_shifts(self, peaks):
+        """
+        The chemical shifts of the peaks which nmrglue has picked, in the order
+        the peaklist holds them: the axis shown across the bore plot, the axis
+        shown up it, and the bore dimension.
+
+        nmrglue names the last axis of the data X_AXIS, then Y_AXIS and
+        Z_AXIS. The data is held with the bore dimension first, then the axis
+        shown across the plot, then the axis shown up it, so the axis across
+        the plot is the Y_AXIS of the picked peaks and the axis up it is the
+        X_AXIS. Transposing the bore plot swaps the two unit conversions over
+        with the axes they are drawn on.
+        """
+        if self.main_frame.transposed2D == False:
+            x = self.main_frame.uc0.ppm(peaks["Y_AXIS"])
+            y = self.main_frame.uc1.ppm(peaks["X_AXIS"])
+        else:
+            x = self.main_frame.uc0.ppm(peaks["X_AXIS"])
+            y = self.main_frame.uc1.ppm(peaks["Y_AXIS"])
+
+        z = self.main_frame.main_frame.uc2.ppm(peaks["Z_AXIS"])
+
+        return x, y, z
+
     def OnPickPeaks(self, event):
         """
         Pick peaks using nmrglue peak picking routines and then load this peaklist.
@@ -3505,13 +3529,7 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                 else:
                     peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection)
             
-            if(self.main_frame.transposed2D == False):
-                x = self.main_frame.uc0.ppm(peaks["X_AXIS"])
-                y = self.main_frame.uc1.ppm(peaks["Y_AXIS"])
-            else:
-                x = self.main_frame.uc0.ppm(peaks["Y_AXIS"])
-                y = self.main_frame.uc1.ppm(peaks["X_AXIS"])
-            z = self.main_frame.main_frame.uc2.ppm(peaks["Z_AXIS"])
+            x, y, z = self.find_picked_shifts(peaks)
 
             intensities = []
             for p in peaks:
