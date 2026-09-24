@@ -3028,6 +3028,14 @@ class SpinBore(wx.Frame):
 
         self.plot_peak_bore_lines()
 
+        # The view the window starts with, which q goes back to. The window
+        # keeps its own record of the 1D and strip limits under another name,
+        # which is used for the amino acid overlay
+        self.starting_limits = [
+            (axes, axes.get_xlim(), axes.get_ylim())
+            for axes in [self.ax_bore, self.ax_bore_2]
+        ]
+
         # Plot the strip plot contour plot
         contour_start_strip = (
             np.max(self.nmrdata.data) / 10
@@ -3153,6 +3161,128 @@ class SpinBore(wx.Frame):
 
         self.canvas_bore.draw_idle()
 
+    def find_bore_indexes(self, x, y):
+        """
+        The point of the 3D data which the position marker sits on. The data is
+        held as [bore][first plane axis][second plane axis], and the plane can be
+        shown either way round, so the axis each coordinate belongs to is found
+        by its chemical shifts rather than by its size.
+        """
+        viewer = self.main_frame
+
+        across = viewer.ppms_0
+        up = viewer.ppms_1
+
+        try:
+            same = len(self.new_x_ppms) == len(across) and np.allclose(
+                self.new_x_ppms[:3], across[:3]
+            )
+        except (AttributeError, TypeError, ValueError):
+            same = True
+
+        if same == False:
+            # The plane is shown the other way round from the 3D window
+            x, y = y, x
+
+        return (
+            int(np.argmin(np.abs(np.array(across) - x))),
+            int(np.argmin(np.abs(np.array(up) - y))),
+        )
+
+    def draw_bore_trace(self):
+        """
+        Draw the bore dimension at the position the marker is at. Everything
+        which moves the marker or changes what is shown ends up here, so that
+        the trace and the strip plot always follow the marker.
+        """
+        viewer = self.main_frame
+
+        try:
+            x, y = self.bore_initial
+            first, second = self.find_bore_indexes(x, y)
+            self.bore_initial_index = first, second
+            self.bore_data = np.array(
+                [value for value in viewer.nmrdata.data[:, first, second]]
+            )
+            self.bore_data_strip1 = np.array(
+                [plane[first] for plane in viewer.nmrdata.data]
+            )
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return
+
+        intensity_percent = 10 ** float(self.bore_intensity_slider.GetValue())
+
+        title = self.ax_bore_2.get_title()
+        ylabel = self.ax_bore_2.get_ylabel()
+        self.ax_bore_2.clear()
+        self.ax_bore_2.set_title(title)
+        self.ax_bore_2.plot(
+            self.bore_data, viewer.ppms_2, color="red", linewidth=0.5
+        )
+        self.ax_bore_2.set_ylim(max(viewer.ppms_2), min(viewer.ppms_2))
+        self.ax_bore_2.set_xlim(
+            -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
+            np.max(self.nmrdata.data) / (intensity_percent / 100),
+        )
+        self.ax_bore_2.set_ylabel(ylabel)
+
+        self.line1 = self.ax_bore_2.axhline(y=x, color="black", linewidth=0.5)
+        self.line2 = self.ax_bore_2.axhline(y=y, color="black", linewidth=0.5)
+
+        # The strip plot is taken at the same position
+        self.ppms_2 = viewer.ppms_2
+        self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
+        strip_axis = "shift1"
+        if self.Xstrip.shape != self.bore_data_strip1.shape:
+            self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
+            strip_axis = "shift2"
+
+        # The peaks drawn on the strip plot follow whichever of the two plane
+        # axes it is showing
+        peaks = getattr(self, "peak_lists3D", None)
+        if peaks != None:
+            try:
+                peaks.bore_xdim = strip_axis
+            except (RuntimeError, AttributeError):
+                pass
+
+        self.plot_peak_bore_lines()
+
+    def reset_bore_view(self):
+        """
+        Go back to the view the bore window started with and stop showing what
+        is selected: the peak which is selected, the peaks shown down the bore
+        and the positions a peak being resolved could have.
+        """
+        peaks = getattr(self, "peak_lists3D", None)
+
+        if peaks != None:
+            try:
+                peaks.selected_peak_indexes = ["N/A"]
+                peaks.selected_peakname = ""
+            except (RuntimeError, AttributeError):
+                pass
+
+        self.selected_bore_peaks = []
+        self.candidate_shifts = []
+
+        # Back to the view the window started with. The tools keep their own
+        # history, which is empty until they have been used, so the limits the
+        # window was drawn with are kept as well
+        try:
+            self.toolbar_bore.home()
+        except Exception:
+            pass
+
+        for axes, xlimits, ylimits in getattr(self, "starting_limits", []):
+            try:
+                axes.set_xlim(xlimits)
+                axes.set_ylim(ylimits)
+            except (RuntimeError, ValueError):
+                pass
+
+        self.OnBoreSlider(wx.EVT_BUTTON)
+
     def on_key_bore(self, event):
         """
         The keyboard shortcuts for the navigation tools, as the 2D and 3D
@@ -3164,7 +3294,7 @@ class SpinBore(wx.Frame):
         if event.key == "p":
             self.toolbar_bore.pan()
         if event.key == "q":
-            self.toolbar_bore.home()
+            self.reset_bore_view()
         if event.key == "b":
             self.toolbar_bore.back()
         if event.key == "f":
@@ -3460,6 +3590,15 @@ class SpinBore(wx.Frame):
         self.peak_bore_lines = []
 
         try:
+            # The positions a peak being resolved could have, so that they can
+            # be compared with the trace
+            for shift in getattr(self, "candidate_shifts", []):
+                self.peak_bore_lines.append(
+                    self.ax_bore_2.axhline(
+                        y=shift, color="grey", linewidth=0.8, linestyle="--"
+                    )
+                )
+
             for peakname, shift3 in self.find_peak_bore_lines():
                 self.peak_bore_lines.append(
                     self.ax_bore_2.axhline(
@@ -3726,7 +3865,9 @@ class SpinBore(wx.Frame):
 
         self.add_peaklist()
 
-        self.plot_peak_bore_lines()
+        # The bore dimension is drawn at the position the marker is at, so that
+        # it always shows what the marker points at
+        self.draw_bore_trace()
 
         self.OnBoreSliderStripPlot(wx.EVT_BUTTON)
 

@@ -11,6 +11,7 @@ import matplotlib.patches as patches
 from matplotlib.backend_bases import MouseEvent as MPLMouseEvent
 import matplotlib
 matplotlib.use("wxAgg")
+from SpinExplorer.SpinView.Peaks import bore_candidates
 from SpinExplorer.SpinView.Peaks.fit_peaks import fit_peaks
 from SpinExplorer.SpinView.Peaks.fit_peaks import fit_peaks_2D_window
 from SpinExplorer.SpinView.Peaks.analysis import analysis_frame
@@ -3685,6 +3686,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+        # The distances at which peaks can be confused follow the data
+        self.update_closeness_boxes()
+
         # The peaklists which were shown last time are loaded again
         self.load_remembered_peaklists()
 
@@ -3845,6 +3849,22 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             "selected peaklist box above."
         )
 
+        self.resolve_button = wx.Button(self.row2_label, label="Resolve Bore Peaks")
+        self.resolve_button.Bind(wx.EVT_BUTTON, self.OnResolveAmbiguities)
+        self.resolve_button.SetToolTip(
+            "Show the peaks whose position down the bore dimension is not "
+            "certain, so that one of the maxima which were found can be chosen "
+            "or the peak left as it is."
+        )
+
+        self.reanalyse_button = wx.Button(self.row2_label, label="Re-analyse Bore")
+        self.reanalyse_button.Bind(wx.EVT_BUTTON, self.OnReanalyseBore)
+        self.reanalyse_button.SetToolTip(
+            "Work out again which maxima down the bore dimension belong to which "
+            "peak, using the expected number and the distance which are set now. "
+            "The positions of the peaks in the plane are not changed."
+        )
+
         self.refresh_intensities_button = wx.Button(
             self.row2_label, label="Refresh Intensities"
         )
@@ -3921,6 +3941,10 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.row2_2.Add(self.move_to_local_max_bore)
         self.row2_2.AddSpacer(5)
         self.row2_2.Add(self.refresh_intensities_button)
+        self.row2_2.AddSpacer(5)
+        self.row2_2.Add(self.resolve_button)
+        self.row2_2.AddSpacer(5)
+        self.row2_2.Add(self.reanalyse_button)
         self.row2_2.AddSpacer(10)
         self.row2_2.Add(self.add_at_local_max_box, 0, wx.ALIGN_CENTER_VERTICAL)
         self.row2_2.AddSpacer(10)
@@ -3948,6 +3972,40 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.reference_plane_button = wx.ToggleButton(self.row_pickpeaks_label,-1,"Load reference plane (optional)")
         self.reference_plane_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnLoadReferencePlane)
+
+        self.expected_peaks_text = wx.StaticText(
+            self.row_pickpeaks_label, -1, "Expected peaks down the bore:"
+        )
+        self.expected_peaks_box = wx.TextCtrl(
+            self.row_pickpeaks_label, value="0", size=(30, 20)
+        )
+        self.expected_peaks_box.SetToolTip(
+            "How many maxima down the bore dimension each peak of the reference "
+            "plane is expected to have, which depends on the experiment. A peak "
+            "with fewer than this is noted rather than made up, as a peak can be "
+            "missing for good reasons such as a proline or the end of the chain. "
+            "Zero keeps every maximum which is found."
+        )
+
+        self.closeness_text = wx.StaticText(
+            self.row_pickpeaks_label, -1, "Peaks closer than:"
+        )
+        self.closeness_box_1 = wx.TextCtrl(
+            self.row_pickpeaks_label, value="", size=(50, 20)
+        )
+        self.closeness_box_2 = wx.TextCtrl(
+            self.row_pickpeaks_label, value="", size=(50, 20)
+        )
+        self.closeness_units_text = wx.StaticText(
+            self.row_pickpeaks_label, -1, "ppm may be confused"
+        )
+        for box in [self.closeness_box_1, self.closeness_box_2]:
+            box.SetToolTip(
+                "How close two peaks have to be in the plane before a maximum "
+                "down the bore of one of them could belong to the other. The "
+                "values are worked out from the spacing of the data and can be "
+                "changed."
+            )
 
         self.peaklist_name_text = wx.StaticText(self.row_pickpeaks_label,-1,"Peaklist name:")
         self.peaklist_name_box = wx.TextCtrl(self.row_pickpeaks_label,value='peaks_nmrglue.list',
@@ -3982,6 +4040,18 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.row_pickpeaks2.Add(self.peak_picking_algorithm_text)
         self.row_pickpeaks2.AddSpacer(5)
         self.row_pickpeaks2.Add(self.peak_picking_algorithm_box)
+        self.row_pickpeaks2.AddSpacer(10)
+        self.row_pickpeaks2.Add(self.expected_peaks_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.expected_peaks_box)
+        self.row_pickpeaks2.AddSpacer(10)
+        self.row_pickpeaks2.Add(self.closeness_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.closeness_box_1)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.closeness_box_2)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.closeness_units_text, 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.row_pickpeaks.Add(self.row_pickpeaks1, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.row_pickpeaks.AddSpacer(10)
@@ -4017,13 +4087,15 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.row3 = wx.StaticBoxSizer(self.row3_label, wx.HORIZONTAL)
 
         self.grid = gridlib.Grid(self.row3_label)
-        self.grid.CreateGrid(5, 5)
+        self.grid.CreateGrid(5, 7)
 
         self.grid.SetColLabelValue(0, "Peak name")
         self.grid.SetColLabelValue(1, "Shift 1 (ppm)")
         self.grid.SetColLabelValue(2, "Shift 2 (ppm)")
         self.grid.SetColLabelValue(3, "Shift 3 (ppm)")
         self.grid.SetColLabelValue(4, "Intensity")
+        self.grid.SetColLabelValue(5, "Ambiguity")
+        self.grid.SetColLabelValue(6, "Alternatives (ppm)")
 
         # Bind event when cell value changes
         self.grid.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.on_begin_edit)
@@ -4108,6 +4180,576 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.main_frame.peak_lists3D = self
 
         PeakModeButtons.load_remembered_peaklists(self)
+
+    def analyse_bore_positions(self, positions):
+        """
+        Pick the maxima down the bore dimension at each position in the plane
+        and share them out between the positions which are close together.
+        """
+        viewer = self.find_viewer()
+        data = viewer.nmrdata.data
+
+        try:
+            threshold = float(self.peak_picking_threshold_box.GetValue()) / 100 * np.max(
+                data
+            )
+        except (ValueError, TypeError):
+            dlg = wx.MessageDialog(
+                self,
+                "The value in the threshold box is not a number, please correct "
+                "it and try again.",
+                "Analysing the bore dimension",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return None
+
+        algorithm = self.peak_picking_algorithm_box.GetValue()
+        sign_option = self.peak_picking_type.GetValue()
+
+        bore_shifts = np.array(viewer.uc2.ppm(np.arange(data.shape[0])))
+
+        trace_peaks = []
+        for shift1, shift2 in positions:
+            index3, index1, index2 = self.find_peak_indexes(shift1, shift2, 0)
+            plane = (index1, index2)
+            trace = data[:, index1, index2]
+
+            found = None
+            try:
+                if algorithm in ["thres", "thres-fast"]:
+                    if sign_option == "Negative Peaks":
+                        found = ng.peakpick.pick(
+                            trace, nthres=threshold, algorithm=algorithm, msep=1
+                        )
+                    elif sign_option == "Positive Peaks":
+                        found = ng.peakpick.pick(
+                            trace, pthres=threshold, algorithm=algorithm, msep=1
+                        )
+                    else:
+                        found = ng.peakpick.pick(
+                            trace,
+                            pthres=threshold,
+                            nthresh=threshold,
+                            algorithm=algorithm,
+                            msep=1,
+                        )
+                else:
+                    if sign_option == "Negative Peaks":
+                        found = ng.peakpick.pick(
+                            trace, nthres=threshold, algorithm=algorithm
+                        )
+                    elif sign_option == "Positive Peaks":
+                        found = ng.peakpick.pick(
+                            trace, pthres=threshold, algorithm=algorithm
+                        )
+                    else:
+                        found = ng.peakpick.pick(
+                            trace,
+                            pthres=threshold,
+                            nthresh=threshold,
+                            algorithm=algorithm,
+                        )
+            except Exception:
+                # The peak picker found nothing down the bore here
+                found = None
+
+            candidates = self.find_trace_candidates(
+                trace, bore_shifts, found, threshold
+            )
+
+            trace_peaks.append(
+                {
+                    "plane": plane,
+                    "candidates": candidates,
+                    "projection": self.find_projection_intensity(shift1, shift2),
+                }
+            )
+
+        return self.find_bore_assignments(data, trace_peaks, positions)
+
+    def apply_bore_assignments(self, peaklist, positions, groups, assignments):
+        """
+        Put the positions down the bore which the analysis has worked out into
+        the peaklist, keeping the peaks where they are in the plane.
+        """
+        dictionary = self.peak_list_dictionary[peaklist]
+        self.pad_notes(peaklist)
+        self.peak_candidates = getattr(self, "peak_candidates", {})
+
+        uncertain = 0
+
+        for i, assignment in enumerate(assignments):
+            kept = assignment["kept"]
+            others = bore_candidates.find_alternatives_text(assignment["others"])
+            notes = [
+                note for note in assignment["notes"]
+                if note != bore_candidates.AMBIGUOUS
+            ]
+
+            for position, index in enumerate(groups[i]):
+                name = dictionary["peak_name"][index]
+                self.peak_candidates[name] = assignment["candidates"]
+
+                if position < len(kept):
+                    candidate = kept[position]
+                    dictionary["shift3"][index] = candidate["shift"]
+                    dictionary["intensity"][index] = candidate["intensity"]
+                    peak_notes = list(notes)
+                    if candidate["ambiguous"] == True:
+                        peak_notes = [bore_candidates.AMBIGUOUS] + peak_notes
+                else:
+                    # This peak has no maximum of its own down the bore
+                    dictionary["shift3"][index] = 0
+                    dictionary["intensity"][index] = 0
+                    peak_notes = list(notes)
+
+                dictionary["ambiguity"][index] = bore_candidates.find_ambiguity_text(
+                    peak_notes
+                )
+                dictionary["alternatives"][index] = others
+
+                if dictionary["ambiguity"][index] != "":
+                    uncertain += 1
+
+        self.AddToTable()
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+        return uncertain
+
+    def pad_notes(self, peaklist):
+        """
+        Make sure every peak has an entry in the two columns which say how sure
+        its position down the bore is.
+        """
+        dictionary = self.peak_list_dictionary[peaklist]
+        number_of_peaks = len(dictionary.get("peak_name", []))
+
+        for key in ["ambiguity", "alternatives"]:
+            if key not in dictionary:
+                dictionary[key] = []
+            while len(dictionary[key]) < number_of_peaks:
+                dictionary[key].append("")
+
+    def find_uncertain_peaks(self) -> list:
+        """
+        The peaks whose position down the bore dimension is not certain: the
+        ones where the choice between neighbouring peaks was too close to call,
+        and the ones which found fewer maxima than expected.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            return []
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        uncertain = []
+
+        for index in self.find_table_order(peaklist):
+            note = self.find_note(peaklist, "ambiguity", index)
+            if note == "":
+                continue
+
+            name = dictionary["peak_name"][index]
+            candidates = list(getattr(self, "peak_candidates", {}).get(name, []))
+
+            if len(candidates) == 0:
+                # A peaklist which has been read back from a file holds the
+                # other positions but not how sure each of them was
+                candidates = [
+                    {"shift": shift, "intensity": None, "confidence": None}
+                    for shift in bore_candidates.read_alternatives(
+                        self.find_note(peaklist, "alternatives", index)
+                    )
+                ]
+
+            if len(candidates) == 0:
+                continue
+
+            uncertain.append(
+                {
+                    "name": name,
+                    "note": note,
+                    "index": index,
+                    "shift3": dictionary["shift3"][index],
+                    "candidates": candidates,
+                }
+            )
+
+        return uncertain
+
+    def offer_to_resolve(self):
+        """
+        Say how many peaks have an uncertain position down the bore dimension
+        and offer to look at them now. They can also be looked at later with
+        the resolve button.
+        """
+        uncertain = self.find_uncertain_peaks()
+        if len(uncertain) == 0:
+            return
+
+        dlg = wx.MessageDialog(
+            self,
+            "{} of the peaks have a position down the bore dimension which is "
+            "not certain, either because a close neighbour has a similar claim "
+            "on a maximum or because fewer maxima were found than expected. "
+            "Would you like to look at them now? They can also be looked at "
+            "later using the resolve bore peaks button.".format(len(uncertain)),
+            "Resolve peaks",
+            wx.YES_NO | wx.ICON_QUESTION,
+        )
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        if result == wx.ID_YES:
+            self.OnResolveAmbiguities(wx.EVT_BUTTON)
+
+    def OnResolveAmbiguities(self, event):
+        """
+        Show the peaks whose position down the bore is not certain so that each
+        of them can be looked at in the spectrum and given a position, kept as
+        it is, or accepted where it now sits.
+        """
+        uncertain = self.find_uncertain_peaks()
+
+        if len(uncertain) == 0:
+            dlg = wx.MessageDialog(
+                self,
+                "There are no peaks with an uncertain position down the bore "
+                "dimension in this peaklist.",
+                "Resolve peaks",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        # Only one of these windows at a time, so that it always shows the
+        # peaklist as it is now
+        self.close_resolve_dialog()
+
+        self.resolve_dialog = ResolveAmbiguityDialog(self, uncertain)
+        self.resolve_dialog.Show()
+        self.resolve_dialog.Raise()
+
+    def close_resolve_dialog(self):
+        """
+        Put away the window for resolving peaks, if it is open.
+        """
+        dialog = getattr(self, "resolve_dialog", None)
+        if dialog == None:
+            return
+
+        try:
+            dialog.Destroy()
+        except RuntimeError:
+            pass
+
+        self.resolve_dialog = None
+
+    def reopen_resolve_dialog(self):
+        """
+        Show the peaks which are still uncertain, after some of them have been
+        looked at or moved in the spectrum.
+        """
+        self.close_resolve_dialog()
+        self.OnResolveAmbiguities(wx.EVT_BUTTON)
+
+    def finish_resolving(self):
+        """
+        Stop showing the positions a peak could have, now that the window for
+        resolving peaks has gone.
+        """
+        self.resolve_dialog = None
+        self.main_frame.candidate_shifts = []
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+    def find_peak_for_resolving(self, peak):
+        """
+        A peak of the resolving window as it is in the peaklist now, which is
+        not always where it was when the window was opened.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            return peak
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        index = peak.get("index")
+
+        held = dict(peak)
+        try:
+            if dictionary["peak_name"][index] != peak["name"]:
+                # The peaklist has changed since the window was opened
+                index = dictionary["peak_name"].index(peak["name"])
+                held["index"] = index
+
+            held["shift3"] = dictionary["shift3"][index]
+        except (KeyError, IndexError, TypeError, ValueError):
+            pass
+
+        return held
+
+    def show_peak_for_resolving(self, peak):
+        """
+        Show one peak of the resolving window in the spectrum: select it, so
+        that the select and move tools work on it, move the position marker onto
+        it, zoom the plane onto it and show the positions it could have as lines
+        down the bore.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            return
+
+        held = self.find_peak_for_resolving(peak)
+        index = held.get("index")
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        try:
+            shift1 = dictionary["shift1"][index]
+            shift2 = dictionary["shift2"][index]
+        except (KeyError, IndexError, TypeError):
+            return
+
+        # The peak becomes the selected one, so that the peak tools work on it
+        self.selected_peaklist = peaklist
+        self.selected_peak_indexes = [index]
+        self.selected_peakname = held["name"]
+        self.main_frame.selected_bore_peaks = [index]
+
+        # The positions it could have are drawn down the bore alongside its own
+        self.main_frame.candidate_shifts = [
+            candidate["shift"] for candidate in peak.get("candidates", [])
+        ]
+
+        # Zoom the plane onto the peak and show the bore dimension there
+        width = 0.1
+        self.zoom_to_region(
+            self.main_frame.ax_bore,
+            [shift1 - width, shift1 + width],
+            [shift2 - width, shift2 + width],
+        )
+
+        show_bore_position = getattr(self.main_frame, "show_bore_position", None)
+        if show_bore_position != None:
+            show_bore_position(shift1, shift2)
+        else:
+            self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+        self.AddToTable()
+
+    def apply_resolutions(self, uncertain, answers) -> int:
+        """
+        Give the peaks the positions down the bore which were chosen for them.
+        A peak which was left alone is not touched, and one which was accepted
+        where it sits keeps its position and is noted as resolved.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            return 0
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        self.pad_notes(peaklist)
+        changed = 0
+
+        for i, answer in enumerate(answers):
+            if answer == None:
+                continue
+
+            held = self.find_peak_for_resolving(uncertain[i])
+            index = held.get("index")
+
+            try:
+                previous = float(dictionary["shift3"][index])
+            except (KeyError, IndexError, TypeError, ValueError):
+                continue
+
+            if answer == "current":
+                # The peak stays where it is, which the user has accepted
+                chosen = previous
+            else:
+                chosen = float(answer["shift"])
+
+            # The position which was given up becomes one of the other options
+            others = bore_candidates.read_alternatives(
+                self.find_note(peaklist, "alternatives", index)
+            )
+            others = [shift for shift in others if abs(shift - chosen) > 1e-6]
+            if previous != 0 and abs(previous - chosen) > 1e-6:
+                others.append(previous)
+
+            dictionary["shift3"][index] = chosen
+            dictionary["intensity"][index] = self.find_intensity_3d(
+                dictionary["shift1"][index], dictionary["shift2"][index], chosen
+            )
+            dictionary["ambiguity"][index] = bore_candidates.RESOLVED.capitalize()
+            dictionary["alternatives"][index] = ";".join(
+                ["{:.5f}".format(shift) for shift in others]
+            )
+            changed += 1
+
+        self.AddToTable()
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+        return changed
+
+    def OnReanalyseBore(self, event):
+        """
+        Work out again which maxima down the bore belong to which peak, using
+        the expected number and the distance which are set now. The positions
+        of the peaks in the plane are not changed.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            self.no_peaklist_message("Analysing the bore dimension")
+            return
+
+        dictionary = self.peak_list_dictionary[peaklist]
+
+        # Peaks which were picked from the same position in the plane belong to
+        # one peak of the reference plane, so they are gathered back together
+        positions = []
+        groups = []
+        for index in range(len(dictionary["peak_name"])):
+            position = (dictionary["shift1"][index], dictionary["shift2"][index])
+            for i, held in enumerate(positions):
+                if abs(held[0] - position[0]) < 1e-6 and abs(held[1] - position[1]) < 1e-6:
+                    groups[i].append(index)
+                    break
+            else:
+                positions.append(position)
+                groups.append([index])
+
+        assignments = self.analyse_bore_positions(positions)
+        if assignments == None:
+            return
+
+        self.apply_bore_assignments(peaklist, positions, groups, assignments)
+
+    def find_expected_peaks(self) -> int:
+        """
+        How many maxima down the bore dimension are expected for each peak of
+        the reference plane, which depends on the experiment. Zero means that
+        every maximum which is found is kept.
+        """
+        try:
+            expected = int(float(self.expected_peaks_box.GetValue()))
+        except (ValueError, AttributeError, TypeError):
+            return 0
+
+        if expected < 0:
+            return 0
+
+        return expected
+
+    def find_closeness(self) -> list:
+        """
+        How close two peaks have to be in each dimension of the plane before a
+        maximum down the bore of one of them could belong to the other. The
+        boxes are filled in from the spacing of the data and can be changed.
+        """
+        viewer = self.find_viewer()
+        automatic = bore_candidates.find_default_closeness(
+            viewer.ppms_0, viewer.ppms_1
+        )
+
+        distances = []
+        for dimension, box in enumerate([self.closeness_box_1, self.closeness_box_2]):
+            try:
+                distances.append(abs(float(box.GetValue())))
+            except (ValueError, AttributeError, TypeError):
+                distances.append(automatic[dimension])
+
+        return distances
+
+    def update_closeness_boxes(self):
+        """
+        Fill in the distances at which peaks can be confused, worked out from
+        the spacing of the data, leaving anything the user has typed alone.
+        """
+        viewer = self.find_viewer()
+        try:
+            automatic = bore_candidates.find_default_closeness(
+                viewer.ppms_0, viewer.ppms_1
+            )
+        except (AttributeError, TypeError, IndexError):
+            return
+
+        for dimension, box in enumerate([self.closeness_box_1, self.closeness_box_2]):
+            try:
+                if box.GetValue().strip() == "":
+                    box.SetValue("{:.4f}".format(automatic[dimension]))
+            except (RuntimeError, AttributeError):
+                pass
+
+    def find_projection_intensity(self, shift1, shift2):
+        """
+        How strong a peak is in the projection which is shown in the plane plot.
+        The projection holds the largest intensity down the bore at each
+        position, so it says how strong each peak should be down the bore.
+        """
+        try:
+            data, x_values, y_values = self.find_projection_data()
+            row = int(np.argmin(np.abs(x_values - shift1)))
+            column = int(np.argmin(np.abs(y_values - shift2)))
+            return abs(float(data[row][column]))
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return None
+
+    def find_trace_candidates(self, trace, shifts, found, threshold):
+        """
+        The maxima down a bore trace: the ones the peak picker reported, and any
+        others the trace holds above half of the threshold. A bore can hold more
+        than one resonance, and a maximum which did not clear the threshold can
+        still be the one a peak belongs to, so it is worth offering.
+        """
+        candidates = []
+
+        # What the peak picker reported, which it gives back as a table of its
+        # own rather than as a list
+        reported = []
+        try:
+            if len(found) > 0:
+                reported = found["X_AXIS"]
+        except TypeError:
+            reported = []
+
+        for j, bore_index in enumerate(reported):
+            index = int(round(float(bore_index)))
+            try:
+                shift = float(shifts[index])
+            except (IndexError, TypeError, ValueError):
+                continue
+
+            candidates.append(
+                {
+                    "bore_index": index,
+                    "shift": shift,
+                    "intensity": float(found[j][-1]),
+                }
+            )
+
+        candidates += bore_candidates.find_extra_candidates(
+            trace,
+            shifts,
+            abs(threshold) / 2,
+            [candidate["bore_index"] for candidate in candidates],
+        )
+
+        return candidates
+
+    def find_bore_assignments(self, data, trace_peaks, positions):
+        """
+        Share the maxima found down the bore between the peaks of the reference
+        plane, so that a maximum which belongs to a close neighbour is not
+        given to the wrong peak.
+        """
+        neighbours = bore_candidates.find_close_peaks(
+            positions, self.find_closeness()
+        )
+
+        return bore_candidates.find_assignments(
+            data, trace_peaks, neighbours, self.find_expected_peaks()
+        )
 
     def find_viewer(self):
         """
@@ -4791,26 +5433,24 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             # shifts closest to this value needs to be known so a list of 1D
             # data points can be individually fitted by the nmrglue peak picker
 
-            indexes0 = []
-            indexes1 = []
-
+            # The 3D data is held as [bore][first plane axis][second plane
+            # axis], so each reference peak is found on the two plane axes and
+            # the trace down the bore is taken there. The axes are found by
+            # their chemical shifts rather than by their size, so that a plane
+            # whose two dimensions have the same number of points is not
+            # turned round
+            planes = []
             for i, ppm0 in enumerate(ppms0):
-                if(len(x)==data.shape[-1] and len(y)==data.shape[-2]):
-                    index0 = np.argmin(np.abs(x-ppm0))
-                    index1 = np.argmin(np.abs(y-ppms1[i]))
-                else:
-                    index1 = np.argmin(np.abs(x-ppm0))
-                    index0 = np.argmin(np.abs(y-ppms1[i]))
-                indexes0.append(index0)
-                indexes1.append(index1)
-                
-            
+                planes.append(
+                    (
+                        int(np.argmin(np.abs(x - ppm0))),
+                        int(np.argmin(np.abs(y - ppms1[i]))),
+                    )
+                )
 
-            data_1D_slices = []
-            for i, index in enumerate(indexes0):
-                data_1D_slices.append(data[:, indexes1[i], index])
-
-            data_1D_slices = np.array(data_1D_slices)
+            data_1D_slices = np.array(
+                [data[:, plane[0], plane[1]] for plane in planes]
+            )
 
 
             threshold = float(threshold_box_value)/100 *np.max(data)
@@ -4844,34 +5484,106 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                     except:
                         peaks.append(0)
             
+            # The maxima found down the bore of each reference peak, which are
+            # then shared out between peaks which are close to one another in
+            # the plane
+            bore_shifts = np.array(
+                self.main_frame.main_frame.uc2.ppm(np.arange(data.shape[0]))
+            )
+
+            trace_peaks = []
+            for i, peak in enumerate(peaks):
+                found = peak
+                try:
+                    if peak == 0:
+                        # The peak picker found nothing down the bore here
+                        found = None
+                except (ValueError, TypeError):
+                    pass
+
+                candidates = self.find_trace_candidates(
+                    data_1D_slices[i], bore_shifts, found, threshold
+                )
+
+                trace_peaks.append(
+                    {
+                        "plane": planes[i],
+                        "candidates": candidates,
+                        "projection": self.find_projection_intensity(
+                            ppms0[i], ppms1[i]
+                        ),
+                    }
+                )
+
+            assignments = self.find_bore_assignments(
+                data, trace_peaks, list(zip(ppms0, ppms1))
+            )
+
             names1 = []
             x = []
             y = []
             z = []
             intensities = []
-            for i, peak in enumerate(peaks):
-                try:
-                    if(peak==0):
-                        # No peak picked for this slice
-                        continue
-                except:
-                    pass
-                if(self.main_frame.transposed2D == False):
+            ambiguities = []
+            alternatives = []
+            self.peak_candidates = {}
+
+            for i, assignment in enumerate(assignments):
+                if self.main_frame.transposed2D == False:
                     xval = ppms0[i]
                     yval = ppms1[i]
                 else:
                     xval = ppms1[i]
                     yval = ppms0[i]
-                z_list = self.main_frame.main_frame.uc2.ppm(peak["X_AXIS"])
-                intensity_list = []
-                for p in peak:
-                    intensity_list.append(p[-1])
-                for j,zval in enumerate(z_list):
-                    names1.append(names[i]+'_'+str(j+1))
+
+                kept = assignment["kept"]
+                notes = bore_candidates.find_ambiguity_text(assignment["notes"])
+                others = bore_candidates.find_alternatives_text(assignment["others"])
+
+                if len(kept) == 0:
+                    # Nothing was found down the bore of this peak, which is
+                    # worth keeping so that it can be looked at
+                    peakname = names[i]
+                    names1.append(peakname)
                     x.append(xval)
                     y.append(yval)
-                    z.append(zval)
-                    intensities.append(intensity_list[j])
+                    z.append(0)
+                    intensities.append(0)
+                    ambiguities.append(notes)
+                    alternatives.append(others)
+                    self.peak_candidates[peakname] = assignment["candidates"]
+                    continue
+
+                for j, candidate in enumerate(kept):
+                    peakname = names[i] + '_' + str(j + 1)
+                    names1.append(peakname)
+                    x.append(xval)
+                    y.append(yval)
+                    z.append(candidate["shift"])
+                    intensities.append(candidate["intensity"])
+                    if candidate["ambiguous"] == True:
+                        ambiguities.append(
+                            bore_candidates.find_ambiguity_text(
+                                [bore_candidates.AMBIGUOUS]
+                                + [
+                                    note
+                                    for note in assignment["notes"]
+                                    if note != bore_candidates.AMBIGUOUS
+                                ]
+                            )
+                        )
+                    else:
+                        ambiguities.append(
+                            bore_candidates.find_ambiguity_text(
+                                [
+                                    note
+                                    for note in assignment["notes"]
+                                    if note != bore_candidates.AMBIGUOUS
+                                ]
+                            )
+                        )
+                    alternatives.append(others)
+                    self.peak_candidates[peakname] = assignment["candidates"]
 
 
             
@@ -4887,7 +5599,15 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             dictionary["shift2"] = []
             dictionary["shift3"] = []
             dictionary["intensity"] = []
+            dictionary["ambiguity"] = []
+            dictionary["alternatives"] = []
             for i, peak in enumerate(picked_peak_array):
+                if(self.reference_plane==True):
+                    dictionary["ambiguity"].append(ambiguities[i])
+                    dictionary["alternatives"].append(alternatives[i])
+                else:
+                    dictionary["ambiguity"].append("")
+                    dictionary["alternatives"].append("")
                 if(self.reference_plane==True):
                     # Keeping the naming consistent with the reference plane
                     dictionary["peak_name"].append(names1[i])
@@ -4921,7 +5641,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.AddToTable()
 
-        self.current_peaklist_box.SetValue(peaklist_name)
+        # The box shows the peaklist by the same name as it is held under, which
+        # is the last few parts of the path rather than the whole of it
+        self.current_peaklist_box.SetValue(last_directories_path)
 
         # Where the peaklist really is, so that saving goes back to it
         self.peaklist_path = str(pathlib.Path(peaklist_name).absolute())
@@ -4934,6 +5656,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         # Save the 3D peaklist
         self.OnSave(wx.EVT_BUTTON, peaklist_file=peaklist_name)
+
+        # Offer to look at any peak whose position down the bore is not certain
+        self.offer_to_resolve()
 
     def AddPeakListBrowser(self, event):
         """
@@ -5003,6 +5728,10 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         # marked or unmarked and the columns are named from this one place
         self.update_saved_button()
         self.update_column_labels()
+
+        peaklist = self.find_current_peaklist()
+        if peaklist != None:
+            self.pad_notes(peaklist)
 
         row_count = self.grid.GetNumberRows()
         if row_count > 0:
@@ -5113,6 +5842,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             dictionary["shift2"] = []
             dictionary["shift3"] = []
             dictionary["intensity"] = []
+            dictionary["ambiguity"] = []
+            dictionary["alternatives"] = []
             name1 = ''
             name2 = ''
             name3 = ''
@@ -5135,6 +5866,7 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                                             dictionary["intensity"].append(float(line[4]))
                                         except:
                                             dictionary["intensity"].append(float(0.0))
+                                        self.read_notes(dictionary, lines[i])
                                     except:
                                         name1 = line[1]
                                         name2 = line[2]
@@ -5149,6 +5881,7 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                                             dictionary["intensity"].append(float(line[4]))
                                         except:
                                             dictionary["intensity"].append(float(0.0))
+                                        self.read_notes(dictionary, lines[i])
                                     except:
                                         pass
 
@@ -5362,129 +6095,105 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
     def check_peaklist(self, dictionary: dict):
         """
-        Try to see if the chemical shifts of the peaks are within the 2D spectral range
+        Match a peaklist to the spectrum which is being shown.
+
+        A peaklist can have been picked from a different projection of the same
+        3D data, so its three columns are not always in the order this window
+        shows them. Each column is compared with the range of each axis of the
+        plots and the columns are put in the order of what is shown: the axis
+        across the plane, the axis up it, and the bore dimension. A peaklist
+        which does not fit the spectrum at all is refused.
         """
-        ppms_0 = copy.deepcopy(dictionary["shift1"])
-        ppms_1 = copy.deepcopy(dictionary["shift2"])
-        ppms_2 = copy.deepcopy(dictionary["shift3"])
+        columns = [
+            copy.deepcopy(dictionary["shift1"]),
+            copy.deepcopy(dictionary["shift2"]),
+            copy.deepcopy(dictionary["shift3"]),
+        ]
 
+        ranges = self.find_axis_ranges()
 
-        shifts = [ppms_0, ppms_1, ppms_2]
+        order = bore_candidates.find_axis_assignment(
+            columns, ranges, score=self.find_peaklist_data_fit(columns)
+        )
 
-        mean_0 = np.mean(ppms_0)
-        mean_1 = np.mean(ppms_1)
-        mean_2 = np.mean(ppms_2)
-
-
-        # If there are two dimensions with the same ppm axis (e.g. (H)N(CA)NH), then the bore should be dimension 3
-
-        # find out which chemical shift is the bore dimension
-        if mean_0 > np.min(self.main_frame.main_frame.ppms_2) and mean_0 < np.max(
-            self.main_frame.main_frame.ppms_2
-        ):
-            bore_shifts = 0
-        elif mean_1 > np.min(self.main_frame.main_frame.ppms_2) and mean_1 < np.max(
-            self.main_frame.main_frame.ppms_2
-        ):
-            bore_shifts = 1
-        elif mean_2 > np.min(self.main_frame.main_frame.ppms_2) and mean_2 < np.max(
-            self.main_frame.main_frame.ppms_2
-        ):
-            bore_shifts = 2
-        else:
+        if order == None:
             dlg = wx.MessageDialog(
                 self,
-                "Chemical shifts in the peaklist for the bore dimension do not match any chemical shift axis. Try using a different peaklist",
+                "The chemical shifts in this peaklist do not fit the spectrum "
+                "which is shown, whichever way round its columns are read. Try "
+                "a different peaklist, or one picked from this spectrum.",
                 "Warning",
                 wx.OK,
             )
+            dlg.ShowModal()
+            dlg.Destroy()
             return None
-        
 
-        ppms_projection = []
-        for i in range(3):
-            if i == bore_shifts:
-                continue
-            else:
-                ppms_projection.append(shifts[i])
+        dictionary["shift1"] = columns[order[0]]
+        dictionary["shift2"] = columns[order[1]]
+        dictionary["shift3"] = columns[order[2]]
 
-        dictionary["shift3"] = shifts[bore_shifts]
-
-        ppms_0 = ppms_projection[0]
-        ppms_1 = ppms_projection[1]
-
-
-        mean_0 = np.mean(ppms_0)
-        mean_1 = np.mean(ppms_1)
-
-        match_0 = []
-        for ppm in ppms_0:
-            if ppm > np.min(self.main_frame.ppms_0) and ppm < np.max(
-                self.main_frame.ppms_0
-            ):
-                match_0.append(1)
-            else:
-                match_0.append(0)
-
-        mean0 = np.mean(np.array(match_0))
-
-        match_1 = []
-        for ppm in ppms_1:
-            if ppm > np.min(self.main_frame.ppms_1) and ppm < np.max(
-                self.main_frame.ppms_1
-            ):
-                match_1.append(1)
-            else:
-                match_1.append(0)
-
-        mean1 = np.mean(np.array(match_1))
-
-        if mean0 == 0 and mean1 == 0:
-            # No peaks are within the spectrum, trying transposing
-            match_0 = []
-            for ppm in ppms_0:
-                if ppm > np.min(self.main_frame.ppms_1) and ppm < np.max(
-                    self.main_frame.ppms_1
-                ):
-                    match_0.append(1)
-                else:
-                    match_0.append(0)
-
-            mean0 = np.mean(np.array(match_0))
-
-            match_1 = []
-            for ppm in ppms_1:
-                if ppm > np.min(self.main_frame.ppms_0) and ppm < np.max(
-                    self.main_frame.ppms_0
-                ):
-                    match_1.append(1)
-                else:
-                    match_1.append(0)
-
-            mean1 = np.mean(np.array(match_1))
-
-            if mean0 > 0.5 and mean1 > 0.5:
-                # More than 50 percent of the peaks are within the spectrum
-                dictionary["shift1"] = ppms_1
-                dictionary["shift2"] = ppms_0
-                self.bore_xdim = 'shift1'
-                if self.main_frame.transposed2D == True:
-                    dictionary["shift1"] = ppms_0
-                    dictionary["shift2"] = ppms_1
-                    self.bore_xdim = 'shift2'
-                return dictionary
-
-            else:
-                return None
-
-        else:
-            if self.main_frame.transposed2D == True:
-                dictionary["shift1"] = ppms_1
-                dictionary["shift2"] = ppms_0
-                self.bore_xdim = 'shift2'
+        # The columns are now in the order the plots show them, so the first one
+        # is the axis across the plane
+        self.bore_xdim = 'shift1'
 
         return dictionary
-    
+
+    def find_peaklist_data_fit(self, columns):
+        """
+        A way of telling how well a peaklist fits the spectrum with its columns
+        one way round rather than another, used when two dimensions cover the
+        same range of chemical shifts and the ranges cannot tell them apart.
+
+        The peaks of the right arrangement sit on the data, so the intensity of
+        the spectrum at the peaks says which way round the columns belong.
+        """
+
+        def find_fit(order):
+            total = 0.0
+            counted = 0
+
+            for i in range(len(columns[0])):
+                try:
+                    total += abs(
+                        float(
+                            self.find_intensity_3d(
+                                columns[order[0]][i],
+                                columns[order[1]][i],
+                                columns[order[2]][i],
+                            )
+                        )
+                    )
+                    counted += 1
+                except (IndexError, KeyError, TypeError, ValueError):
+                    continue
+
+            if counted == 0:
+                return 0.0
+
+            return total / counted
+
+        return find_fit
+
+    def find_axis_ranges(self) -> list:
+        """
+        The lowest and highest chemical shift of each axis of the plots, in the
+        order a peaklist holds them: the axis across the plane, the axis up it,
+        and the bore dimension. The plane axes are taken from the plot as it is
+        shown, so a projection which has been transposed is followed.
+        """
+        bore = self.main_frame
+        viewer = self.find_viewer()
+
+        axes = []
+        for values in [bore.new_x_ppms, bore.new_y_ppms, viewer.ppms_2]:
+            try:
+                axes.append((float(np.min(values)), float(np.max(values))))
+            except (TypeError, ValueError):
+                axes.append((0.0, 0.0))
+
+        return axes
+
     def check_reference_peaklist(self, dictionary: dict):
         """
         Try to see if the chemical shifts of the peaks are within the 2D spectral range
@@ -6535,6 +7244,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             find_axis_column_label(labels[1], 2),
             find_axis_column_label(labels[2], 3),
             "Intensity",
+            "Ambiguity",
+            "Alternatives (ppm)",
         ]
 
     def update_column_labels(self):
@@ -6567,6 +7278,42 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             )
         ]
 
+    def read_notes(self, dictionary, line):
+        """
+        Read what a peaklist file holds about how sure a peak's position down
+        the bore is. A peaklist written before this was worked out has neither
+        column, so the peak simply has nothing in them.
+        """
+        columns = split_peaklist_header(str(line).split("\n")[0])
+
+        for i, key in enumerate(["ambiguity", "alternatives"]):
+            value = ""
+            try:
+                value = str(columns[5 + i]).strip()
+            except IndexError:
+                value = ""
+
+            if value.lower() == "nan":
+                value = ""
+
+            dictionary[key].append(value)
+
+    def find_note(self, peaklist, key, index) -> str:
+        """
+        What is held for a peak in one of the columns which say how sure its
+        position down the bore is. A peaklist which has not been through that
+        analysis has nothing in them.
+        """
+        try:
+            value = self.peak_list_dictionary[peaklist][key][index]
+        except (KeyError, IndexError, TypeError):
+            return ""
+
+        if value == None:
+            return ""
+
+        return str(value)
+
     def find_peak_rows(self):
         """
         The peaks of the loaded peaklist as rows of text, in the order the table
@@ -6589,6 +7336,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                     "{:.5f}".format(dictionary["shift2"][index]),
                     "{:.5f}".format(dictionary["shift3"][index]),
                     "{:.5e}".format(dictionary["intensity"][index]),
+                    self.find_note(peaklist, "ambiguity", index),
+                    self.find_note(peaklist, "alternatives", index),
                 ])
             except (IndexError, KeyError, TypeError, ValueError):
                 continue
@@ -6842,17 +7591,246 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             else:
                 file.write(" \t ".join(labels[:3]) + "\n")
 
-            for peak, shift1, shift2, shift3, intensity in rows:
+            for row in rows:
                 if save_2d_plane == False:
-                    file.write(
-                        "{} \t {} \t {} \t {} \t {}\n".format(
-                            peak, shift1, shift2, shift3, intensity
-                        )
-                    )
+                    file.write(" \t ".join(row) + "\n")
                 else:
-                    file.write("{} \t {} \t {}\n".format(peak, shift1, shift2))
+                    file.write(" \t ".join(row[:3]) + "\n")
 
         return len(rows)
 
 
+class ResolveAmbiguityDialog(wx.Dialog):
+    """
+    A window listing the peaks whose position down the bore dimension is not
+    certain. Each peak can be shown in the spectrum, so that the peak tools can
+    be used to look at it, and then given one of the positions which were found,
+    kept as it is, or accepted where it now sits.
 
+    The window does not take over the application, so the spectrum and the peak
+    window can be used while it is open.
+    """
+
+    KEEP = "Leave as it is"
+    CURRENT = "Accept the position it has now"
+
+    def __init__(self, parent, peaks):
+        """
+        peaks is a list of dictionaries holding the name of the peak, the text
+        saying what is uncertain about it, where it is in the peaklist and the
+        positions it could have, each as {"shift", "intensity", "confidence"}.
+        """
+        wx.Dialog.__init__(
+            self,
+            parent,
+            title="Resolve peaks down the bore",
+            size=(860, 480),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+
+        self.peaks_window = parent
+        self.peaks = peaks
+        self.choices = []
+        self.positions = []
+        self.show_buttons = []
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        sizer.Add(
+            wx.StaticText(
+                self,
+                -1,
+                "These peaks could have more than one position down the bore "
+                "dimension, or found\nfewer maxima than expected. Show a peak to "
+                "look at it in the spectrum, where the\nselect and move tools can "
+                "be used, then give it a position or leave it as it is.",
+            ),
+            0,
+            wx.ALL,
+            10,
+        )
+
+        scrolled = wx.ScrolledWindow(self, -1, style=wx.VSCROLL)
+        scrolled.SetScrollRate(0, 10)
+        rows = wx.FlexGridSizer(cols=5, hgap=10, vgap=6)
+        rows.AddGrowableCol(4)
+
+        for name in ["", "Peak", "What is uncertain", "Position now", "Give it"]:
+            label = wx.StaticText(scrolled, -1, name)
+            label.SetFont(label.GetFont().Bold())
+            rows.Add(label, 0, wx.ALIGN_CENTER_VERTICAL)
+
+        for i, peak in enumerate(peaks):
+            show = wx.Button(scrolled, -1, "Show", size=(60, 24))
+            show.Bind(wx.EVT_BUTTON, self.on_show)
+            show.peak_number = i
+            rows.Add(show, 0, wx.ALIGN_CENTER_VERTICAL)
+            self.show_buttons.append(show)
+
+            rows.Add(
+                wx.StaticText(scrolled, -1, str(peak["name"])),
+                0,
+                wx.ALIGN_CENTER_VERTICAL,
+            )
+            rows.Add(
+                wx.StaticText(scrolled, -1, str(peak["note"])),
+                0,
+                wx.ALIGN_CENTER_VERTICAL,
+            )
+
+            position = wx.StaticText(scrolled, -1, self.find_position_text(peak))
+            rows.Add(position, 0, wx.ALIGN_CENTER_VERTICAL)
+            self.positions.append(position)
+
+            choice = wx.Choice(scrolled, -1, choices=self.find_choices(peak))
+            choice.SetSelection(0)
+            rows.Add(choice, 0, wx.EXPAND)
+            self.choices.append(choice)
+
+        scrolled.SetSizer(rows)
+        sizer.Add(scrolled, 1, wx.EXPAND | wx.ALL, 10)
+
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.apply_button = wx.Button(self, -1, "Apply")
+        self.apply_button.Bind(wx.EVT_BUTTON, self.on_apply)
+        self.apply_button.SetToolTip(
+            "Give each peak the position chosen for it. The peaks left alone are "
+            "not changed."
+        )
+        self.refresh_button = wx.Button(self, -1, "Refresh")
+        self.refresh_button.Bind(wx.EVT_BUTTON, self.on_refresh)
+        self.refresh_button.SetToolTip(
+            "Read the peaks again, to show where they are now after being moved "
+            "in the spectrum."
+        )
+        self.close_button = wx.Button(self, wx.ID_CANCEL, "Close")
+        buttons.Add(self.apply_button)
+        buttons.AddSpacer(10)
+        buttons.Add(self.refresh_button)
+        buttons.AddSpacer(10)
+        buttons.Add(self.close_button)
+        sizer.Add(buttons, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
+
+        self.SetSizer(sizer)
+
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+
+    def find_position_text(self, peak) -> str:
+        """
+        Where the peak sits down the bore dimension at the moment.
+        """
+        shift = peak.get("shift3")
+
+        if shift == None or shift == 0:
+            return "not placed"
+
+        return "{:.4f} ppm".format(float(shift))
+
+    def find_choices(self, peak) -> list:
+        """
+        How the positions a peak could have are offered. Leaving it alone comes
+        first, so that a window which is not touched changes nothing.
+        """
+        choices = [self.KEEP, self.CURRENT]
+
+        for candidate in peak["candidates"]:
+            text = "{:.4f} ppm".format(candidate["shift"])
+            if candidate.get("intensity") != None:
+                text += "   intensity {:.3e}".format(candidate["intensity"])
+            if candidate.get("confidence") != None:
+                text += "   confidence {:.2f}".format(candidate["confidence"])
+            if candidate.get("extra") == True:
+                text += "   (below the threshold)"
+            choices.append(text)
+
+        return choices
+
+    def find_answers(self) -> list:
+        """
+        What was chosen for each peak: None to leave it alone, "current" to
+        accept where it now sits, or the position to give it.
+        """
+        answers = []
+
+        for i, choice in enumerate(self.choices):
+            selection = choice.GetSelection()
+
+            if selection <= 0:
+                answers.append(None)
+                continue
+
+            if selection == 1:
+                answers.append("current")
+                continue
+
+            try:
+                answers.append(self.peaks[i]["candidates"][selection - 2])
+            except IndexError:
+                answers.append(None)
+
+        return answers
+
+    def on_show(self, event):
+        """
+        Show the peak of this row in the spectrum, so that it can be looked at
+        with the peak tools before a decision is made.
+        """
+        number = getattr(event.GetEventObject(), "peak_number", None)
+        if number == None:
+            return
+
+        self.show_peak(number)
+
+    def show_peak(self, number):
+        """
+        Select the peak in the peak window, move the position marker onto it and
+        show the positions it could have down the bore.
+        """
+        try:
+            peak = self.peaks[number]
+        except IndexError:
+            return
+
+        self.peaks_window.show_peak_for_resolving(peak)
+
+        try:
+            self.positions[number].SetLabel(
+                self.find_position_text(
+                    self.peaks_window.find_peak_for_resolving(peak)
+                )
+            )
+        except (RuntimeError, AttributeError):
+            pass
+
+    def on_apply(self, event):
+        """
+        Give each peak the position which was chosen for it.
+        """
+        self.peaks_window.apply_resolutions(self.peaks, self.find_answers())
+
+        for i, peak in enumerate(self.peaks):
+            try:
+                self.positions[i].SetLabel(
+                    self.find_position_text(
+                        self.peaks_window.find_peak_for_resolving(peak)
+                    )
+                )
+                self.choices[i].SetSelection(0)
+            except (RuntimeError, AttributeError):
+                pass
+
+    def on_refresh(self, event):
+        """
+        Read the peaks again, so that peaks which have been moved in the
+        spectrum are shown where they now are.
+        """
+        self.peaks_window.reopen_resolve_dialog()
+
+    def on_close(self, event):
+        """
+        The positions a peak could have are no longer shown once the window has
+        gone.
+        """
+        self.peaks_window.finish_resolving()
+
+        self.Destroy()
