@@ -37,6 +37,23 @@ PEAK_ENTRY_KEYS = [
 ] + PEAK_LINEWIDTH_KEYS
 
 
+def peaklist_file_is_empty(peaklist_file) -> bool:
+    """
+    Whether a peaklist file holds nothing at all, as a file which has only just
+    been created does. Such a file is a peaklist which peaks have not been added
+    to yet rather than a file which could not be read.
+    """
+    try:
+        with open(peaklist_file) as file:
+            for line in file:
+                if line.strip() != "":
+                    return False
+    except OSError:
+        return False
+
+    return True
+
+
 class PeakModeButtons:
     """
     Shared behaviour for the buttons which put the spectrum into a peak
@@ -273,9 +290,17 @@ class PeakModeButtons:
 
     def find_navigation_toolbar(self):
         """
-        The pan/zoom toolbar of the spectrum this peak window belongs to.
+        The pan/zoom toolbar of the spectrum this peak window belongs to. The
+        bore window names its toolbar differently from the 2D window.
         """
-        return getattr(getattr(self, "main_frame", None), "toolbar", None)
+        main_frame = getattr(self, "main_frame", None)
+
+        for name in ["toolbar", "toolbar_bore"]:
+            toolbar = getattr(main_frame, name, None)
+            if toolbar != None:
+                return toolbar
+
+        return None
 
     def find_navigation_mode(self) -> str:
         """
@@ -389,7 +414,7 @@ class PeakModeButtons:
             "OnSelectPeaks",
             "OnMovePeaks",
             "OnMovePeak",
-            "OnMovePeakBore",
+            "OnMovePeakz",
             "OnRemovePeaks",
             "OnFindPeaks",
         ]
@@ -457,6 +482,9 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         self.selected_peakname = ""
         self.selected_peaklist = ""
         self.selected_peak_indexes = ""
+
+        # Set when a peak has been picked out to be removed
+        self.remove_peak = False
 
         # Flags showing whether a given button is active or not
         self.active_add = False
@@ -1544,11 +1572,16 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
             self.peaklist_error_message()
             return None
 
-        if len(dictionary["peak_name"]) == 0 and new_peaklist == False:
-            self.peaklist_error_message()
-            return None
-        
-        
+        if len(dictionary["peak_name"]) == 0:
+            if new_peaklist == False and peaklist_file_is_empty(peaklist_file) == False:
+                # The file holds something which could not be read as peaks
+                self.peaklist_error_message()
+                return None
+
+            # An empty peaklist, ready for peaks to be added to it
+            self.names[last_directories_path] = [name1, name2, name3]
+            return dictionary
+
         self.names[last_directories_path] = [name1, name2, name3]
     
 
@@ -1848,15 +1881,45 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
             dlg.Destroy()
             # Making a new peaklist, ask the user to create and save a new file in a file dialog
             dlg = wx.FileDialog(
-                None, "Creating new peaklist", wildcard="*.list|*.txt", style=wx.FD_SAVE
+                None,
+                "Creating new peaklist",
+                wildcard="Peaklists (*.list;*.txt)|*.list;*.txt|All files (*.*)|*.*",
+                style=wx.FD_SAVE,
             )
             dlg.SetDirectory(os.getcwd())
             if dlg.ShowModal() == wx.ID_OK:
                 peaklist_file = dlg.GetPath()
-                with open(peaklist_file, "w") as file:
-                    pass
+                try:
+                    with open(peaklist_file, "w") as file:
+                        pass
+                except OSError as error:
+                    dlg.Destroy()
+                    dlg = wx.MessageDialog(
+                        None,
+                        "The new peaklist could not be created ({}). Please try "
+                        "again in a folder which can be written to.".format(error),
+                        "Adding peaks",
+                        wx.OK,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                    return
 
                 self.AddPeaklist(peaklist_file, new_peaklist=True)
+
+                if self.peak_list_choices == [""]:
+                    # The peaklist was not loaded, so there is nothing to add
+                    # peaks to and the add peaks mode is not turned on
+                    dlg = wx.MessageDialog(
+                        None,
+                        "The new peaklist {} could not be loaded, so peaks "
+                        "cannot be added to it.".format(peaklist_file),
+                        "Adding peaks",
+                        wx.OK,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                    return
 
             else:
                 dlg.Destroy()
@@ -3181,6 +3244,14 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.make_peaklist_window()
         self.watch_navigation_toolbar()
         self.update_mode_buttons()
+
+        # Clicking along the bore dimension moves the selected peak there
+        self.bore_click_connect = self.main_frame.fig_bore.canvas.mpl_connect(
+            "button_press_event", self.on_click_bore_dimension
+        )
+
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
         self.Show()
         # self.AddPeakListBrowser()
 
@@ -3196,6 +3267,18 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.selected_peaklist = ""
         self.selected_peak_indexes = ["N/A"]
         self.bore_xdim = 'shift1'
+
+        # Set when a peak has been picked out to be removed
+        self.remove_peak = False
+
+        # The peaklist as it was when it was last read or saved, so that
+        # changes which have not been saved can be noticed
+        self.saved_peaklist = {}
+
+        # The file the peaklist was read from or created as. Only the last few
+        # parts of the path are shown in the window, so the whole path is kept
+        # here for saving the peaklist back to the file it came from
+        self.peaklist_path = ""
 
         # Flags showing whether a given button is active or not
         self.reference_plane = False
@@ -3237,7 +3320,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             -1,
             "Manipulate Peaklists: (shorcuts for Mac - cmd+key)",
         )
-        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.HORIZONTAL)
+        self.row2 = wx.StaticBoxSizer(self.row2_label, wx.VERTICAL)
+        self.row2_1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row2_2 = wx.BoxSizer(wx.HORIZONTAL)
 
         self.add_peaks_button = wx.ToggleButton(self.row2_label, label="Add Peaks (a)")
         self.add_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddPeaks)
@@ -3247,13 +3332,11 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.select_peak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeak)
         ID_BUTTON_s = wx.NewIdRef()
 
-        self.add_borepeak_button = wx.ToggleButton(self.row2_label, label="Add Bore Peak (b)")
-        self.add_borepeak_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnAddBorePeak)
-        ID_BUTTON_b = wx.NewIdRef()
-
-        # self.select_peaks_button = wx.ToggleButton(self, label="Select Peak Group (g)")
-        # self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
-        # ID_BUTTON_g = wx.NewIdRef()
+        self.select_peaks_button = wx.ToggleButton(
+            self.row2_label, label="Select Peak Group (g)"
+        )
+        self.select_peaks_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnSelectPeaks)
+        ID_BUTTON_g = wx.NewIdRef()
 
         self.remove_peaks_button = wx.Button(self.row2_label, label="Remove Peaks (r)")
         self.remove_peaks_button.Bind(wx.EVT_BUTTON, self.OnRemovePeaks)
@@ -3271,16 +3354,21 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.move_peaks_bore_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnMovePeakz)
         ID_BUTTON_z = wx.NewIdRef()
 
+        ID_BUTTON_k = wx.NewIdRef()
+        ID_BUTTON_j = wx.NewIdRef()
+
         # Creating an accelerator table for keyboard shortcuts for the buttons
         accelerator_table = wx.AcceleratorTable(
             [
                 (wx.ACCEL_CTRL, ord("a"), ID_BUTTON_a),
                 (wx.ACCEL_CTRL, ord("r"), ID_BUTTON_r),
-                (wx.ACCEL_CTRL, ord("b"), ID_BUTTON_b),
+                (wx.ACCEL_CTRL, ord("g"), ID_BUTTON_g),
                 (wx.ACCEL_CTRL, ord("f"), ID_BUTTON_f),
                 (wx.ACCEL_CTRL, ord("m"), ID_BUTTON_m),
                 (wx.ACCEL_CTRL, ord("z"), ID_BUTTON_z),
                 (wx.ACCEL_CTRL, ord("s"), ID_BUTTON_s),
+                (wx.ACCEL_CTRL, ord("k"), ID_BUTTON_k),
+                (wx.ACCEL_CTRL, ord("j"), ID_BUTTON_j),
             ]
         )
 
@@ -3292,35 +3380,97 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnMovePeakz, id=ID_BUTTON_z)
         self.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
         self.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
+        self.Bind(wx.EVT_MENU, self.OnFindLocalMaximum, id=ID_BUTTON_k)
+        self.Bind(wx.EVT_MENU, self.OnFindLocalMaximumBore, id=ID_BUTTON_j)
+        self.Bind(wx.EVT_MENU, self.OnSelectPeaks, id=ID_BUTTON_g)
 
         self.main_frame.Bind(wx.EVT_MENU, self.OnAddPeaks, id=ID_BUTTON_a)
-        self.main_frame.Bind(wx.EVT_MENU, self.OnAddBorePeak, id=ID_BUTTON_b)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeaks, id=ID_BUTTON_g)
         self.main_frame.Bind(wx.EVT_MENU, self.OnRemovePeaks, id=ID_BUTTON_r)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeak, id=ID_BUTTON_m)
         self.main_frame.Bind(wx.EVT_MENU, self.OnMovePeakz, id=ID_BUTTON_z)
         self.main_frame.Bind(wx.EVT_MENU, self.OnFindPeaks, id=ID_BUTTON_f)
         self.main_frame.Bind(wx.EVT_MENU, self.OnSelectPeak, id=ID_BUTTON_s)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnFindLocalMaximum, id=ID_BUTTON_k)
+        self.main_frame.Bind(wx.EVT_MENU, self.OnFindLocalMaximumBore, id=ID_BUTTON_j)
 
         self.save_peaks_button = wx.Button(self.row2_label, label="Save")
         self.save_peaks_button.Bind(wx.EVT_BUTTON, self.OnSave)
+        self.save_peaks_button.SetToolTip(
+            "Save the peaklist into its own file, which is named in the "
+            "selected peaklist box above."
+        )
 
+        self.save_peaks_as_button = wx.Button(self.row2_label, label="Save As")
+        self.save_peaks_as_button.Bind(wx.EVT_BUTTON, self.OnSaveAs)
+        self.save_peaks_as_button.SetToolTip(
+            "Save the peaklist into a different file, which it is then saved "
+            "into from then on."
+        )
 
+        # Moving the selected peaks onto the nearest maximum, in the plane
+        # which is shown and along the bore dimension
+        self.move_to_local_max = wx.Button(
+            self.row2_label, label="Move to local max x/y (k)"
+        )
+        self.move_to_local_max.Bind(wx.EVT_BUTTON, self.OnFindLocalMaximum)
+
+        self.move_to_local_max_bore = wx.Button(
+            self.row2_label, label="Move to local max z (j)"
+        )
+        self.move_to_local_max_bore.Bind(wx.EVT_BUTTON, self.OnFindLocalMaximumBore)
+
+        self.add_at_local_max_box = wx.CheckBox(
+            self.row2_label, -1, "Add peaks at local maximum (x/y and z)"
+        )
+        self.add_at_local_max_box.SetValue(False)
+        self.add_at_local_max_box.SetToolTip(
+            "A peak which is added goes onto the nearest maximum of the plane "
+            "which is shown, and is given the chemical shift of the largest "
+            "point down the bore dimension at that position rather than zero."
+        )
+
+        self.snap_bore_box = wx.CheckBox(
+            self.row2_label, -1, "Move to local maximum in z when clicking the bore"
+        )
+        self.snap_bore_box.SetValue(False)
+        self.snap_bore_box.SetToolTip(
+            "When a peak is selected, clicking along the bore dimension moves "
+            "it there. With this ticked the peak goes onto the maximum nearest "
+            "to the click instead of exactly where it was clicked."
+        )
+
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.add_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.select_peak_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.select_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.move_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.move_peaks_bore_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.remove_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.find_peak_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.save_peaks_button)
+        self.row2_1.AddSpacer(5)
+        self.row2_1.Add(self.save_peaks_as_button)
+
+        self.row2_2.AddSpacer(5)
+        self.row2_2.Add(self.move_to_local_max)
+        self.row2_2.AddSpacer(5)
+        self.row2_2.Add(self.move_to_local_max_bore)
+        self.row2_2.AddSpacer(10)
+        self.row2_2.Add(self.add_at_local_max_box, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.row2_2.AddSpacer(10)
+        self.row2_2.Add(self.snap_bore_box, 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.row2.Add(self.row2_1)
         self.row2.AddSpacer(5)
-        self.row2.Add(self.add_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.select_peak_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.add_borepeak_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.move_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.move_peaks_bore_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.remove_peaks_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.find_peak_button)
-        self.row2.AddSpacer(5)
-        self.row2.Add(self.save_peaks_button)
+        self.row2.Add(self.row2_2)
 
 
         self.row_pickpeaks_label = wx.StaticBox(self, -1, "Peak Picking (nmrglue):")
@@ -3433,6 +3583,500 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             for c in range(col_count):
                 self.grid.SetColSize(c, col_width)
 
+
+    def find_viewer(self):
+        """
+        The 3D window the bore plot belongs to, which holds the 3D data.
+        """
+        return self.main_frame.main_frame
+
+    def find_plane_axes_swapped(self) -> bool:
+        """
+        Whether the axis shown across the bore plot is the second of the two
+        plane dimensions of the 3D data rather than the first. The 3D data is
+        held as [bore][first plane axis][second plane axis].
+        """
+        try:
+            return len(self.main_frame.new_x_ppms) != len(self.find_viewer().ppms_0)
+        except (AttributeError, TypeError):
+            return False
+
+    def find_peak_indexes(self, shift1, shift2, shift3):
+        """
+        Where a peak falls in the 3D data, as indexes into the bore dimension
+        and the two plane dimensions, in the order the data is held.
+        """
+        viewer = self.find_viewer()
+
+        first, second = shift1, shift2
+        if self.find_plane_axes_swapped() == True:
+            first, second = shift2, shift1
+
+        return (
+            int(np.argmin(np.abs(viewer.ppms_2 - shift3))),
+            int(np.argmin(np.abs(viewer.ppms_0 - first))),
+            int(np.argmin(np.abs(viewer.ppms_1 - second))),
+        )
+
+    def find_intensity_3d(self, shift1, shift2, shift3):
+        """
+        The intensity of the 3D data at the position of a peak.
+        """
+        try:
+            index3, index1, index2 = self.find_peak_indexes(shift1, shift2, shift3)
+            return self.find_viewer().nmrdata.data[index3][index1][index2]
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return 0
+
+    def find_bore_trace(self, shift1, shift2):
+        """
+        The 1D trace down the bore dimension at the position of a peak, along
+        with the chemical shifts of the bore dimension.
+        """
+        viewer = self.find_viewer()
+        index3, index1, index2 = self.find_peak_indexes(shift1, shift2, 0)
+
+        return viewer.ppms_2, viewer.nmrdata.data[:, index1, index2]
+
+    def find_local_maximum_bore(self, shift1, shift2, shift3):
+        """
+        Walk along the bore dimension from a position to the nearest maximum,
+        returning the chemical shift of the maximum and the intensity there.
+        The starting position is returned when the data cannot be read.
+        """
+        try:
+            ppms, trace = self.find_bore_trace(shift1, shift2)
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return shift3, None
+
+        if len(trace) == 0:
+            return shift3, None
+
+        index = int(np.argmin(np.abs(ppms - shift3)))
+
+        while True:
+            neighbours = [
+                position
+                for position in [index - 1, index + 1]
+                if position >= 0 and position < len(trace)
+            ]
+            if len(neighbours) == 0:
+                break
+
+            best = max(neighbours, key=lambda position: np.abs(trace[position]))
+            if np.abs(trace[best]) > np.abs(trace[index]):
+                index = best
+            else:
+                # Neither neighbour is higher, the maximum has been reached
+                break
+
+        return ppms[index], trace[index]
+
+    def find_projection_data(self):
+        """
+        The 2D data shown in the bore plot along with the chemical shifts of
+        its two axes, in the order the peaks are held (across the plot, then
+        up it).
+        """
+        bore = self.main_frame
+
+        return bore.nmrdata.data, bore.new_x_ppms, bore.new_y_ppms
+
+    def find_maximum_bore(self, shift1, shift2):
+        """
+        The chemical shift of the largest point down the bore dimension at the
+        position of a peak, used to place a peak which has not been given a
+        bore chemical shift yet.
+        """
+        try:
+            ppms, trace = self.find_bore_trace(shift1, shift2)
+            if len(trace) == 0:
+                return None, None
+            index = int(np.argmax(np.abs(trace)))
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return None, None
+
+        return ppms[index], trace[index]
+
+    def find_local_maximum_plane(self, shift1, shift2, shift3=0):
+        """
+        Walk uphill from a position to the nearest maximum of the 2D data shown
+        in the bore plot, returning the chemical shifts of the maximum and the
+        intensity of the 3D data there. The bore chemical shift is used to read
+        the intensity and is not changed.
+        """
+        try:
+            data, x_values, y_values = self.find_projection_data()
+            rows, columns = data.shape
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return shift1, shift2, None
+
+        r = int(np.argmin(np.abs(x_values - shift1)))
+        c = int(np.argmin(np.abs(y_values - shift2)))
+
+        while True:
+            neighbours = [
+                (nr, nc)
+                for nr in range(r - 1, r + 2)
+                for nc in range(c - 1, c + 2)
+                if (0 <= nr < rows and 0 <= nc < columns and (nr, nc) != (r, c))
+            ]
+            if len(neighbours) == 0:
+                break
+
+            best = max(neighbours, key=lambda position: np.abs(data[position[0], position[1]]))
+            if np.abs(data[best[0], best[1]]) > np.abs(data[r, c]):
+                r, c = best
+            else:
+                # No neighbour is higher, the local maximum has been reached
+                break
+
+        shift1, shift2 = x_values[r], y_values[c]
+
+        return shift1, shift2, self.find_intensity_3d(shift1, shift2, shift3)
+
+    def OnSelectPeaks(self, event):
+        """
+        Drag a box over the plane which is shown to select a group of peaks,
+        which can then be moved or moved onto their local maxima together.
+        """
+        if self.active_move == True or self.active_movez == True:
+            if self.active_select_peaks == True:
+                self.select_peaks_button.SetValue(True)
+            return
+
+        self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        if self.selected_peaklist not in self.peak_list_dictionary:
+            self.select_peaks_button.SetValue(False)
+            dlg = wx.MessageDialog(
+                None,
+                "No peaklists are loaded, please load a peaklist or perform peak picking and try again.",
+                "Warning",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if self.active_select_peaks == True:
+            # Turning the mode off again
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.select_peaks_button.SetValue(False)
+            self.disconnect_bore("select_press", "select_motion", "select_release")
+            self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+            self.update_mode_buttons()
+            return
+
+        # The other modes take the same mouse clicks, so they are turned off
+        self.turn_off_picking_modes("group")
+
+        self.active_select_peaks = True
+        self.select_peaks_button.SetValue(True)
+
+        # The peaks are drawn again so that the selected ones stand out
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+        self.select_press = self.main_frame.fig_bore.canvas.mpl_connect(
+            "button_press_event", self.on_press_select
+        )
+        self.select_motion = self.main_frame.fig_bore.canvas.mpl_connect(
+            "motion_notify_event", self.on_motion_select
+        )
+        self.select_release = self.main_frame.fig_bore.canvas.mpl_connect(
+            "button_release_event", self.on_release_select
+        )
+
+        self.update_mode_buttons()
+
+    def on_press_select(self, event):
+        """
+        The start of the box which is dragged over a group of peaks.
+        """
+        if event.inaxes is not self.main_frame.ax_bore:
+            return
+
+        self.start_point = (event.xdata, event.ydata)
+
+        self.rect = patches.Rectangle(
+            self.start_point, 0, 0, linewidth=1, edgecolor="red", facecolor="none"
+        )
+        self.main_frame.ax_bore.add_patch(self.rect)
+        self.main_frame.canvas_bore.draw_idle()
+
+    def on_motion_select(self, event):
+        """
+        Showing the box as it is dragged over a group of peaks.
+        """
+        if self.start_point == None or self.rect == None:
+            return
+
+        if event.inaxes is not self.main_frame.ax_bore:
+            return
+
+        x0, y0 = self.start_point
+        self.rect.set_width(event.xdata - x0)
+        self.rect.set_height(event.ydata - y0)
+        self.rect.set_xy((x0, y0))
+        self.main_frame.canvas_bore.draw_idle()
+
+    def on_release_select(self, event):
+        """
+        Select every peak of the current peaklist inside the box which was
+        dragged. Holding shift adds to the peaks which are already selected.
+        """
+        if self.start_point == None:
+            return
+
+        if event.inaxes is not self.main_frame.ax_bore:
+            return
+
+        x0, y0 = self.start_point
+        xmin, xmax = sorted([x0, event.xdata])
+        ymin, ymax = sorted([y0, event.ydata])
+
+        self.find_peaks_in_area([xmin, xmax], [ymin, ymax], event)
+
+        self.start_point = None
+        if self.rect != None:
+            self.rect.set_visible(False)
+            self.rect = None
+
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        self.AddToTable()
+
+    def find_peaks_in_area(self, xcoords: list, ycoords: list, event):
+        """
+        The peaks of the current peaklist which are inside an area of the plane
+        which is shown.
+        """
+        peaklist = self.current_peaklist_box.GetValue()
+        if peaklist not in self.peak_list_dictionary:
+            return
+
+        if event.key != None and "shift" in str(event.key).lower():
+            # Adding to the peaks which are already selected
+            selected = [
+                index for index in self.selected_peak_indexes if index != "N/A"
+            ]
+        else:
+            selected = []
+
+        dictionary = self.peak_list_dictionary[peaklist]
+
+        for index, peakname in enumerate(dictionary["peak_name"]):
+            shift1 = dictionary["shift1"][index]
+            shift2 = dictionary["shift2"][index]
+            if shift1 > xcoords[0] and shift1 < xcoords[1]:
+                if shift2 > ycoords[0] and shift2 < ycoords[1]:
+                    if index not in selected:
+                        selected.append(index)
+
+        self.selected_peaklist = peaklist
+        self.selected_peak_indexes = selected
+        if len(selected) == 1:
+            self.selected_peakname = dictionary["peak_name"][selected[0]]
+        else:
+            self.selected_peakname = ""
+
+        # Show the selected peaks down the bore dimension as well
+        self.main_frame.selected_bore_peaks = selected
+
+    def find_peaks_to_move(self):
+        """
+        The peaks which are currently selected, telling the user when there
+        are none. An empty list is returned when nothing is selected.
+        """
+        if self.selected_peaklist not in self.peak_list_dictionary:
+            self.selected_peaklist = self.current_peaklist_box.GetValue()
+
+        indexes = [
+            index for index in self.selected_peak_indexes if index != "N/A"
+        ]
+
+        if self.selected_peaklist not in self.peak_list_dictionary or len(indexes) == 0:
+            dlg = wx.MessageDialog(
+                self,
+                "There are no peaks selected. Please select a peak using the select peak button and try again.",
+                "Warning",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return []
+
+        return indexes
+
+    def OnFindLocalMaximum(self, event):
+        """
+        Move the selected peaks onto the nearest maximum of the plane which is
+        shown in the bore plot, leaving their bore chemical shift alone.
+        """
+        indexes = self.find_peaks_to_move()
+        if len(indexes) == 0:
+            return
+
+        dictionary = self.peak_list_dictionary[self.selected_peaklist]
+
+        for index in indexes:
+            shift1, shift2, intensity = self.find_local_maximum_plane(
+                dictionary["shift1"][index],
+                dictionary["shift2"][index],
+                dictionary["shift3"][index],
+            )
+            if intensity == None:
+                continue
+
+            dictionary["shift1"][index] = shift1
+            dictionary["shift2"][index] = shift2
+            dictionary["intensity"][index] = intensity
+
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        self.AddToTable()
+
+    def OnFindLocalMaximumBore(self, event):
+        """
+        Move the selected peaks onto the nearest maximum along the bore
+        dimension, leaving their position in the plane alone.
+        """
+        indexes = self.find_peaks_to_move()
+        if len(indexes) == 0:
+            return
+
+        dictionary = self.peak_list_dictionary[self.selected_peaklist]
+
+        for index in indexes:
+            shift3, intensity = self.find_local_maximum_bore(
+                dictionary["shift1"][index],
+                dictionary["shift2"][index],
+                dictionary["shift3"][index],
+            )
+            if intensity == None:
+                continue
+
+            dictionary["shift3"][index] = shift3
+            dictionary["intensity"][index] = intensity
+
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        self.AddToTable()
+
+    def on_click_bore_dimension(self, event):
+        """
+        When a peak is selected, clicking along the bore dimension moves that
+        peak in the bore dimension alone. The peak is put where it was clicked,
+        or on the nearest maximum along the bore when that option is chosen.
+        """
+        if event.button != 1:
+            return
+
+        if self.active_movez == True:
+            # The move peak (z) mode is dealing with the click
+            return
+
+        try:
+            bore_axes = [self.main_frame.ax_bore_2, self.main_frame.ax_bore_3]
+        except AttributeError:
+            return
+
+        if event.inaxes not in bore_axes:
+            return
+
+        if self.selected_peaklist not in self.peak_list_dictionary:
+            return
+
+        indexes = [index for index in self.selected_peak_indexes if index != "N/A"]
+        if len(indexes) == 0:
+            return
+
+        shift3 = event.ydata
+        if shift3 == None:
+            return
+
+        dictionary = self.peak_list_dictionary[self.selected_peaklist]
+
+        for index in indexes:
+            shift1 = dictionary["shift1"][index]
+            shift2 = dictionary["shift2"][index]
+
+            intensity = None
+            if self.snap_bore_box.GetValue() == True:
+                # The peak goes onto the maximum nearest to the click
+                new_shift3, intensity = self.find_local_maximum_bore(
+                    shift1, shift2, shift3
+                )
+            else:
+                new_shift3 = shift3
+
+            if intensity == None:
+                new_shift3 = shift3
+                intensity = self.find_intensity_3d(shift1, shift2, new_shift3)
+
+            dictionary["shift3"][index] = new_shift3
+            dictionary["intensity"][index] = intensity
+
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        self.AddToTable()
+
+    def find_duplicate_peak(self, shift1, shift2, shift3, peaklist):
+        """
+        The name of a peak which is already in the peaklist at the position
+        given, or None when there is no peak there. Two peaks are at the same
+        position when they fall on the same point of the 3D data in all three
+        dimensions.
+        """
+        if peaklist not in self.peak_list_dictionary:
+            return None
+
+        dictionary = self.peak_list_dictionary[peaklist]
+
+        try:
+            new_index = self.find_peak_indexes(shift1, shift2, shift3)
+        except (AttributeError, IndexError, TypeError, ValueError):
+            new_index = None
+
+        for i, peakname in enumerate(dictionary["peak_name"]):
+            try:
+                shifts = [
+                    dictionary["shift1"][i],
+                    dictionary["shift2"][i],
+                    dictionary["shift3"][i],
+                ]
+            except IndexError:
+                continue
+
+            if new_index == None:
+                if shifts == [shift1, shift2, shift3]:
+                    return peakname
+                continue
+
+            if self.find_peak_indexes(*shifts) == new_index:
+                return peakname
+
+        return None
+
+    def check_duplicate_peak(self, shift1, shift2, shift3, peaklist) -> bool:
+        """
+        Warn the user when a new peak would be added on top of a peak which is
+        already in the peaklist, returning whether the peak should be added.
+        """
+        duplicate = self.find_duplicate_peak(shift1, shift2, shift3, peaklist)
+        if duplicate == None:
+            return True
+
+        dlg = wx.MessageDialog(
+            None,
+            "The peak {} in the peaklist {} is already at this position in all "
+            "three dimensions. Adding this peak will give two peaks on top of "
+            "each other. Do you want to add it anyway?".format(duplicate, peaklist),
+            "Peaks at the Same Position",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+        )
+        result = dlg.ShowModal()
+        dlg.Destroy()
+
+        return result == wx.ID_YES
 
     def find_picked_shifts(self, peaks):
         """
@@ -3723,6 +4367,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.current_peaklist_box.SetValue(peaklist_name)
 
+        # Where the peaklist really is, so that saving goes back to it
+        self.peaklist_path = str(pathlib.Path(peaklist_name).absolute())
+
         # Update the plot with the new peaklist
         self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
 
@@ -3767,9 +4414,22 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.peak_list = self.peak_list_choices[-1]
         self.turn_off_togglebuttons()
 
-        self.AddToTable()
+        # The peaks which were selected belonged to the peaklist which was
+        # loaded before this one
+        self.selected_peak_indexes = ["N/A"]
+        self.selected_peakname = ""
+        self.selected_peaklist = last_directories_path
+        self.main_frame.selected_bore_peaks = []
 
         self.current_peaklist_box.SetValue(last_directories_path)
+
+        # Where the peaklist really is, so that saving goes back to it
+        self.peaklist_path = str(pathlib.Path(peaklist_file).absolute())
+
+        # The peaklist matches the file it has just been read from
+        self.mark_saved()
+
+        self.AddToTable()
 
         self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
 
@@ -3777,39 +4437,19 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         """
         Adding the peaklist just entered into the peaklist table
         """
+        # Every change to the peaklist ends up here, so the save button is
+        # marked or unmarked from this one place
+        self.update_saved_button()
+
         row_count = self.grid.GetNumberRows()
         if row_count > 0:
             self.grid.DeleteRows(0, row_count)
-        peaklist = self.peak_list
-        data = []
 
-        def extract_number(s):
-            match = re.match(r"(\d+)", s)
-            return int(match.group(1)) if match else float("inf")
-
-        # Pair each item with its original index
-        indexed_arr = list(enumerate(self.peak_list_dictionary[peaklist]["peak_name"]))
-
-        # Sort by number while keeping track of original indices
-        sorted_indexed = sorted(indexed_arr, key=lambda x: extract_number(x[1]))
-
-        # Extract sorted values and index mapping
-        sorted_values = [val for _, val in sorted_indexed]
-        index_mapping = {
-            new_idx: old_idx for new_idx, (old_idx, _) in enumerate(sorted_indexed)
-        }
-
-        for i, peak_name in enumerate(self.peak_list_dictionary[peaklist]["peak_name"]):
-            index = index_mapping[i]
-            peak = self.peak_list_dictionary[peaklist]["peak_name"][index]
-            shift1 = self.peak_list_dictionary[peaklist]["shift1"][index]
-            shift2 = self.peak_list_dictionary[peaklist]["shift2"][index]
-            shift3 = self.peak_list_dictionary[peaklist]["shift3"][index]
-            intensity = self.peak_list_dictionary[peaklist]["intensity"][index]
-            data.append([peak, "{:.5f}".format(shift1), "{:.5f}".format(shift2), "{:.5f}".format(shift3), "{:.5e}".format(intensity)])
+        data = self.find_peak_rows()
 
         num_rows = self.grid.GetNumberRows()
-        self.grid.AppendRows(len(data) - num_rows)
+        if len(data) > num_rows:
+            self.grid.AppendRows(len(data) - num_rows)
         for row, rowData in enumerate(data):
             for col, value in enumerate(rowData):
                 self.grid.SetCellValue(row, col, str(value))
@@ -3953,9 +4593,18 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                 self.peaklist_error_message()
                 return None
 
-            if len(dictionary["peak_name"]) == 0 and new_peaklist == False:
-                self.peaklist_error_message()
-                return None
+            if len(dictionary["peak_name"]) == 0:
+                if (
+                    new_peaklist == False
+                    and peaklist_file_is_empty(peaklist_file) == False
+                ):
+                    # The file holds something which could not be read as peaks
+                    self.peaklist_error_message()
+                    return None
+
+                # An empty peaklist, ready for peaks to be added to it. There
+                # are no chemical shifts to compare with the spectrum
+                return dictionary
 
             # Try to see if the chemical shifts of the peaks are within the 2D spectral range
             if(new_peaklist==False):
@@ -4383,25 +5032,79 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.AddToTable()
 
+    def disconnect_bore(self, *names):
+        """
+        Disconnect mouse handlers from the bore plots by name, ignoring any
+        which were never connected.
+        """
+        for name in names:
+            connection = getattr(self, name, None)
+            if connection == None:
+                continue
+            try:
+                self.main_frame.fig_bore.canvas.mpl_disconnect(connection)
+            except (AttributeError, TypeError):
+                pass
+            setattr(self, name, None)
+
+    def turn_off_picking_modes(self, keep=""):
+        """
+        Adding peaks, selecting a peak and selecting a group of peaks all take
+        the mouse clicks on the plane, so only one of them can be on at a time.
+        Any of them which is on is turned off, apart from the one named.
+        """
+        if keep != "add" and self.active_add == True:
+            self.active_add = False
+            self.add_peaks_button.SetValue(False)
+            self.disconnect_bore("add_peak_connect")
+
+        if keep != "select" and self.active_select_peak == True:
+            self.active_select_peak = False
+            self.select_peak_button.SetValue(False)
+            self.selected_peakname = ""
+            self.main_frame.plot_cross = True
+            self.disconnect_bore("select_peak_connect")
+
+        if keep != "group" and self.active_select_peaks == True:
+            self.active_select_peaks = False
+            self.select_peaks_button.SetValue(False)
+            self.rect = None
+            self.start_point = None
+            self.disconnect_bore("select_press", "select_motion", "select_release")
+
+        self.update_mode_buttons()
+
     def turn_off_togglebuttons(self):
         # If any toggle buttons are on, turn them off
         if self.active_add == True:
             self.active_add = False
             self.add_peaks_button.SetValue(False)
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.add_peak_connect)
+            self.disconnect_bore("add_peak_connect")
         if self.active_move:
             self.active_move = False
+            self.move_peaks_button.SetValue(False)
             if self.active_select_peak:
-                self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_connect)
+                self.disconnect_bore("move_peak_connect")
             if self.active_select_peaks:
-                self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_press)
-                self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_motion)
-                self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_release)
+                self.disconnect_bore(
+                    "move_peak_press", "move_peak_motion", "move_peak_release"
+                )
+        if self.active_movez == True:
+            self.active_movez = False
+            self.move_peaks_bore_button.SetValue(False)
+            self.disconnect_bore("move_peak_connectz")
         if self.active_select_peak == True:
             self.select_peak_button.SetValue(False)
             self.active_select_peak = False
             self.selected_peakname = ""
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.select_peak_connect)
+            self.disconnect_bore("select_peak_connect")
+            self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        if self.active_select_peaks == True:
+            self.select_peaks_button.SetValue(False)
+            self.active_select_peaks = False
+            self.rect = None
+            self.start_point = None
+            self.disconnect_bore("select_press", "select_motion", "select_release")
             self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
 
         self.update_mode_buttons()
@@ -4464,17 +5167,14 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         if self.active_add == True:
             self.active_add = False
             self.add_peaks_button.SetValue(False)
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.add_peak_connect)
+            self.disconnect_bore("add_peak_connect")
+            self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
             return
 
 
 
-        if self.active_select_peak:
-            self.select_peak_button.SetValue(False)
-            self.active_select_peak = False
-            self.selected_peakname = ""
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.select_peak_connect)
-            self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        # Only one of the picking modes can be on at a time
+        self.turn_off_picking_modes("add")
 
         if self.peak_list_choices == [""]:
             dlg = wx.MessageDialog(
@@ -4491,15 +5191,45 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             dlg.Destroy()
             # Making a new peaklist, ask the user to create and save a new file in a file dialog
             dlg = wx.FileDialog(
-                None, "Creating new peaklist", wildcard="*.list|*.txt", style=wx.FD_SAVE
+                None,
+                "Creating new peaklist",
+                wildcard="Peaklists (*.list;*.txt)|*.list;*.txt|All files (*.*)|*.*",
+                style=wx.FD_SAVE,
             )
             dlg.SetDirectory(os.getcwd())
             if dlg.ShowModal() == wx.ID_OK:
                 peaklist_file = dlg.GetPath()
-                with open(peaklist_file, "w") as file:
-                    pass
+                try:
+                    with open(peaklist_file, "w") as file:
+                        pass
+                except OSError as error:
+                    dlg.Destroy()
+                    dlg = wx.MessageDialog(
+                        None,
+                        "The new peaklist could not be created ({}). Please try "
+                        "again in a folder which can be written to.".format(error),
+                        "Adding peaks",
+                        wx.OK,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                    return
 
                 self.AddPeaklist(peaklist_file, new_peaklist=True)
+
+                if self.peak_list_choices == [""]:
+                    # The peaklist was not loaded, so there is nothing to add
+                    # peaks to and the add peaks mode is not turned on
+                    dlg = wx.MessageDialog(
+                        None,
+                        "The new peaklist {} could not be loaded, so peaks "
+                        "cannot be added to it.".format(peaklist_file),
+                        "Adding peaks",
+                        wx.OK,
+                    )
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                    return
 
             else:
                 dlg.Destroy()
@@ -4541,7 +5271,10 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         if x != None and y != None:
 
             # Current peaklist
-            current_peaklist = self.current_peaklist_box.GetValue()
+            current_peaklist = self.find_current_peaklist()
+            if current_peaklist == None:
+                # There is no peaklist to add the peak to
+                return
 
             part = ""
             number = 1
@@ -4570,13 +5303,60 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             else:
                 peakname = str(number) + part
 
+            shift3 = 0
+            intensity = 0
+
+            if self.add_at_local_max_box.GetValue() == True:
+                # Put the peak on the nearest maximum of the plane which is
+                # shown rather than exactly where it was clicked
+                x, y, plane_intensity = self.find_local_maximum_plane(x, y)
+
+                # and give it the chemical shift of the largest point down the
+                # bore dimension at that position rather than zero
+                bore_shift, bore_intensity = self.find_maximum_bore(x, y)
+                if bore_shift != None:
+                    shift3 = bore_shift
+                    intensity = bore_intensity
+                elif plane_intensity != None:
+                    intensity = plane_intensity
+
+            if self.check_duplicate_peak(x, y, shift3, current_peaklist) == False:
+                # The user has chosen not to have two peaks on top of one
+                # another, so the peaklist is left as it was
+                return
+
             self.peak_list_dictionary[current_peaklist]["peak_name"].append(peakname)
             self.peak_list_dictionary[current_peaklist]["shift1"].append(x)
             self.peak_list_dictionary[current_peaklist]["shift2"].append(y)
-            self.peak_list_dictionary[current_peaklist]["shift3"].append(0)
-            self.peak_list_dictionary[current_peaklist]["intensity"].append(0)
+            self.peak_list_dictionary[current_peaklist]["shift3"].append(shift3)
+            self.peak_list_dictionary[current_peaklist]["intensity"].append(intensity)
 
+            # The peak which has just been added becomes the selected peak, so
+            # that its bore dimension is shown and it can be moved along the
+            # bore straight away
+            self.selected_peaklist = current_peaklist
+            self.selected_peak_indexes = [
+                len(self.peak_list_dictionary[current_peaklist]["peak_name"]) - 1
+            ]
+            self.selected_peakname = peakname
+            self.main_frame.selected_bore_peaks = list(self.selected_peak_indexes)
+
+            # The table is filled in before the plots are redrawn, so that the
+            # peak is in the table whatever the plots do
+            self.AddToTable()
+
+            # Redraw the plane so that the new peak is shown along with the
+            # peaks which are already there
             self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+            # and move the position marker onto the new peak so that its bore
+            # dimension is shown
+            show_bore_position = getattr(
+                self.main_frame, "show_bore_position", None
+            )
+            if show_bore_position != None:
+                show_bore_position(x, y)
+
             self.AddToTable()
 
     def OnSelectPeak(self, event):
@@ -4609,11 +5389,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
             return
 
-        # First need to disable other toggle buttons that are selected
-        if self.active_add == True:
-            self.active_add = False
-            self.add_peaks_button.SetValue(False)
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.add_peak_connect)
+        # Only one of the picking modes can be on at a time
+        self.turn_off_picking_modes("select")
 
         self.active_select_peak = True
         self.select_peak_button.SetValue(True)
@@ -4745,16 +5522,6 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                 "button_press_event", self.on_click_movepeak3d
             )
 
-
-    def OnAddBorePeak(self, event):
-        # This functionality will be added shortly
-        dlg = wx.MessageDialog(
-                    self,
-                    "This feature is not yet implemented, but is planned to be added to a future release.",
-                    "Not yet implemented",
-                    wx.OK)
-        dlg.ShowModal()
-        dlg.Destroy()
 
 
     def on_click_movepeak3d(self, event):
@@ -4974,32 +5741,29 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         if the user if they want to remove these peaks.
         """
 
-        if self.active_select_peak == True:
-            if "N/A" not in self.selected_peak_indexes:
-                if self.remove_peak == True:
-                    count = 0
-                    for peak_index in self.selected_peak_indexes:
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["peak_name"][peak_index]
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["shift1"][peak_index]
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["shift2"][peak_index]
-                        del self.peak_list_dictionary[
-                            self.current_peaklist_box.GetValue()
-                        ]["shift3"][peak_index]
+        indexes = self.find_peaks_to_move()
+        if len(indexes) == 0:
+            return
 
-                        count += 1
+        dictionary = self.peak_list_dictionary[self.selected_peaklist]
 
-                    self.remove_peak = False
-                    self.selected_peak_indexes = ["N/A"]
-                    self.selected_peakname = ""
+        # Removing from the end so that the indexes of the peaks which are
+        # still to be removed do not move, and taking everything which is held
+        # for the peak so that the lists stay in step with one another
+        for index in sorted(indexes, reverse=True):
+            for key in ["peak_name", "shift1", "shift2", "shift3", "intensity"]:
+                try:
+                    del dictionary[key][index]
+                except (KeyError, IndexError, TypeError):
+                    pass
 
-                    self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
-                    self.AddToTable()
+        self.remove_peak = False
+        self.selected_peak_indexes = ["N/A"]
+        self.selected_peakname = ""
+        self.main_frame.selected_bore_peaks = []
+
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+        self.AddToTable()
 
 
     def on_click_movepeak(self, event):
@@ -5157,51 +5921,299 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.main_frame.on_pick(event)
         self.main_frame.on_click_bore(event)
 
+    def find_current_peaklist(self):
+        """
+        The peaklist which is loaded. The box showing it is what everything
+        else works from, so it is used in preference to the name recorded when
+        the peaklist was read.
+        """
+        peaklist = self.current_peaklist_box.GetValue()
+        if peaklist in self.peak_list_dictionary:
+            return peaklist
+
+        peaklist = getattr(self, "peak_list", "")
+        if peaklist in self.peak_list_dictionary:
+            return peaklist
+
+        return None
+
+    def find_table_order(self, peaklist):
+        """
+        The peaks of a peaklist in the order the table shows them, as indexes
+        into its lists. The table is sorted by the number in the peak name.
+        """
+        def extract_number(name):
+            match = re.match(r"(\d+)", name)
+            return int(match.group(1)) if match else float("inf")
+
+        names = self.peak_list_dictionary[peaklist]["peak_name"]
+
+        return [
+            index
+            for index, name in sorted(
+                enumerate(names), key=lambda pair: extract_number(pair[1])
+            )
+        ]
+
+    def find_peak_rows(self):
+        """
+        The peaks of the loaded peaklist as rows of text, in the order the table
+        shows them. The table and the file which is saved are both filled from
+        here, so what is saved is what the peaklist holds rather than whatever
+        the table happens to be showing.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            return []
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        rows = []
+
+        for index in self.find_table_order(peaklist):
+            try:
+                rows.append([
+                    dictionary["peak_name"][index],
+                    "{:.5f}".format(dictionary["shift1"][index]),
+                    "{:.5f}".format(dictionary["shift2"][index]),
+                    "{:.5f}".format(dictionary["shift3"][index]),
+                    "{:.5e}".format(dictionary["intensity"][index]),
+                ])
+            except (IndexError, KeyError, TypeError, ValueError):
+                continue
+
+        return rows
+
+    def find_save_location(self):
+        """
+        The folder and file name shown when saving, taken from the file the
+        peaklist was read from or created as. The current directory and an
+        untitled file are used when there is no peaklist.
+        """
+        directory = pathlib.Path(os.getcwd())
+        file_name = "Untitled.list"
+
+        # The whole path of the file the peaklist came from, rather than the
+        # shortened name which is shown in the window
+        peaklist = getattr(self, "peaklist_path", "")
+        if peaklist == "" or peaklist == None:
+            peaklist = self.current_peaklist_box.GetValue()
+
+        if peaklist == "":
+            return directory, file_name
+
+        try:
+            peaklist_path = pathlib.Path(peaklist).expanduser()
+        except TypeError:
+            return directory, file_name
+
+        if peaklist_path.name != "":
+            file_name = peaklist_path.name
+
+        parent = peaklist_path.absolute().parent
+        if parent.is_dir() == True:
+            directory = parent
+
+        return directory, file_name
+
+    def mark_saved(self):
+        """
+        Remember the peaklist as it is now, so that changes made after this are
+        noticed as changes which have not been saved.
+        """
+        peaklist = self.current_peaklist_box.GetValue()
+        self.saved_peaklist = copy.deepcopy(
+            self.peak_list_dictionary.get(peaklist, {})
+        )
+        self.update_saved_button()
+
+    def find_unsaved_changes(self) -> bool:
+        """
+        Whether the peaklist has changed since it was read or last saved.
+        """
+        peaklist = self.current_peaklist_box.GetValue()
+        if peaklist not in self.peak_list_dictionary:
+            return False
+
+        return self.peak_list_dictionary[peaklist] != getattr(
+            self, "saved_peaklist", {}
+        )
+
+    def update_saved_button(self):
+        """
+        Mark the save button while the peaklist has changes which have not been
+        saved, so that it is clear whether the file on disk is up to date.
+        """
+        try:
+            if self.find_unsaved_changes() == True:
+                self.save_peaks_button.SetLabel("Save *")
+            else:
+                self.save_peaks_button.SetLabel("Save")
+        except (RuntimeError, AttributeError):
+            pass
+
+    def OnClose(self, event):
+        """
+        Offer to save the peaklist when the window is closed while it has
+        changes which have not been saved.
+        """
+        self.turn_off_togglebuttons()
+
+        if self.find_unsaved_changes() == True:
+            dlg = wx.MessageDialog(
+                self,
+                "The peaklist {} has changes which have not been saved. Would "
+                "you like to save it before closing?".format(
+                    self.current_peaklist_box.GetValue()
+                ),
+                "Save peaklist",
+                wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION,
+            )
+            result = dlg.ShowModal()
+            dlg.Destroy()
+
+            if result == wx.ID_CANCEL:
+                # Staying open so that the peaks are not lost
+                try:
+                    event.Veto()
+                except AttributeError:
+                    pass
+                return
+
+            if result == wx.ID_YES:
+                self.OnSave(wx.EVT_BUTTON)
+
+        self.Destroy()
+
     def OnSave(self, event, peaklist_file=''):
         """
-        Provide a FileDialog where the user can chose the name for
-        the peaklist.
-        The peaklist will then be saved.
+        Save the peaklist back into its own file, which is the file it was read
+        from or created as, or the one it was last saved as. The user is asked
+        for a file only when the peaklist does not have one.
         """
+        tell_the_user = peaklist_file == ''
 
+        if peaklist_file == '':
+            peaklist_file = getattr(self, "peaklist_path", "")
+
+        if peaklist_file == '' or peaklist_file == None:
+            # The peaklist has no file of its own to be saved into
+            return self.OnSaveAs(event)
+
+        self.save_peaklist(peaklist_file, False, tell_the_user)
+
+    def OnSaveAs(self, event):
+        """
+        Ask for a file to save the peaklist as, which becomes the file the
+        peaklist is saved into from then on.
+        """
         save_2d_plane = False
 
-        if(peaklist_file == ''):
-            dlg = wx.FileDialog(self, "Select the peak list", wildcard="", style=wx.FD_SAVE)
-            dlg.SetDirectory(os.getcwd())
-            if dlg.ShowModal() == wx.ID_OK:
-                peaklist_file = dlg.GetPath()
-            else:
-                dlg.Destroy()
-                return
-            
-            
-            message = 'Would you like to save the full 3D peaklist (click yes), or would you like to save the 2D reference plane (click no)?'
-            dlg = wx.MessageDialog(None, message, "Pick Peaks", wx.YES_NO)
-            result=dlg.ShowModal()
-            if(result == wx.ID_NO):
-                save_2d_plane = True
+        directory, file_name = self.find_save_location()
+        dlg = wx.FileDialog(
+            self,
+            "Save the peaklist as",
+            wildcard="Peaklists (*.list;*.tab;*.txt)|*.list;*.tab;*.txt|All files (*.*)|*.*",
+            style=wx.FD_SAVE,
+        )
+        dlg.SetDirectory(str(directory))
+        dlg.SetFilename(str(file_name))
+        if dlg.ShowModal() == wx.ID_OK:
+            peaklist_file = dlg.GetPath()
+        else:
+            dlg.Destroy()
+            return
+        dlg.Destroy()
 
+        if peaklist_file == "" or os.path.isdir(peaklist_file) == True:
+            # No name was given, so there is nowhere to save the peaklist
+            dlg = wx.MessageDialog(
+                None,
+                "No name was given for the peaklist, so it has not been "
+                "saved. Please try again and give the peaklist a name.",
+                "Save peaklist",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        message = 'Would you like to save the full 3D peaklist (click yes), or would you like to save the 2D reference plane (click no)?'
+        dlg = wx.MessageDialog(None, message, "Save peaklist", wx.YES_NO)
+        result = dlg.ShowModal()
+        dlg.Destroy()
+        if(result == wx.ID_NO):
+            save_2d_plane = True
+
+        self.save_peaklist(peaklist_file, save_2d_plane, True)
+
+    def save_peaklist(self, peaklist_file, save_2d_plane, tell_the_user):
+        """
+        Write the peaklist into a file, saying where it has gone and what went
+        wrong if it could not be written.
+        """
+        try:
+            number_of_peaks = self.write_peaklist(peaklist_file, save_2d_plane)
+        except OSError as error:
+            dlg = wx.MessageDialog(
+                None,
+                "The peaklist could not be saved as {} ({}).".format(
+                    peaklist_file, error
+                ),
+                "Save peaklist",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if number_of_peaks == 0:
+            dlg = wx.MessageDialog(
+                None,
+                "There are no peaks in the peaklist, so the file {} has been "
+                "written empty.".format(peaklist_file),
+                "Save peaklist",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+        elif tell_the_user == True:
+            # Say where the peaklist has gone, as it is not always the file it
+            # was read from
+            dlg = wx.MessageDialog(
+                None,
+                "{} peaks have been saved as {}.".format(
+                    number_of_peaks, peaklist_file
+                ),
+                "Save peaklist",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+
+        if save_2d_plane == False:
+            # The peaklist on disk now holds what the window holds, and later
+            # saves go back to the file it has just been written to
+            self.peaklist_path = str(pathlib.Path(peaklist_file).absolute())
+            self.mark_saved()
+
+    def write_peaklist(self, peaklist_file, save_2d_plane=False):
+        """
+        Write the peaklist into a file, in the order the table shows it.
+        """
+        rows = self.find_peak_rows()
 
         with open(peaklist_file, "w") as file:
-
-            # Save all elements in the grid
-            num_rows = self.grid.GetNumberRows()
-            for i in range(num_rows):
-                
-                peak = self.grid.GetCellValue(i, 0)
-                shift1 = self.grid.GetCellValue(i, 1)
-                shift2 = self.grid.GetCellValue(i, 2)
-                shift3 = self.grid.GetCellValue(i, 3)
-                intensity = self.grid.GetCellValue(i, 4)
-                if(save_2d_plane == False):
+            for peak, shift1, shift2, shift3, intensity in rows:
+                if save_2d_plane == False:
                     file.write(
-                        "{} \t {} \t {} \t {} \t {}\n".format(peak, shift1, shift2, shift3, intensity)
+                        "{} \t {} \t {} \t {} \t {}\n".format(
+                            peak, shift1, shift2, shift3, intensity
+                        )
                     )
                 else:
-                    file.write(
-                        "{} \t {} \t {}\n".format(peak, shift1, shift2)
-                    )
+                    file.write("{} \t {} \t {}\n".format(peak, shift1, shift2))
+
+        return len(rows)
 
 
 

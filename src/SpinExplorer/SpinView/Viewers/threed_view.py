@@ -2585,6 +2585,23 @@ class Plot3DFrame(wx.Frame):
     #             self.OnChangePlane(event)
 
 
+class BorePosition:
+    """
+    A stand-in for a mouse click at a place on the plane of the bore plot, so
+    that the bore dimension can be shown at a position the user has not
+    clicked themselves.
+    """
+
+    def __init__(self, axes, x, y):
+        self.inaxes = axes
+        self.xdata = x
+        self.ydata = y
+        self.x = x
+        self.y = y
+        self.button = 1
+        self.key = None
+
+
 class SpinBore(wx.Frame):
     def __init__(self, title, projection, parent=None):
         self.main_frame = parent
@@ -2610,6 +2627,12 @@ class SpinBore(wx.Frame):
         self.main_bore_sizer.Add(self.canvas_bore, 10, flag=wx.GROW)
         self.toolbar_bore = NavigationToolbar(self.canvas_bore)
         self.main_bore_sizer.Add(self.toolbar_bore, 0, wx.EXPAND)
+
+        # The scroll wheel zooms, as it does in the 2D and 3D windows
+        self.mouse_wheel_mode = ScrollMode.ZOOM
+        self.mouse_wheel_connect = self.canvas_bore.Bind(
+            wx.EVT_MOUSEWHEEL, self.on_mouse_wheel_bore
+        )
 
         # Read the projection file
         self.nmrdata = ReadProjection(projection)
@@ -2682,7 +2705,12 @@ class SpinBore(wx.Frame):
         event.Skip()
 
     def UpdateBoreFrame(self):
-        # Updates the plots in the frame
+        # Updates the plots in the frame. The lines showing where the selected
+        # peaks sit along the bore dimension are drawn here so that they are
+        # there whatever has just been redrawn, and stay for as long as the
+        # peaks are selected
+        self.plot_peak_bore_lines()
+
         self.canvas_bore.draw()
         self.canvas_bore.Refresh()
         self.canvas_bore.Update()
@@ -2899,6 +2927,10 @@ class SpinBore(wx.Frame):
             "button_press_event", self.on_click_bore
         )
 
+        self.key_press_connect = self.fig_bore.canvas.mpl_connect(
+            "key_press_event", self.on_key_bore
+        )
+
         self.cmap = "#e41a1c"
         self.cmap_neg = "#377eb8"
         self.transposed2D = False
@@ -2977,6 +3009,8 @@ class SpinBore(wx.Frame):
         )
 
         self.ax_bore_2.set_title("1D Bore")
+
+        self.plot_peak_bore_lines()
 
         # Plot the strip plot contour plot
         contour_start_strip = (
@@ -3059,6 +3093,67 @@ class SpinBore(wx.Frame):
         )
         self.UpdateBoreFrame()
 
+    def on_mouse_wheel_bore(self, event):
+        """
+        The scroll wheel zooms the plot the cursor is over, as it does in the
+        2D and 3D windows.
+        """
+        if self.toolbar_bore != None:
+            # Logs the position so that the back, forward and home tools work
+            self.toolbar_bore.push_current()
+
+        if self.mouse_wheel_mode == ScrollMode.ZOOM:
+            self.mouse_wheel_zoom_bore(event)
+
+    def mouse_wheel_zoom_bore(self, event):
+        """
+        Zoom in or out of the plot the cursor is over, about the position of
+        the cursor.
+        """
+        mx, my = event.GetPosition()
+
+        scale = self.canvas_bore.GetDPIScaleFactor()
+        mx *= scale
+        my *= scale
+
+        # The canvas measures from the top down and the figure from the bottom up
+        my = self.canvas_bore.GetSize().height * scale - my
+
+        zoom = 1.1 if event.GetWheelRotation() < 0 else 1 / 1.1
+
+        try:
+            renderer = self.canvas_bore.get_renderer()
+        except AttributeError:
+            renderer = None
+
+        for axes in self.fig_bore.axes:
+            if axes.get_window_extent(renderer=renderer).contains(mx, my) == False:
+                continue
+
+            x, y = axes.transData.inverted().transform((mx, my))
+
+            axes.set_xlim([x + (limit - x) * zoom for limit in axes.get_xlim()])
+            axes.set_ylim([y + (limit - y) * zoom for limit in axes.get_ylim()])
+
+        self.canvas_bore.draw_idle()
+
+    def on_key_bore(self, event):
+        """
+        The keyboard shortcuts for the navigation tools, as the 2D and 3D
+        windows have. Selecting a tool turns off any peak picking mode, which
+        the peak window arranges by following the tools.
+        """
+        if event.key == "z":
+            self.toolbar_bore.zoom()
+        if event.key == "p":
+            self.toolbar_bore.pan()
+        if event.key == "q":
+            self.toolbar_bore.home()
+        if event.key == "b":
+            self.toolbar_bore.back()
+        if event.key == "f":
+            self.toolbar_bore.forward()
+
     def on_click_bore(self, event):
         intensity_percent = 10 ** float(self.bore_intensity_slider.GetValue())
         if self.ax_bore_2.get_title() == "":
@@ -3105,6 +3200,8 @@ class SpinBore(wx.Frame):
                 self.line2 = self.ax_bore_2.axhline(
                     y=event.ydata, color="black", linewidth=0.5
                 )
+
+                self.plot_peak_bore_lines()
 
                 self.bore_data_strip1 = []
                 for i in range(len(self.main_frame.ppms_2)):
@@ -3222,6 +3319,8 @@ class SpinBore(wx.Frame):
                     y=event.ydata, color="black", linewidth=0.5
                 )
 
+                self.plot_peak_bore_lines()
+
                 self.bore_data_strip1 = []
                 for i in range(len(self.main_frame.ppms_2)):
                     # Get the contour data for the strip plot
@@ -3281,6 +3380,113 @@ class SpinBore(wx.Frame):
         # self.canvas_bore.draw_idle()
         self.UpdateBoreFrame()
 
+    def show_bore_position(self, x, y):
+        """
+        Move the position marker to a place on the plane and show the bore
+        dimension there, as though the user had clicked it. This is used when a
+        peak is added so that the bore of the new peak is shown straight away.
+        """
+        self.on_click_bore(BorePosition(self.ax_bore, x, y))
+
+    def find_peak_bore_lines(self):
+        """
+        Where the peaks which are selected in the plane sit along the bore
+        dimension, as [name, chemical shift]. Only the selected peaks are
+        shown, and a peak which still has the chemical shift of zero it was
+        given when it was added has not been placed along the bore, so it is
+        left out.
+        """
+        peaks = getattr(self, "peak_lists3D", None)
+        if peaks == None:
+            return []
+
+        peaklist = peaks.current_peaklist_box.GetValue()
+        if peaklist not in peaks.peak_list_dictionary:
+            return []
+
+        dictionary = peaks.peak_list_dictionary[peaklist]
+
+        selected = [
+            index for index in peaks.selected_peak_indexes if index != "N/A"
+        ]
+        for index in getattr(self, "selected_bore_peaks", []):
+            if index not in selected:
+                selected.append(index)
+
+        lines = []
+        for index in selected:
+            try:
+                peakname = dictionary["peak_name"][index]
+                shift3 = dictionary["shift3"][index]
+            except (IndexError, TypeError):
+                continue
+
+            if shift3 == 0:
+                # The peak has not been given a position along the bore
+                continue
+
+            lines.append([peakname, shift3])
+
+        return lines
+
+    def plot_peak_bore_lines(self):
+        """
+        Show where each of those peaks sits along the bore dimension as a
+        dotted line across the 1D bore plot.
+        """
+        for line in getattr(self, "peak_bore_lines", []):
+            try:
+                line.remove()
+            except (ValueError, AttributeError, NotImplementedError):
+                # The plot has been cleared since the line was drawn
+                pass
+
+        self.peak_bore_lines = []
+
+        try:
+            for peakname, shift3 in self.find_peak_bore_lines():
+                self.peak_bore_lines.append(
+                    self.ax_bore_2.axhline(
+                        y=shift3, color="darkviolet", linewidth=0.8, linestyle=":"
+                    )
+                )
+                self.peak_bore_lines.append(
+                    self.ax_bore_2.text(
+                        self.ax_bore_2.get_xlim()[0],
+                        shift3,
+                        peakname,
+                        color="darkviolet",
+                        fontsize=6,
+                        verticalalignment="bottom",
+                    )
+                )
+        except (AttributeError, IndexError, TypeError, ValueError):
+            # The bore plot is being rebuilt
+            pass
+
+    def find_bore_peaks_shown(self):
+        """
+        The selected peaks which are shown down the bore dimension, leaving out
+        any which the peaklist no longer holds. The peaks are selected by their
+        position in the peaklist, so loading a different peaklist or removing
+        peaks can leave a selection which no longer points at anything.
+        """
+        selected = getattr(self, "selected_bore_peaks", [])
+
+        try:
+            dictionary = self.peak_lists3D.peak_list_dictionary[
+                self.peak_lists3D.peak_list_choices[0]
+            ]
+            number_of_peaks = len(dictionary["peak_name"])
+        except (AttributeError, KeyError, IndexError, TypeError):
+            return []
+
+        return [
+            index
+            for index in selected
+            if isinstance(index, (int, np.integer)) and index < number_of_peaks
+        ]
+
     def overlay_peaklist(self):
         """
         This will show all peaks down the bore that have been selected in
@@ -3292,6 +3498,10 @@ class SpinBore(wx.Frame):
                 isinstance(window, wx.Frame)
                 and window.GetTitle() == "3D Peak List - " + self.title
             ):
+                # A peaklist which has been loaded since the peaks were
+                # selected may not have those peaks in it any more
+                self.selected_bore_peaks = self.find_bore_peaks_shown()
+
                 if len(self.selected_bore_peaks) > 0:
                     # Plot these bore peaks
                     xvals = []
@@ -3399,6 +3609,8 @@ class SpinBore(wx.Frame):
                     fontsize=6,
                 )
 
+            self.plot_peak_bore_lines()
+
         self.UpdateBoreFrame()
 
     def OnBoreSliderStripPlot(self, event):
@@ -3498,6 +3710,8 @@ class SpinBore(wx.Frame):
 
         self.add_peaklist()
 
+        self.plot_peak_bore_lines()
+
         self.OnBoreSliderStripPlot(wx.EVT_BUTTON)
 
         self.UpdateBoreFrame()
@@ -3563,6 +3777,7 @@ class SpinBore(wx.Frame):
                     
                     if (
                         self.peak_lists3D.select_peak_button.GetValue() == True
+                        or self.peak_lists3D.select_peaks_button.GetValue() == True
                     ):
                                 cs = []
                                 for i, peak in enumerate(dictionary["peak_name"]):
