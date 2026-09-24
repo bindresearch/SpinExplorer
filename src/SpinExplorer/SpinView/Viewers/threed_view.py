@@ -2871,6 +2871,22 @@ class SpinBore(wx.Frame):
 
         self.title = 'SpinBore - ' + self.main_frame.parent.title
 
+        for window in wx.GetTopLevelWindows():
+            if (
+                isinstance(window, wx.Frame)
+                and window.GetTitle() == "3D Peak List - " + self.title
+            ):
+                if window.IsBeingDeleted() == True:
+                    # The window is on its way out, so a new one is needed
+                    continue
+
+                # The window already exists, holding the peaklist which is
+                # shown, so it is brought back rather than made again
+                window.Show()
+                window.Raise()
+                window.SetFocus()
+                return
+
         self.peak_lists3D = PeakListWindow3D(
             title="3D Peak List - " + self.title, parent=self
         )

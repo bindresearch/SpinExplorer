@@ -1480,9 +1480,15 @@ class TwoDViewer(wx.Panel):
 
         for window in wx.GetTopLevelWindows():
             if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
-                # The window already exists - move it to the foreground and then return
-                self.peaklist_frame.Raise()
-                self.peaklist_frame.SetFocus()
+                if window.IsBeingDeleted() == True:
+                    # The window is on its way out, so a new one is needed
+                    continue
+
+                # The window already exists, holding the peaklists which are
+                # shown, so it is brought back rather than made again
+                window.Show()
+                window.Raise()
+                window.SetFocus()
                 return
 
         self.peaklist_frame = PeakListWindow2D(title="Peak Lists - "+self.title, parent=self)

@@ -37,6 +37,53 @@ PEAK_ENTRY_KEYS = [
 ] + PEAK_LINEWIDTH_KEYS
 
 
+def find_axis_column_label(name, number: int) -> str:
+    """
+    How a chemical shift column is named in the peaklist table and in the header
+    of a saved peaklist. The name of the axis is used when it is known, so that
+    the columns say which dimension they hold.
+    """
+    name = str(name).strip()
+
+    # The axis labels of a spectrum carry their units, which are added here
+    for units in [" (ppm)", " (points)", "(ppm)", "(points)"]:
+        if name.endswith(units) == True:
+            name = name[: -len(units)].strip()
+
+    if name == "" or name.lower() == "none":
+        return "Shift {} (ppm)".format(number)
+
+    return "{} (ppm)".format(name)
+
+
+def find_axis_name(label) -> str:
+    """
+    The name of the axis a column label was made from, which is what a peaklist
+    holds for each of its dimensions.
+    """
+    label = str(label).strip()
+
+    for units in [" (ppm)", " (points)", "(ppm)", "(points)"]:
+        if label.endswith(units) == True:
+            label = label[: -len(units)].strip()
+
+    if label.startswith("Shift") == True:
+        return ""
+
+    return label
+
+
+def split_peaklist_header(line) -> list:
+    """
+    The column names of a peaklist header. The columns are separated by tabs, so
+    that a column name made of more than one word stays in one piece.
+    """
+    if "\t" in line:
+        return [name.strip() for name in line.split("\t")]
+
+    return line.split()
+
+
 def peaklist_file_is_empty(peaklist_file) -> bool:
     """
     Whether a peaklist file holds nothing at all, as a file which has only just
@@ -243,6 +290,164 @@ class PeakModeButtons:
 
         return True
 
+    def find_remembered_peaklists(self) -> list:
+        """
+        The peaklists which were loaded the last time this peaks window was
+        open, as [file, the spectrum it belongs to]. They are held by the
+        spectrum window, which stays open while the peaks window is closed and
+        opened again.
+        """
+        remembered = getattr(self.main_frame, "remembered_peaklists", None)
+        if remembered == None:
+            remembered = []
+            self.main_frame.remembered_peaklists = remembered
+
+        return remembered
+
+    def find_remembered_path(self, peaklist_file) -> str:
+        """
+        A peaklist file as it is remembered, which is its whole path.
+        """
+        try:
+            return str(pathlib.Path(peaklist_file).absolute())
+        except TypeError:
+            return str(peaklist_file)
+
+    def remember_peaklist(self, peaklist_file, dataset=None):
+        """
+        Remember a peaklist so that it is loaded again when this window is
+        opened next time, along with the spectrum it belongs to.
+        """
+        path = self.find_remembered_path(peaklist_file)
+        remembered = self.find_remembered_peaklists()
+
+        for held in remembered:
+            if held[0] == path:
+                held[1] = dataset
+                return
+
+        remembered.append([path, dataset])
+
+    def forget_peaklist(self, peaklist_file):
+        """
+        Stop remembering a peaklist, so that it does not come back when this
+        window is opened next time.
+        """
+        path = self.find_remembered_path(peaklist_file)
+        remembered = self.find_remembered_peaklists()
+
+        for held in list(remembered):
+            if held[0] == path or str(held[0]).endswith(str(peaklist_file)) == True:
+                remembered.remove(held)
+
+    def load_remembered_peaklists(self):
+        """
+        Load the peaklists which were shown the last time this window was open,
+        so that closing and opening it does not lose them.
+        """
+        for path, dataset in list(self.find_remembered_peaklists()):
+            if os.path.exists(path) == False:
+                # The file has gone, so it is not remembered any more
+                self.forget_peaklist(path)
+                continue
+
+            try:
+                self.AddPeaklist(path)
+                if dataset != None:
+                    self.set_peaklist_dataset(
+                        self.current_peaklist_box.GetValue(), dataset
+                    )
+            except Exception:
+                # A peaklist which cannot be read is not worth holding on to
+                self.forget_peaklist(path)
+
+        update_dataset_box = getattr(self, "update_dataset_box", None)
+        if update_dataset_box != None:
+            update_dataset_box()
+
+    def zoom_to_region(self, axes, xlimits, ylimits):
+        """
+        Zoom a plot onto a region, keeping each axis running in the direction it
+        already runs in. Chemical shift axes are drawn with the largest shift
+        first, whereas an axis showing points runs the other way, so the
+        direction is taken from the plot rather than assumed.
+        """
+        xmin, xmax = sorted([float(limit) for limit in xlimits])
+        ymin, ymax = sorted([float(limit) for limit in ylimits])
+
+        if axes.get_xlim()[0] > axes.get_xlim()[1]:
+            axes.set_xlim([xmax, xmin])
+        else:
+            axes.set_xlim([xmin, xmax])
+
+        if axes.get_ylim()[0] > axes.get_ylim()[1]:
+            axes.set_ylim([ymax, ymin])
+        else:
+            axes.set_ylim([ymin, ymax])
+
+    def OnRefreshIntensities(self, event):
+        """
+        Read the intensity of every peak of the current peaklist from the
+        spectrum, leaving the positions of the peaks alone. This is used when a
+        peaklist picked on one spectrum is loaded onto another one.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            self.no_peaklist_message("Refreshing intensities")
+            return
+
+        # Keep the peaklist as it was, so that the intensities can be undone
+        previous = getattr(self, "previous_peaklists", None)
+        if previous != None:
+            if len(previous) > 10:
+                previous.pop(0)
+            previous.append(copy.deepcopy(self.peak_list_dictionary))
+
+        number_of_peaks = len(self.peak_list_dictionary[peaklist]["peak_name"])
+
+        if self.update_peaklist_intensities(peaklist) == False:
+            dlg = wx.MessageDialog(
+                self,
+                "The intensities could not be read from the spectrum, so the "
+                "peaklist has been left as it was.",
+                "Refreshing intensities",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        self.AddToTable()
+        self.redraw_spectrum()
+
+        dlg = wx.MessageDialog(
+            self,
+            "The intensities of the {} peaks of {} have been read from the "
+            "spectrum. The positions of the peaks have not been changed.".format(
+                number_of_peaks, peaklist
+            ),
+            "Refreshing intensities",
+            wx.OK,
+        )
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def redraw_spectrum(self):
+        """
+        Draw the spectrum and its peaks again, whichever window this is.
+        """
+        for name, arguments in [
+            ("OnMinContour2D", {"textcontrol": True}),
+            ("OnBoreSlider", {}),
+        ]:
+            redraw = getattr(self.main_frame, name, None)
+            if redraw != None:
+                try:
+                    redraw(wx.EVT_BUTTON, **arguments)
+                except (RuntimeError, AttributeError, TypeError):
+                    pass
+                return
+
     def OnDatasetSelection(self, event):
         """
         The user has chosen which spectrum the selected peaklist belongs to.
@@ -256,6 +461,14 @@ class PeakModeButtons:
             return
 
         self.set_peaklist_dataset(peaklist, selection)
+
+        # The spectrum a peaklist belongs to is remembered along with it, so
+        # that it is put back on the same spectrum next time
+        find_peaklist_file = getattr(self, "find_peaklist_file", None)
+        if find_peaklist_file != None:
+            peaklist_file = find_peaklist_file()
+            if peaklist_file != "":
+                self.remember_peaklist(peaklist_file, selection)
 
         if self.update_peaklist_intensities(peaklist) == True:
             self.AddToTable()
@@ -467,6 +680,14 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         self.watch_navigation_toolbar()
         self.update_mode_buttons()
         self.update_dataset_box()
+
+        # The spectrum draws the peaks of this window, which is not the one it
+        # holds until this window has been made
+        self.main_frame.peaklist_frame = self
+
+        # The peaklists which were shown last time are loaded again
+        self.load_remembered_peaklists()
+
         self.Show()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -655,6 +876,29 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
         self.save_peaks_button = wx.Button(self.other_box_label, label="Save")
         self.save_peaks_button.Bind(wx.EVT_BUTTON, self.OnSave)
+        self.save_peaks_button.SetToolTip(
+            "Save the peaklist into its own file, which is the one named in the "
+            "peaklist box."
+        )
+
+        self.refresh_intensities_button = wx.Button(
+            self.other_box_label, label="Refresh Intensities"
+        )
+        self.refresh_intensities_button.Bind(
+            wx.EVT_BUTTON, self.OnRefreshIntensities
+        )
+        self.refresh_intensities_button.SetToolTip(
+            "Read the intensity of every peak from the spectrum again, leaving "
+            "the positions of the peaks alone. This is used when a peaklist "
+            "picked on one spectrum is loaded onto another one."
+        )
+
+        self.save_peaks_as_button = wx.Button(self.other_box_label, label="Save As")
+        self.save_peaks_as_button.Bind(wx.EVT_BUTTON, self.OnSaveAs)
+        self.save_peaks_as_button.SetToolTip(
+            "Save the peaklist into a different file, which it is then saved "
+            "into from then on."
+        )
 
         self.duplicate_peaklist_button = wx.Button(self.other_box_label, label="Duplicate Peaklist")
         self.duplicate_peaklist_button.Bind(wx.EVT_BUTTON, self.OnDuplicatePeaklist)
@@ -760,6 +1004,10 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         self.other_sizer.Add(self.duplicate_peaklist_button)
         self.other_sizer.AddSpacer(10)
         self.other_sizer.Add(self.save_peaks_button)
+        self.other_sizer.AddSpacer(5)
+        self.other_sizer.Add(self.save_peaks_as_button)
+        self.other_sizer.AddSpacer(10)
+        self.other_sizer.Add(self.refresh_intensities_button)
         self.other_sizer.AddSpacer(10)
         self.other_sizer.Add(self.add_at_local_max_box)
 
@@ -847,45 +1095,41 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
 
     def OnClose(self, event):
-
-        # Turn off all togglebuttons before closing (unlinks the matplotlib canvas of peaklist specific tasks)
+        """
+        Closing the peaklist window puts it away without losing anything: the
+        peaklists stay loaded and their peaks stay on the spectrum, and opening
+        the window again brings it back as it was. A peaklist is only taken off
+        the spectrum by removing it.
+        """
+        # The peak modes take the mouse clicks on the spectrum, so they are
+        # turned off while the window is away
         self.turn_off_togglebuttons()
 
         # Check if a Fit peaks result window is open
         continue_closing = self.check_fit_window()
         if(continue_closing==False):
             return
-        
-        # Telling the user that closing will lead to all unsaved changes to each peaklist being lost, asking if they wish to continue
-        # Asking the user if they would like to save a session containing these peaklists
-        dlg = wx.MessageDialog(
-                    self,
-                    "Closing the peaklist window will lead to all unsaved changes to each peaklist being lost. Would you like to continue?"
-                    ,
-                    "Warning",
-                    wx.YES_NO,
-        )
-        res = dlg.ShowModal()
-        if(res == wx.ID_NO):    
-            dlg.Destroy()
-            return
-        dlg.Destroy()
 
-        # Asking the user if they would like to save a session containing these peaklists
-        dlg = wx.MessageDialog(
-                    self,
-                    "Would you like to save the a session containing the current peaklists before closing?"
-                    ,
-                    "Save",
-                    wx.YES_NO,
-        )
-        res = dlg.ShowModal()
-        if(res == wx.ID_YES):
-            self.main_frame.OnSaveSessionButton2D(wx.EVT_BUTTON)
-        dlg.Destroy()
+        # The peaks stay drawn on the spectrum
+        self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
 
+        self.hide_window(event)
 
-        self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True, showpeaks=False)
+    def hide_window(self, event):
+        """
+        Put the window away rather than destroying it, so that everything it
+        holds is still there when it is opened again.
+        """
+        self.Hide()
+
+        try:
+            if event.CanVeto() == True:
+                event.Veto()
+                return
+        except AttributeError:
+            pass
+
+        # The window cannot stay, so it is destroyed as it used to be
         self.Destroy()
 
 
@@ -1187,6 +1431,12 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
         self.peaklist_paths.append(p)
 
+        # so that the peaklist is loaded again when this window is opened next
+        # time, along with the spectrum it belongs to
+        self.remember_peaklist(
+            peaklist_file, self.find_peaklist_dataset(last_directories_path)
+        )
+
         self.update_comparison_boxes()
 
         self.main_frame.OnMinContour2D(wx.EVT_BUTTON, textcontrol=True)
@@ -1208,6 +1458,73 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                     box.SetSelection(0)
             except (RuntimeError, AttributeError):
                 pass
+
+    def find_column_labels(self, peaklist=None, linewidths=True) -> list:
+        """
+        The names of the peaklist columns, used both for the table and for the
+        header of a saved peaklist so that the two say the same thing.
+        """
+        if peaklist == None:
+            peaklist = self.current_peaklist_box.GetValue()
+
+        names = list(self.names.get(peaklist, ["", "", ""]))
+        while len(names) < 3:
+            names = names + [""]
+
+        # A peaklist which did not come from a file has no names of its own, so
+        # the axes of the spectrum are used
+        spectrum = self.find_spectrum_axis_names()
+        for dimension in [0, 1]:
+            if str(names[dimension]).strip() == "":
+                names[dimension] = spectrum[dimension]
+
+        intensity = str(names[2]).strip()
+        if intensity == "" or intensity.lower() == "intensity":
+            intensity = "Intensity"
+
+        labels = [
+            "Peak name",
+            find_axis_column_label(names[0], 1),
+            find_axis_column_label(names[1], 2),
+            intensity,
+        ]
+
+        if linewidths == True:
+            labels += [
+                "Linewidth 1 (Hz)",
+                "Linewidth 1 (ppm)",
+                "Linewidth 2 (Hz)",
+                "Linewidth 2 (ppm)",
+            ]
+
+        return labels
+
+    def find_spectrum_axis_names(self) -> list:
+        """
+        The names of the two axes of the spectrum as they are shown on the plot,
+        used to name the columns of a peaklist which has no names of its own.
+        """
+        names = ["", ""]
+
+        try:
+            names[0] = self.main_frame.ax.get_xlabel()
+            names[1] = self.main_frame.ax.get_ylabel()
+        except (AttributeError, RuntimeError):
+            pass
+
+        return names
+
+    def update_column_labels(self):
+        """
+        Show which dimension each shift column holds, using the names of the
+        axes of the peaklist or of the spectrum.
+        """
+        try:
+            for column, label in enumerate(self.find_column_labels()):
+                if column < self.grid.GetNumberCols():
+                    self.grid.SetColLabelValue(column, label)
+        except (RuntimeError, AttributeError):
+            pass
 
     def find_table_order(self, peaklist):
         """
@@ -1377,6 +1694,9 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         if peaklist not in self.peak_list_dictionary:
             # No peaklist is loaded, the table is left empty
             return
+
+        # The columns say which dimension they hold
+        self.update_column_labels()
 
         # Every peak has an entry in every list, whether or not it has been fitted
         self.pad_peaklist(peaklist)
@@ -1548,11 +1868,17 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                                         dictionary["intensity"].append(0)
                                     self.read_linewidths(dictionary, line)
                                 except:
-                                    name1 = line[1]
-                                    name2 = line[2]
+                                    # A header naming the columns, which is
+                                    # separated by tabs so that names made of
+                                    # more than one word stay in one piece
+                                    header = split_peaklist_header(
+                                        lines[i].split("\n")[0]
+                                    )
+                                    name1 = find_axis_name(header[1])
+                                    name2 = find_axis_name(header[2])
                                     try:
-                                        name3 = line[3]
-                                    except:
+                                        name3 = header[3]
+                                    except IndexError:
                                         name3 = 'intensity'
                             else:
                                 try:
@@ -1766,6 +2092,11 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         self.turn_off_togglebuttons()
 
         index = self.peak_list_choices.index(peaklist)
+
+        # Stop it coming back when this window is opened next time
+        if index < len(self.peaklist_paths):
+            self.forget_peaklist(self.peaklist_paths[index])
+        self.forget_peaklist(peaklist)
 
         # Forget everything which was held for this peaklist
         self.peak_list_dictionary.pop(peaklist, None)
@@ -2679,8 +3010,7 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
         self.main_frame.toolbar.push_current()
 
-        self.main_frame.ax.set_xlim([xmax, xmin])
-        self.main_frame.ax.set_ylim([ymax, ymin])
+        self.zoom_to_region(self.main_frame.ax, [xmin, xmax], [ymin, ymax])
         self.main_frame.UpdateFrame()
 
         self.main_frame.toolbar.push_current()
@@ -2713,24 +3043,20 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         current_peaklist = self.current_peaklist_box.GetValue()
         if current_peaklist not in self.peak_list_dictionary:
             self.no_peaklist_message("Saving a peaklist")
-            return
+            return 0
 
         self.pad_peaklist(current_peaklist)
 
         dictionary = self.peak_list_dictionary[current_peaklist]
         linewidths = self.find_linewidths_written(current_peaklist)
+        written = 0
 
         with open(peaklist_file, "w") as file:
-            if self.names[current_peaklist] != ["", ""]:
-                header = "Peak \t {} \t {} \t {}".format(
-                    self.names[current_peaklist][0],
-                    self.names[current_peaklist][1],
-                    "Intensity",
-                )
-                if linewidths == True:
-                    header += " \t Linewidth1(Hz) \t Linewidth1(ppm)"
-                    header += " \t Linewidth2(Hz) \t Linewidth2(ppm)"
-                file.write(header + "\n")
+            # The header names the columns in the same way as the table
+            file.write(
+                " \t ".join(self.find_column_labels(current_peaklist, linewidths))
+                + "\n"
+            )
 
             for index in self.find_table_order(current_peaklist):
                 line = "{} \t {} \t {} \t{}".format(
@@ -2744,6 +3070,9 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                         current_peaklist, index
                     )
                 file.write(line + "\n")
+                written += 1
+
+        return written
 
     def find_save_location(self):
         """
@@ -2774,28 +3103,127 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
         return directory, file_name
 
+    def find_peaklist_file(self) -> str:
+        """
+        The file the current peaklist was read from, created as, or last saved
+        as. An empty string is returned when the peaklist has no file yet.
+        """
+        selection = self.current_peaklist_box.GetSelection()
+        if selection < 0 or selection >= len(self.peaklist_paths):
+            return ""
+
+        try:
+            return str(pathlib.Path(self.peaklist_paths[selection]).expanduser())
+        except TypeError:
+            return ""
+
+    def set_peaklist_file(self, peaklist_file):
+        """
+        Record the file the current peaklist is saved into, so that saving it
+        again goes back to the same file.
+        """
+        selection = self.current_peaklist_box.GetSelection()
+        if selection < 0 or selection >= len(self.peaklist_paths):
+            return
+
+        self.peaklist_paths[selection] = pathlib.Path(peaklist_file).absolute()
+
     def OnSave(self, event, save_after_picking=False):
         """
-        Provide a FileDialog where the user can chose the name for
-        the peaklist.
-        The peaklist will then be saved.
+        Save the peaklist back into its own file, which is the file it was read
+        from or created as, or the one it was last saved as. The user is asked
+        for a file only when the peaklist does not have one.
         """
+        if save_after_picking == True:
+            self.save_peaklist(self.peaklist_name_box.GetValue(), False)
+            return
 
+        peaklist_file = self.find_peaklist_file()
+        if peaklist_file == "":
+            return self.OnSaveAs(event)
+
+        self.save_peaklist(peaklist_file, True)
+
+    def OnSaveAs(self, event):
+        """
+        Ask for a file to save the peaklist as, which becomes the file it is
+        saved into from then on.
+        """
         directory, file_name = self.find_save_location()
 
-        if(save_after_picking==False):
-            dlg = wx.FileDialog(self, "Select the folder and name to save the peaklist as.", wildcard="", style=wx.FD_SAVE)
-            dlg.SetDirectory(str(directory))
-            dlg.SetFilename(str(file_name))
-            if dlg.ShowModal() == wx.ID_OK:
-                peaklist_file = dlg.GetPath()
-            else:
-                dlg.Destroy()
-                return
+        dlg = wx.FileDialog(
+            self,
+            "Save the peaklist as",
+            wildcard="Peaklists (*.list;*.tab;*.txt)|*.list;*.tab;*.txt|All files (*.*)|*.*",
+            style=wx.FD_SAVE,
+        )
+        dlg.SetDirectory(str(directory))
+        dlg.SetFilename(str(file_name))
+        if dlg.ShowModal() == wx.ID_OK:
+            peaklist_file = dlg.GetPath()
         else:
-            peaklist_file = self.peaklist_name_box.GetValue()
+            dlg.Destroy()
+            return
+        dlg.Destroy()
 
-        self.write_peaklist(peaklist_file)
+        if peaklist_file == "" or os.path.isdir(peaklist_file) == True:
+            dlg = wx.MessageDialog(
+                None,
+                "No name was given for the peaklist, so it has not been saved. "
+                "Please try again and give the peaklist a name.",
+                "Save peaklist",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        self.save_peaklist(peaklist_file, True)
+
+    def save_peaklist(self, peaklist_file, tell_the_user):
+        """
+        Write the peaklist into a file, saying where it has gone and what went
+        wrong if it could not be written.
+        """
+        try:
+            number_of_peaks = self.write_peaklist(peaklist_file)
+        except OSError as error:
+            dlg = wx.MessageDialog(
+                None,
+                "The peaklist could not be saved as {} ({}).".format(
+                    peaklist_file, error
+                ),
+                "Save peaklist",
+                wx.OK,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        # Saving it again goes back to the same file, and it is that file which
+        # is loaded when this window is opened next time
+        previous = self.find_peaklist_file()
+        self.set_peaklist_file(peaklist_file)
+        if previous != "" and previous != peaklist_file:
+            self.forget_peaklist(previous)
+        self.remember_peaklist(peaklist_file, self.find_peaklist_dataset())
+
+        if tell_the_user == False:
+            return
+
+        if number_of_peaks == 0:
+            message = (
+                "There are no peaks in the peaklist, so the file {} has been "
+                "written empty.".format(peaklist_file)
+            )
+        else:
+            message = "{} peaks have been saved as {}.".format(
+                number_of_peaks, peaklist_file
+            )
+
+        dlg = wx.MessageDialog(None, message, "Save peaklist", wx.OK)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def OnPickPeaks(self, event):
         """
@@ -2921,6 +3349,11 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         # The peaklist belongs to the spectrum which is currently selected
         self.set_peaklist_dataset(
             last_directories_path, getattr(self.main_frame, "active_plot_index", 0)
+        )
+
+        # and it is loaded again when this window is opened next time
+        self.remember_peaklist(
+            peaklist_name, self.find_peaklist_dataset(last_directories_path)
         )
         self.update_dataset_box()
 
@@ -3252,6 +3685,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+        # The peaklists which were shown last time are loaded again
+        self.load_remembered_peaklists()
+
         self.Show()
         # self.AddPeakListBrowser()
 
@@ -3307,6 +3743,14 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.add_peaklist_button = wx.Button(self, label="Add peaklist")
         self.add_peaklist_button.Bind(wx.EVT_BUTTON, self.AddPeakListBrowser)
+
+        self.remove_peaklist_button = wx.Button(self, label="Remove Peaklist")
+        self.remove_peaklist_button.Bind(wx.EVT_BUTTON, self.OnRemovePeakList)
+        self.remove_peaklist_button.SetToolTip(
+            "Remove the peaklist from this window. The peaklist file itself is "
+            "not deleted, and the peaklist is not loaded again when this window "
+            "is opened next time."
+        )
 
         self.peaklist_selection_text = wx.StaticText(self, -1, "Selected Peaklist:")
 
@@ -3401,6 +3845,18 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             "selected peaklist box above."
         )
 
+        self.refresh_intensities_button = wx.Button(
+            self.row2_label, label="Refresh Intensities"
+        )
+        self.refresh_intensities_button.Bind(
+            wx.EVT_BUTTON, self.OnRefreshIntensities
+        )
+        self.refresh_intensities_button.SetToolTip(
+            "Read the intensity of every peak from the spectrum again, leaving "
+            "the positions of the peaks alone. This is used when a peaklist "
+            "picked on one spectrum is loaded onto another one."
+        )
+
         self.save_peaks_as_button = wx.Button(self.row2_label, label="Save As")
         self.save_peaks_as_button.Bind(wx.EVT_BUTTON, self.OnSaveAs)
         self.save_peaks_as_button.SetToolTip(
@@ -3463,6 +3919,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.row2_2.Add(self.move_to_local_max)
         self.row2_2.AddSpacer(5)
         self.row2_2.Add(self.move_to_local_max_bore)
+        self.row2_2.AddSpacer(5)
+        self.row2_2.Add(self.refresh_intensities_button)
         self.row2_2.AddSpacer(10)
         self.row2_2.Add(self.add_at_local_max_box, 0, wx.ALIGN_CENTER_VERTICAL)
         self.row2_2.AddSpacer(10)
@@ -3532,6 +3990,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.row1 = wx.BoxSizer(wx.HORIZONTAL)
         self.row1.Add(self.add_peaklist_button)
+        self.row1.AddSpacer(5)
+        self.row1.Add(self.remove_peaklist_button)
         self.row1.AddSpacer(10)
         self.row1.Add(self.peaklist_selection_text)
         self.row1.AddSpacer(5)
@@ -3583,6 +4043,71 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             for c in range(col_count):
                 self.grid.SetColSize(c, col_width)
 
+
+    def OnRemovePeakList(self, event):
+        """
+        Remove the loaded peaklist from this window, leaving the file it came
+        from on disk. The peaklist is not loaded again when the window is
+        opened next time.
+        """
+        peaklist = self.find_current_peaklist()
+        if peaklist == None:
+            self.no_peaklist_message("Removing a peaklist")
+            return
+
+        dlg = wx.MessageDialog(
+            self,
+            "Remove the peaklist {} from this window? The peaklist file itself "
+            "will not be deleted.".format(peaklist),
+            "Removing a peaklist",
+            wx.YES_NO | wx.ICON_QUESTION,
+        )
+        result = dlg.ShowModal()
+        dlg.Destroy()
+        if result != wx.ID_YES:
+            return
+
+        self.turn_off_togglebuttons()
+
+        # Stop it coming back when this window is opened next time
+        self.forget_peaklist(getattr(self, "peaklist_path", peaklist))
+        self.forget_peaklist(peaklist)
+
+        # Forget everything which was held for this peaklist
+        self.peak_list_dictionary.pop(peaklist, None)
+
+        # Only a peaklist which has been picked has names of its own
+        names = getattr(self, "names", None)
+        if names != None:
+            names.pop(peaklist, None)
+
+        if peaklist in self.peak_list_choices:
+            self.peak_list_choices.remove(peaklist)
+        if len(self.peak_list_choices) == 0:
+            self.peak_list_choices = [""]
+
+        self.peak_list = self.peak_list_choices[-1]
+        self.current_peaklist_box.SetValue("")
+        self.peaklist_path = ""
+        self.saved_peaklist = {}
+
+        self.selected_peaklist = ""
+        self.selected_peakname = ""
+        self.selected_peak_indexes = ["N/A"]
+        self.main_frame.selected_bore_peaks = []
+
+        self.AddToTable()
+        self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
+
+    def load_remembered_peaklists(self):
+        """
+        Load the peaklists which were shown the last time the peaks window was
+        open. The bore window draws the peaks of this window, which is not the
+        one it holds until this window has been made.
+        """
+        self.main_frame.peak_lists3D = self
+
+        PeakModeButtons.load_remembered_peaklists(self)
 
     def find_viewer(self):
         """
@@ -3883,6 +4408,37 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         # Show the selected peaks down the bore dimension as well
         self.main_frame.selected_bore_peaks = selected
+
+    def update_peaklist_intensities(self, peaklist=None) -> bool:
+        """
+        Read the intensity of every peak of a peaklist from the 3D data at the
+        position of the peak, returning whether the intensities were updated.
+        """
+        if peaklist == None:
+            peaklist = self.find_current_peaklist()
+
+        if peaklist not in self.peak_list_dictionary:
+            return False
+
+        dictionary = self.peak_list_dictionary[peaklist]
+        intensities = []
+
+        try:
+            for index, peakname in enumerate(dictionary["peak_name"]):
+                intensities.append(
+                    self.find_intensity_3d(
+                        dictionary["shift1"][index],
+                        dictionary["shift2"][index],
+                        dictionary["shift3"][index],
+                    )
+                )
+        except (KeyError, IndexError, AttributeError, TypeError):
+            # The spectrum cannot be read, the intensities are left as they were
+            return False
+
+        dictionary["intensity"] = intensities
+
+        return True
 
     def find_peaks_to_move(self):
         """
@@ -4370,6 +4926,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         # Where the peaklist really is, so that saving goes back to it
         self.peaklist_path = str(pathlib.Path(peaklist_name).absolute())
 
+        # and so that it is loaded again when this window is opened next time
+        self.remember_peaklist(peaklist_name)
+
         # Update the plot with the new peaklist
         self.main_frame.OnBoreSlider(wx.EVT_BUTTON)
 
@@ -4426,6 +4985,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         # Where the peaklist really is, so that saving goes back to it
         self.peaklist_path = str(pathlib.Path(peaklist_file).absolute())
 
+        # and so that it is loaded again when this window is opened next time
+        self.remember_peaklist(peaklist_file)
+
         # The peaklist matches the file it has just been read from
         self.mark_saved()
 
@@ -4438,8 +5000,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         Adding the peaklist just entered into the peaklist table
         """
         # Every change to the peaklist ends up here, so the save button is
-        # marked or unmarked from this one place
+        # marked or unmarked and the columns are named from this one place
         self.update_saved_button()
+        self.update_column_labels()
 
         row_count = self.grid.GetNumberRows()
         if row_count > 0:
@@ -5467,8 +6030,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         if self.active_move == True:
             self.active_move = False
             self.move_peaks_button.SetValue(False)
+            self.disconnect_bore("move_peak_connect")
             if self.active_select_peak == True:
-                self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_connect)
+                # Clicking the plane selects a peak again
                 self.select_peak_connect = self.main_frame.fig_bore.canvas.mpl_connect(
                     "button_press_event", self.on_click_selectpeak
                 )
@@ -5499,8 +6063,13 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                     self.eventDict[evt.typeId] = name
 
         if self.active_select_peak == True:
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.select_peak_connect)
-            evt_id = event.GetEventType()
+            # While the peak is being moved, clicking the plane moves it rather
+            # than selecting another peak
+            self.disconnect_bore("select_peak_connect")
+            try:
+                evt_id = event.GetEventType()
+            except AttributeError:
+                evt_id = None
             if evt_id != wx.EVT_TOOL_RANGE.typeId:
                 dlg = wx.MessageDialog(
                     self,
@@ -5514,13 +6083,10 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.active_move = True
         self.move_peaks_button.SetValue(True)
 
-
-        # If select peak, and there is a peak selected give a popout telling
-        # the user to click where they want the peak to go
-        if self.active_select_peak == True:
-            self.move_peak_connect = self.main_frame.fig_bore.canvas.mpl_connect(
-                "button_press_event", self.on_click_movepeak3d
-            )
+        # Clicking the plane moves the peak, however the peak was selected
+        self.move_peak_connect = self.main_frame.fig_bore.canvas.mpl_connect(
+            "button_press_event", self.on_click_movepeak3d
+        )
 
 
 
@@ -5595,8 +6161,9 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         if self.active_movez == True:
             self.active_movez = False
             self.move_peaks_bore_button.SetValue(False)
+            self.disconnect_bore("move_peak_connectz")
             if self.active_select_peak == True:
-                self.main_frame.fig_bore.canvas.mpl_disconnect(self.move_peak_connectz)
+                # Clicking the plane selects a peak again
                 self.select_peak_connect = self.main_frame.fig_bore.canvas.mpl_connect(
                     "button_press_event", self.on_click_selectpeak
                 )
@@ -5627,8 +6194,13 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                     self.eventDict[evt.typeId] = name
 
         if self.active_select_peak == True:
-            self.main_frame.fig_bore.canvas.mpl_disconnect(self.select_peak_connect)
-            evt_id = event.GetEventType()
+            # While the peak is being moved, clicking the plane moves it rather
+            # than selecting another peak
+            self.disconnect_bore("select_peak_connect")
+            try:
+                evt_id = event.GetEventType()
+            except AttributeError:
+                evt_id = None
             if evt_id != wx.EVT_TOOL_RANGE.typeId:
                 dlg = wx.MessageDialog(
                     self,
@@ -5642,13 +6214,10 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.active_movez = True
         self.move_peaks_bore_button.SetValue(True)
 
-
-        # If select peak, and there is a peak selected give a popout telling
-        # the user to click where they want the peak to go
-        if self.active_select_peak == True:
-            self.move_peak_connectz = self.main_frame.fig_bore.canvas.mpl_connect(
-                "button_press_event", self.on_click_movepeakz
-            )
+        # Clicking along the bore moves the peak, however the peak was selected
+        self.move_peak_connectz = self.main_frame.fig_bore.canvas.mpl_connect(
+            "button_press_event", self.on_click_movepeakz
+        )
 
     def on_click_movepeakz(self, event):
         """
@@ -5888,8 +6457,7 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.main_frame.toolbar_bore.push_current()
 
-        self.main_frame.ax_bore.set_xlim([xmin, xmax])
-        self.main_frame.ax_bore.set_ylim([ymin, ymax])
+        self.zoom_to_region(self.main_frame.ax_bore, [xmin, xmax], [ymin, ymax])
 
         self.simulate_peak_selection_click(float(shift1), float(shift2))
 
@@ -5936,6 +6504,50 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             return peaklist
 
         return None
+
+    def find_axis_labels(self):
+        """
+        The names of the three dimensions of the peaklist, taken from the axes
+        of the plots so that the peaklist says the same as what is shown: the
+        axis across the plane, the axis up it, and the bore dimension.
+        """
+        labels = ["", "", ""]
+
+        try:
+            labels[0] = self.main_frame.ax_bore.get_xlabel()
+            labels[1] = self.main_frame.ax_bore.get_ylabel()
+            labels[2] = self.main_frame.ax_bore_2.get_ylabel()
+        except (AttributeError, RuntimeError):
+            pass
+
+        return labels
+
+    def find_column_labels(self) -> list:
+        """
+        The names of the peaklist columns, used both for the table and for the
+        header of a saved peaklist so that the two say the same thing.
+        """
+        labels = self.find_axis_labels()
+
+        return [
+            "Peak name",
+            find_axis_column_label(labels[0], 1),
+            find_axis_column_label(labels[1], 2),
+            find_axis_column_label(labels[2], 3),
+            "Intensity",
+        ]
+
+    def update_column_labels(self):
+        """
+        Show which dimension each shift column holds, using the names of the
+        axes of the plots.
+        """
+        try:
+            for column, label in enumerate(self.find_column_labels()):
+                if column < self.grid.GetNumberCols():
+                    self.grid.SetColLabelValue(column, label)
+        except (RuntimeError, AttributeError):
+            pass
 
     def find_table_order(self, peaklist):
         """
@@ -6082,6 +6694,25 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             if result == wx.ID_YES:
                 self.OnSave(wx.EVT_BUTTON)
 
+        # The peaks stay on the plots, and the window holds its peaklist until
+        # the peaklist is removed
+        self.hide_window(event)
+
+    def hide_window(self, event):
+        """
+        Put the window away rather than destroying it, so that everything it
+        holds is still there when it is opened again.
+        """
+        self.Hide()
+
+        try:
+            if event.CanVeto() == True:
+                event.Veto()
+                return
+        except AttributeError:
+            pass
+
+        # The window cannot stay, so it is destroyed as it used to be
         self.Destroy()
 
     def OnSave(self, event, peaklist_file=''):
@@ -6201,8 +6832,16 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         Write the peaklist into a file, in the order the table shows it.
         """
         rows = self.find_peak_rows()
+        labels = self.find_column_labels()
 
         with open(peaklist_file, "w") as file:
+            # The header names the columns in the same way as the table. Only
+            # the two shifts of the plane are saved for a reference plane
+            if save_2d_plane == False:
+                file.write(" \t ".join(labels) + "\n")
+            else:
+                file.write(" \t ".join(labels[:3]) + "\n")
+
             for peak, shift1, shift2, shift3, intensity in rows:
                 if save_2d_plane == False:
                     file.write(
