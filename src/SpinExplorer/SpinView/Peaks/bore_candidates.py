@@ -483,7 +483,11 @@ def find_ambiguity_text(notes) -> str:
     if len(notes) == 0:
         return ""
 
-    return ", ".join([str(note).capitalize() for note in notes])
+    # Only the first letter is changed, so that the names of peaks inside a note
+    # keep the case they are written in
+    return ", ".join(
+        [str(note)[:1].upper() + str(note)[1:] for note in notes]
+    )
 
 
 def find_alternatives_text(others) -> str:
@@ -514,3 +518,132 @@ def read_alternatives(text) -> list:
             continue
 
     return alternatives
+
+
+def find_plane_distance(first, second, distances):
+    """
+    How far apart two positions are in the plane, counted in how much of the
+    distance allowed in each dimension is used up. A position which uses up all
+    of one dimension is a distance of 1 away, so anything above 1 is too far.
+    """
+    used = []
+
+    for dimension in [0, 1]:
+        allowed = abs(float(distances[dimension]))
+        gap = abs(float(first[dimension]) - float(second[dimension]))
+
+        if allowed == 0:
+            used.append(0.0 if gap == 0 else float("inf"))
+        else:
+            used.append(gap / allowed)
+
+    return max(used), (used[0] ** 2 + used[1] ** 2) ** 0.5
+
+
+def find_template_matches(picked, template, distances):
+    """
+    Relate peaks picked in the whole of a 3D to the peaks of a template
+    peaklist, using the two dimensions they share: the plane.
+
+    picked holds the peaks which were found, each with "shift1", "shift2",
+    "shift3" and "intensity"; template holds the peaks to relate them to, each
+    with "name", "shift1" and "shift2"; and distances says how far apart the
+    shared dimensions can be for the peaks to be the same one.
+
+    The answer says, for each picked peak, which template peaks are close
+    enough to it, nearest first. A picked peak which is close to more than one
+    of them cannot be told apart by the plane alone, and one which is close to
+    none of them is not in the template at all.
+    """
+    matches = []
+
+    for peak in picked:
+        position = (peak["shift1"], peak["shift2"])
+
+        owners = []
+        for index, held in enumerate(template):
+            inside, distance = find_plane_distance(
+                position, (held["shift1"], held["shift2"]), distances
+            )
+            if inside <= 1:
+                owners.append((distance, index))
+
+        owners.sort()
+
+        matches.append(
+            {
+                "owners": [index for distance, index in owners],
+                "distances": [distance for distance, index in owners],
+            }
+        )
+
+    return matches
+
+
+def find_template_assignments(picked, template, distances, expected=0):
+    """
+    Work out which of the peaks picked in a 3D belongs to each peak of a
+    template peaklist.
+
+    Each template peak is given the peaks which sit on it in the plane, the
+    nearest first, keeping as many as are expected where a number is given. A
+    picked peak which more than one template peak could claim is noted, along
+    with the names of the others it could belong to, and the peaks which no
+    template peak is near are gathered separately so that they can be looked at
+    too.
+    """
+    matches = find_template_matches(picked, template, distances)
+
+    assignments = [
+        {"kept": [], "others": [], "notes": [], "shared": []}
+        for held in template
+    ]
+    unmatched = []
+
+    for i, match in enumerate(matches):
+        if len(match["owners"]) == 0:
+            unmatched.append(i)
+            continue
+
+        for place, owner in enumerate(match["owners"]):
+            shared = [
+                template[other]["name"]
+                for other in match["owners"]
+                if other != owner
+            ]
+
+            assignments[owner]["kept"].append(
+                {
+                    "picked": i,
+                    "distance": match["distances"][place],
+                    "shift1": picked[i]["shift1"],
+                    "shift2": picked[i]["shift2"],
+                    "shift": picked[i]["shift3"],
+                    "intensity": picked[i]["intensity"],
+                    "ambiguous": len(shared) > 0,
+                    "shared": shared,
+                }
+            )
+
+    for i, assignment in enumerate(assignments):
+        # The peaks which sit closest to the template peak come first, and the
+        # strongest of those at the same distance
+        assignment["kept"].sort(
+            key=lambda peak: (peak["distance"], -abs(peak["intensity"]))
+        )
+
+        if expected > 0 and len(assignment["kept"]) > expected:
+            assignment["others"] = assignment["kept"][expected:]
+            assignment["kept"] = assignment["kept"][:expected]
+
+        notes = []
+        if any(peak["ambiguous"] == True for peak in assignment["kept"]):
+            notes.append(AMBIGUOUS)
+        if expected > 0 and len(assignment["kept"]) < expected:
+            notes.append("{} of {} found".format(len(assignment["kept"]), expected))
+        if len(assignment["kept"]) == 0 and expected == 0:
+            notes.append("none found")
+
+        assignment["notes"] = notes
+
+    return assignments, unmatched

@@ -28,6 +28,24 @@ PEAK_LINEWIDTH_KEYS = [
     "linewidth2_ppm",
 ]
 
+# The two ways a reference plane can be used when picking peaks in a 3D
+TRACE_METHOD = "Pick down the bore of each peak"
+TEMPLATE_METHOD = "Pick in 3D and match"
+
+
+# How many peaks each experiment gives down the bore dimension of a 3D, used to
+# fill in the expected number when an experiment is chosen. Adding an experiment
+# here is all that is needed to offer it
+BORE_EXPERIMENTS = [
+    ("None", None),
+    ("HNCO", 1),
+    ("HNCACO", 2),
+    ("HNCANH", 2),
+    ("HNCOCA", 1),
+    ("HNCOCANH", 1),
+]
+
+
 # Everything which is held for each peak of a 2D peaklist, so that the lists
 # stay the same length as peaks are added and removed
 PEAK_ENTRY_KEYS = [
@@ -3666,8 +3684,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         """
         self.main_frame = parent
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
-        width = 1000
-        height = 400
+        width = min(1280, self.monitorWidth)
+        height = min(460, self.monitorHeight)
         wx.Frame.__init__(self, parent=parent, title=title, size=(width, height))
         self.panel_peaklist = wx.Panel(self, -1)
         self.main_peaklist_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -3719,6 +3737,12 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         # parts of the path are shown in the window, so the whole path is kept
         # here for saving the peaklist back to the file it came from
         self.peaklist_path = ""
+
+        # The peaklist being used as the reference plane, along with the file
+        # it was read from, so that the window can say which one is in use
+        self.reference_peaklist = {}
+        self.reference_peaklist_name = ""
+        self.reference_peaklist_path = ""
 
         # Flags showing whether a given button is active or not
         self.reference_plane = False
@@ -3973,6 +3997,54 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.reference_plane_button = wx.ToggleButton(self.row_pickpeaks_label,-1,"Load reference plane (optional)")
         self.reference_plane_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnLoadReferencePlane)
 
+        self.reference_method_box = wx.ComboBox(
+            self.row_pickpeaks_label,
+            choices=[TRACE_METHOD, TEMPLATE_METHOD],
+            style=wx.CB_READONLY,
+            size=(210, 24),
+        )
+        self.reference_method_box.SetValue(TRACE_METHOD)
+        self.reference_method_box.SetToolTip(
+            "How the reference plane is used. Picking down the bore of each "
+            "reference peak looks along the bore dimension at each of them in "
+            "turn. Picking in 3D and matching finds the peaks of the whole "
+            "spectrum first and then relates them back to the reference peaks "
+            "by the two dimensions they share, which also says which peaks "
+            "belong to nothing in the reference plane."
+        )
+
+        self.remove_reference_button = wx.Button(
+            self.row_pickpeaks_label, label="Remove reference plane"
+        )
+        self.remove_reference_button.Bind(
+            wx.EVT_BUTTON, self.OnRemoveReferencePlane
+        )
+        self.remove_reference_button.SetToolTip(
+            "Stop using the reference plane. Peaks are then picked from the "
+            "spectrum alone, in all three dimensions, and the peaklist which "
+            "was loaded as the reference plane is left alone."
+        )
+
+        # Says whether a reference plane is being used and which peaklist it is,
+        # as the peaks which come out depend on it
+        self.reference_plane_text = wx.StaticText(self.row_pickpeaks_label, -1, "")
+
+        self.experiment_text = wx.StaticText(
+            self.row_pickpeaks_label, -1, "Experiment:"
+        )
+        self.experiment_box = wx.ComboBox(
+            self.row_pickpeaks_label,
+            choices=[name for name, expected in BORE_EXPERIMENTS],
+            style=wx.CB_READONLY,
+        )
+        self.experiment_box.SetValue(BORE_EXPERIMENTS[0][0])
+        self.experiment_box.Bind(wx.EVT_COMBOBOX, self.OnExperimentSelection)
+        self.experiment_box.SetToolTip(
+            "Choosing the experiment fills in how many peaks each peak of the "
+            "reference plane is expected to have down the bore dimension. With "
+            "no experiment chosen the number can be typed in."
+        )
+
         self.expected_peaks_text = wx.StaticText(
             self.row_pickpeaks_label, -1, "Expected peaks down the bore:"
         )
@@ -4025,6 +4097,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
 
         self.row_pickpeaks1.Add(self.reference_plane_button)
+        self.row_pickpeaks1.AddSpacer(5)
+        self.row_pickpeaks1.Add(self.reference_method_box, 0, wx.ALIGN_CENTER_VERTICAL)
         self.row_pickpeaks1.AddSpacer(10)
         self.row_pickpeaks1.Add(self.peaklist_name_text)
         self.row_pickpeaks1.AddSpacer(10)
@@ -4041,6 +4115,10 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.row_pickpeaks2.AddSpacer(5)
         self.row_pickpeaks2.Add(self.peak_picking_algorithm_box)
         self.row_pickpeaks2.AddSpacer(10)
+        self.row_pickpeaks2.Add(self.experiment_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.row_pickpeaks2.AddSpacer(5)
+        self.row_pickpeaks2.Add(self.experiment_box)
+        self.row_pickpeaks2.AddSpacer(10)
         self.row_pickpeaks2.Add(self.expected_peaks_text, 0, wx.ALIGN_CENTER_VERTICAL)
         self.row_pickpeaks2.AddSpacer(5)
         self.row_pickpeaks2.Add(self.expected_peaks_box)
@@ -4053,9 +4131,18 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         self.row_pickpeaks2.AddSpacer(5)
         self.row_pickpeaks2.Add(self.closeness_units_text, 0, wx.ALIGN_CENTER_VERTICAL)
 
+        self.row_pickpeaks3 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row_pickpeaks3.Add(self.reference_plane_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.row_pickpeaks3.AddSpacer(10)
+        self.row_pickpeaks3.Add(self.remove_reference_button, 0, wx.ALIGN_CENTER_VERTICAL)
+
         self.row_pickpeaks.Add(self.row_pickpeaks1, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.row_pickpeaks.AddSpacer(10)
         self.row_pickpeaks.Add(self.row_pickpeaks2, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.row_pickpeaks.AddSpacer(5)
+        self.row_pickpeaks.Add(self.row_pickpeaks3, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        self.update_reference_plane_text()
 
 
         self.row1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -4625,6 +4712,25 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         self.apply_bore_assignments(peaklist, positions, groups, assignments)
 
+    def OnExperimentSelection(self, event):
+        """
+        The user has chosen the experiment, which says how many peaks each peak
+        of the reference plane is expected to have down the bore dimension.
+        Choosing no experiment leaves the number alone, so that it can be typed
+        in for an experiment which is not on the list.
+        """
+        chosen = self.experiment_box.GetValue()
+
+        for name, expected in BORE_EXPERIMENTS:
+            if name != chosen:
+                continue
+
+            if expected == None:
+                return
+
+            self.expected_peaks_box.SetValue(str(expected))
+            return
+
     def find_expected_peaks(self) -> int:
         """
         How many maxima down the bore dimension are expected for each peak of
@@ -4680,6 +4786,137 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                     box.SetValue("{:.4f}".format(automatic[dimension]))
             except (RuntimeError, AttributeError):
                 pass
+
+    def find_template_peaklist(self, picked_peak_array):
+        """
+        Relate the peaks picked in the whole 3D back to the reference peaklist by
+        the two dimensions they share, and make a peaklist of the answer.
+
+        Each reference peak takes its name, and the peaks which sit on it in the
+        plane. A peak which more than one reference peak could claim says so and
+        names the others. The peaks which belong to nothing in the reference
+        plane are kept at the end of the peaklist, so that they can be looked at
+        rather than lost.
+        """
+        template = []
+        reference = self.reference_peaklist
+
+        # The reference plane may be held the other way round from the plots
+        ppms0 = reference["shift1"]
+        ppms1 = reference["shift2"]
+        swapped = self.check_reference_peaklists(
+            self.main_frame.main_frame.ppms_0,
+            self.main_frame.main_frame.ppms_1,
+            ppms0,
+            ppms1,
+        )
+
+        if swapped == None:
+            message = (
+                "The majority of reference plane peaks are not located within "
+                "the current 2D plane of the spin bore. Try loading a different "
+                "reference plane peaklist or peak pick in all 3 dimensions. The "
+                "reference plane peaklist button will be turned off."
+            )
+            dlg = wx.MessageDialog(None, message, "Pick Peaks", wx.OK)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.remove_reference_plane()
+            return None
+
+        if swapped == True:
+            ppms0, ppms1 = ppms1, ppms0
+
+        for i, name in enumerate(reference["peak_name"]):
+            template.append(
+                {"name": name, "shift1": ppms0[i], "shift2": ppms1[i]}
+            )
+
+        picked = [
+            {
+                "shift1": peak[0],
+                "shift2": peak[1],
+                "shift3": peak[2],
+                "intensity": peak[3],
+            }
+            for peak in picked_peak_array
+        ]
+
+        assignments, unmatched = bore_candidates.find_template_assignments(
+            picked, template, self.find_closeness(), self.find_expected_peaks()
+        )
+
+        dictionary = {
+            "peak_name": [],
+            "shift1": [],
+            "shift2": [],
+            "shift3": [],
+            "intensity": [],
+            "ambiguity": [],
+            "alternatives": [],
+        }
+
+        self.peak_candidates = {}
+
+        for i, assignment in enumerate(assignments):
+            name = template[i]["name"]
+            others = bore_candidates.find_alternatives_text(assignment["others"])
+            notes = [
+                note for note in assignment["notes"]
+                if note != bore_candidates.AMBIGUOUS
+            ]
+
+            if len(assignment["kept"]) == 0:
+                # The reference peak has nothing on it, which is worth keeping
+                # so that it can be looked at
+                dictionary["peak_name"].append(name)
+                dictionary["shift1"].append(template[i]["shift1"])
+                dictionary["shift2"].append(template[i]["shift2"])
+                dictionary["shift3"].append(0)
+                dictionary["intensity"].append(0)
+                dictionary["ambiguity"].append(
+                    bore_candidates.find_ambiguity_text(notes)
+                )
+                dictionary["alternatives"].append(others)
+                self.peak_candidates[name] = assignment["candidates"] if (
+                    "candidates" in assignment
+                ) else assignment["others"]
+                continue
+
+            for j, held in enumerate(assignment["kept"]):
+                peakname = name + "_" + str(j + 1)
+                dictionary["peak_name"].append(peakname)
+                dictionary["shift1"].append(held["shift1"])
+                dictionary["shift2"].append(held["shift2"])
+                dictionary["shift3"].append(held["shift"])
+                dictionary["intensity"].append(held["intensity"])
+
+                peak_notes = list(notes)
+                if held["ambiguous"] == True:
+                    peak_notes = [
+                        "ambiguous with " + ", ".join(held["shared"])
+                    ] + peak_notes
+
+                dictionary["ambiguity"].append(
+                    bore_candidates.find_ambiguity_text(peak_notes)
+                )
+                dictionary["alternatives"].append(others)
+                self.peak_candidates[peakname] = (
+                    assignment["kept"] + assignment["others"]
+                )
+
+        # The peaks which belong to nothing in the reference plane
+        for count, index in enumerate(unmatched):
+            peakname = "unassigned_" + str(count + 1)
+            dictionary["peak_name"].append(peakname)
+            dictionary["shift1"].append(picked[index]["shift1"])
+            dictionary["shift2"].append(picked[index]["shift2"])
+            dictionary["shift3"].append(picked[index]["shift3"])
+            dictionary["intensity"].append(picked[index]["intensity"])
+            dictionary["ambiguity"].append("Not in the reference plane")
+            dictionary["alternatives"].append("")
+
+        return dictionary
 
     def find_projection_intensity(self, shift1, shift2):
         """
@@ -5345,7 +5582,14 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             return
         
 
-        if(self.reference_plane==False):
+        # A reference plane can either be looked along the bore of, or used as a
+        # template which the peaks of the whole 3D are related back to
+        as_template = (
+            self.reference_plane == True
+            and self.reference_method_box.GetValue() == TEMPLATE_METHOD
+        )
+
+        if self.reference_plane == False or as_template == True:
         
             data = self.main_frame.main_frame.nmrdata.data
             x = self.main_frame.ppms_0
@@ -5382,18 +5626,29 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             for i, xval in enumerate(x):
                 picked_peak_array.append([xval, y[i], z[i], intensities[i]])
 
-            dictionary = {}
-            dictionary["peak_name"] = []
-            dictionary["shift1"] = []
-            dictionary["shift2"] = []
-            dictionary["shift3"] = []
-            dictionary["intensity"] = []
-            for i, peak in enumerate(picked_peak_array):
-                dictionary["peak_name"].append(str(i+1))
-                dictionary["shift1"].append(peak[0])
-                dictionary["shift2"].append(peak[1])
-                dictionary["shift3"].append(peak[2])
-                dictionary["intensity"].append(peak[3])
+            if as_template == True:
+                # The peaks of the whole 3D are related back to the reference
+                # peaks by the two dimensions they share
+                dictionary = self.find_template_peaklist(picked_peak_array)
+                if dictionary == None:
+                    return
+            else:
+                dictionary = {}
+                dictionary["peak_name"] = []
+                dictionary["shift1"] = []
+                dictionary["shift2"] = []
+                dictionary["shift3"] = []
+                dictionary["intensity"] = []
+                dictionary["ambiguity"] = []
+                dictionary["alternatives"] = []
+                for i, peak in enumerate(picked_peak_array):
+                    dictionary["peak_name"].append(str(i+1))
+                    dictionary["shift1"].append(peak[0])
+                    dictionary["shift2"].append(peak[1])
+                    dictionary["shift3"].append(peak[2])
+                    dictionary["intensity"].append(peak[3])
+                    dictionary["ambiguity"].append("")
+                    dictionary["alternatives"].append("")
 
         else:
             # Picking 3D peaks using a 2D reference plane
@@ -5421,7 +5676,7 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
                 dlg = wx.MessageDialog(None, message, "Pick Peaks", wx.OK)
                 result=dlg.ShowModal()
                 dlg.Destroy()
-                self.OnLoadReferencePlane(wx.EVT_TOGGLEBUTTON)
+                self.remove_reference_plane()
             elif(check_reference_plane == True):
                 ppms0_old = ppms0
                 ppms1_old = ppms1
@@ -5602,12 +5857,8 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             dictionary["ambiguity"] = []
             dictionary["alternatives"] = []
             for i, peak in enumerate(picked_peak_array):
-                if(self.reference_plane==True):
-                    dictionary["ambiguity"].append(ambiguities[i])
-                    dictionary["alternatives"].append(alternatives[i])
-                else:
-                    dictionary["ambiguity"].append("")
-                    dictionary["alternatives"].append("")
+                dictionary["ambiguity"].append(ambiguities[i])
+                dictionary["alternatives"].append(alternatives[i])
                 if(self.reference_plane==True):
                     # Keeping the naming consistent with the reference plane
                     dictionary["peak_name"].append(names1[i])
@@ -6139,6 +6390,70 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
         return dictionary
 
+    def realign_peaklists(self, bore_changed=False) -> dict:
+        """
+        Put every loaded peaklist into the order of the plane which is shown.
+
+        This is used when the plane is changed, which happens when another data
+        orientation is chosen. The peaks themselves do not move: each of them
+        holds a shift for each of the three dimensions, and it is only which
+        dimension is shown where that has changed, so the columns are matched to
+        the axes again in the same way as a peaklist which is read from a file.
+
+        A peaklist which cannot be matched to the new plane is left as it was
+        and named in the answer, rather than being scrambled.
+        """
+
+        ranges = self.find_axis_ranges()
+
+        answer = {"moved": [], "kept": [], "refused": []}
+
+        for name, dictionary in self.peak_list_dictionary.items():
+            columns = [
+                copy.deepcopy(dictionary["shift1"]),
+                copy.deepcopy(dictionary["shift2"]),
+                copy.deepcopy(dictionary["shift3"]),
+            ]
+
+            if len(columns[0]) == 0:
+                # An empty peaklist has nothing to put in order
+                answer["kept"].append(name)
+                continue
+
+            order = bore_candidates.find_axis_assignment(
+                columns, ranges, score=self.find_peaklist_data_fit(columns)
+            )
+
+            if order == None:
+                answer["refused"].append(name)
+                continue
+
+            if list(order) == [0, 1, 2]:
+                answer["kept"].append(name)
+                continue
+
+            dictionary["shift1"] = columns[order[0]]
+            dictionary["shift2"] = columns[order[1]]
+            dictionary["shift3"] = columns[order[2]]
+            answer["moved"].append(name)
+
+        # The first column is the axis across the plane again
+        self.bore_xdim = "shift1"
+
+        if bore_changed == True:
+            # The other positions which were found down the old bore dimension
+            # say nothing about the new one
+            self.peak_candidates = {}
+            for name, dictionary in self.peak_list_dictionary.items():
+                if "alternatives" in dictionary:
+                    dictionary["alternatives"] = [
+                        "" for note in dictionary["alternatives"]
+                    ]
+
+        self.AddToTable()
+
+        return answer
+
     def find_peaklist_data_fit(self, columns):
         """
         A way of telling how well a peaklist fits the spectrum with its columns
@@ -6383,15 +6698,15 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
 
     def OnLoadReferencePlane(self, event):
         """
-        If a reference plane is already loaded, then setting reference_plane to False
+        If a reference plane is already loaded, then it is removed.
         Otherwise, setting reference_plane to true and asking the user to select the reference plane
         peaklist to be loaded from a file dialog.
         """
 
         if self.reference_plane == True:
-            self.reference_plane = False
+            self.remove_reference_plane()
             return
-        
+
         self.reference_plane = True
 
         # Opening up a file window asking the user to select the 1D peak list - must be in the format of 1st column = peak_name, 2nd column = peak_position
@@ -6400,7 +6715,7 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             peaklist_file = dlg.GetPath()
         else:
-            self.OnLoadReferencePlane(wx.EVT_TOGGLEBUTTON)
+            self.remove_reference_plane()
             dlg.Destroy()
             return
         
@@ -6413,10 +6728,106 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         else:
             peaklist = self.ReadPeakList(peaklist_file, reference_plane=True)
         if type(peaklist) != dict:
-            self.OnLoadReferencePlane(wx.EVT_TOGGLEBUTTON)
+            self.remove_reference_plane()
             return
         
         self.reference_peaklist = peaklist
+        self.reference_peaklist_name = file_name
+        self.reference_peaklist_path = str(p)
+
+        self.reference_plane_button.SetValue(True)
+        self.update_reference_plane_text()
+
+    def OnRemoveReferencePlane(self, event):
+        """
+        Stop using the reference plane, which was only ever optional. Peaks are
+        then picked from the spectrum alone in all three dimensions. The
+        peaklist which was loaded as the reference plane is left on disk.
+        """
+
+        if self.reference_plane == False:
+            return
+
+        self.remove_reference_plane()
+
+    def remove_reference_plane(self):
+        """
+        Forget the reference plane and say so in the window. This is used both
+        when the reference plane is removed on purpose and when loading one did
+        not work, so that the button is never left looking as though a reference
+        plane is in use when it is not.
+        """
+
+        self.reference_plane = False
+        self.reference_peaklist = {}
+        self.reference_peaklist_name = ""
+        self.reference_peaklist_path = ""
+
+        try:
+            self.reference_plane_button.SetValue(False)
+        except (AttributeError, RuntimeError):
+            pass
+
+        self.update_reference_plane_text()
+
+    def update_reference_plane_text(self):
+        """
+        Say whether a reference plane is being used and, if it is, which
+        peaklist it is, as the peaks which come out of picking depend on it.
+        The remove button and the choice of how the reference plane is used are
+        only of any use while one is loaded.
+        """
+
+        try:
+            label = self.reference_plane_text
+        except AttributeError:
+            return
+
+        if self.reference_plane == True:
+            name = self.reference_peaklist_name
+            if name == "":
+                name = "a peaklist which has not been named"
+
+            count = len(self.reference_peaklist.get("peak_name", []))
+            peaks = "{} peak{}".format(count, "" if count == 1 else "s")
+
+            label.SetLabel(
+                "Reference plane IN USE:  {}  ({})".format(name, peaks)
+            )
+            label.SetForegroundColour(wx.Colour(0, 100, 0))
+            label.SetToolTip(
+                "Peaks are picked using this peaklist as the reference plane. "
+                "It was read from " + str(self.reference_peaklist_path)
+            )
+            self.reference_plane_button.SetLabel("Reference plane loaded")
+        else:
+            label.SetLabel(
+                "No reference plane: peaks are picked from the spectrum alone, "
+                "in all 3 dimensions"
+            )
+            label.SetForegroundColour(wx.Colour(100, 100, 100))
+            label.SetToolTip(
+                "Loading a reference plane is optional. Without one, peak "
+                "picking finds the peaks of the whole 3D and names them in the "
+                "order they are found."
+            )
+            self.reference_plane_button.SetLabel("Load reference plane (optional)")
+
+        font = label.GetFont()
+        font.SetWeight(wx.FONTWEIGHT_BOLD if self.reference_plane else wx.FONTWEIGHT_NORMAL)
+        label.SetFont(font)
+
+        for widget in [self.remove_reference_button, self.reference_method_box]:
+            try:
+                widget.Enable(self.reference_plane)
+            except (AttributeError, RuntimeError):
+                pass
+
+        try:
+            self.row_pickpeaks.Layout()
+            self.Layout()
+        except (AttributeError, RuntimeError):
+            pass
     
         
 

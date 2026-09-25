@@ -509,67 +509,67 @@ class ThreeDViewer(wx.Panel):
         """
         return str(label).split(" (")[0].strip()
 
+    def find_projection_file(self, selection=None):
+        """
+        The projection file holding the plane of a data orientation, which is
+        what the bore is looked down from. The files are named after the two
+        dimensions of the plane, and either way round, so both spellings are
+        tried. None is given back when neither of them is there.
+        """
+        if selection == None:
+            selection = self.orientation_chooser.GetSelection()
+
+        labels = [self.axis_name(label) for label in self.nmrdata.axislabels]
+
+        # The two dimensions of the plane which each orientation shows, as
+        # indexes into the labels
+        pairs = {0: (1, 2), 1: (2, 1), 2: (1, 0), 3: (0, 1), 4: (0, 2), 5: (2, 0)}
+        first, second = pairs.get(selection, (1, 2))
+
+        for projection in [
+            labels[first] + "." + labels[second] + ".dat",
+            labels[second] + "." + labels[first] + ".dat",
+        ]:
+            if os.path.exists(projection) == True:
+                return projection
+
+        return None
+
+    def find_bore_windows(self) -> list:
+        """
+        The bore windows which are open on this 3D, so that they can be kept
+        showing the same plane as the 3D itself.
+        """
+        windows = []
+
+        for child in self.GetChildren():
+            if isinstance(child, SpinBore) and child.IsBeingDeleted() == False:
+                windows.append(child)
+
+        return windows
+
+    def update_bore_windows(self):
+        """
+        The bore windows look down the bore of the plane which is shown, so
+        they follow the 3D when its orientation is changed. A window which
+        asked for the change itself is already up to date.
+        """
+        for window in self.find_bore_windows():
+            if getattr(window, "changing_projection", False) == True:
+                continue
+
+            try:
+                window.follow_orientation()
+            except (AttributeError, RuntimeError):
+                continue
+
     def OnShowBoreButton(self, event):
         # Open a SpinBore frame
 
         # Find out which projection is currently selected
-        if self.orientation_chooser.GetSelection() == 0:
-            # projection is x_name.y_name.dat
-            projection = (
-                self.axis_name(self.nmrdata.axislabels[1])
-                + "."
-                + self.axis_name(self.nmrdata.axislabels[2])
-                + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 1:
-            # projection is y_name.x_name.dat
-            projection = (
-                self.axis_name(self.nmrdata.axislabels[2])
-                + "."
-                + self.axis_name(self.nmrdata.axislabels[1])
-                + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 2:
-            # projection is x_name.z_name.dat
-            projection = (
-                self.axis_name(self.nmrdata.axislabels[1])
-                + "."
-                + self.axis_name(self.nmrdata.axislabels[0])
-                + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 3:
-            # projection is z_name.x_name.dat
-            projection = (
-                self.axis_name(self.nmrdata.axislabels[0])
-                + "."
-                + self.axis_name(self.nmrdata.axislabels[1])
-                + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 4:
-            # projection is z_name.y_name.dat
-            projection = (
-                self.axis_name(self.nmrdata.axislabels[0])
-                + "."
-                + self.axis_name(self.nmrdata.axislabels[2])
-                + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 5:
-            # projection is y_name.z_name.dat
-            projection = (
-                self.axis_name(self.nmrdata.axislabels[2])
-                + "."
-                + self.axis_name(self.nmrdata.axislabels[0])
-                + ".dat"
-            )
+        projection = self.find_projection_file()
 
-        # Check to see if the projection file exists
-        if os.path.exists(projection) == False:
-            # Swap the axis labels
-            name = projection.split(".dat")[0].split(".")
-            projection = name[1] + "." + name[0] + ".dat"
-
-        # Check to see if the projection file exists
-        if os.path.exists(projection) == False:
+        if projection == None:
             # Give a warning that the projection file does not exist
             dlg = wx.MessageDialog(
                 self,
@@ -880,6 +880,10 @@ class ThreeDViewer(wx.Panel):
             self.ax.set_xlabel(self.nmrdata.axislabels[0])
             self.ax.set_ylabel(self.nmrdata.axislabels[2])
             self.UpdateFrame()
+
+        # A bore window looks down the bore of the plane which is shown here, so
+        # it is shown the new plane as well
+        self.update_bore_windows()
 
     def x_index(self, value) -> int:
         """
@@ -2634,6 +2638,15 @@ class SpinBore(wx.Frame):
             wx.EVT_MOUSEWHEEL, self.on_mouse_wheel_bore
         )
 
+        # The projection file which is being shown, and the data orientation of
+        # the 3D it belongs to, so that the plane can be changed from here
+        self.projection_file = projection
+        self.orientation_selection = self.main_frame.orientation_chooser.GetSelection()
+
+        # True only while this window is changing the orientation of the 3D
+        # itself, so that it does not then be told to follow its own change
+        self.changing_projection = False
+
         # Read the projection file
         self.nmrdata = ReadProjection(projection)
         # Checking if the projection data needs transposing to match the main frame
@@ -2741,6 +2754,32 @@ class SpinBore(wx.Frame):
         self.bore_transpose_button.Bind(wx.EVT_BUTTON, self.OnTransposeButtonBore)
         self.bore_sizer_2D.AddSpacer(10)
         self.bore_sizer_2D.Add(self.bore_transpose_button, 0, wx.ALIGN_CENTER_VERTICAL)
+
+        # The plane which is shown can be changed from here as well as from the
+        # 3D window, as the bore is looked down from whichever plane is shown
+        self.bore_orientation_label = wx.StaticBox(self, -1, "Data Orientation")
+        self.bore_orientation_sizer = wx.StaticBoxSizer(
+            self.bore_orientation_label, wx.VERTICAL
+        )
+        options = list(self.main_frame.orientation_chooser.GetItems())
+        self.bore_orientation_chooser = wx.ComboBox(
+            self.bore_orientation_label,
+            value=options[self.orientation_selection] if options else "",
+            choices=options,
+            style=wx.CB_READONLY,
+            size=(220, 24),
+        )
+        self.bore_orientation_chooser.SetSelection(self.orientation_selection)
+        self.bore_orientation_chooser.Bind(
+            wx.EVT_COMBOBOX, self.OnBoreOrientationCombo
+        )
+        self.bore_orientation_chooser.SetToolTip(
+            "The plane which is shown, written as (across, up), bore. Changing "
+            "it reads the projection of the new plane and turns the 3D window "
+            "to match. Any peaklist which is loaded is put into the order of "
+            "the new plane, as the peaks themselves do not move."
+        )
+        self.bore_orientation_sizer.Add(self.bore_orientation_chooser)
 
         # Sizer containing all 1D bore related items
         self.bore_sizer_1D_label = wx.StaticBox(self, -1, "1D Plot")
@@ -2858,6 +2897,8 @@ class SpinBore(wx.Frame):
         self.bore_sizer_row2.AddSpacer(10)
         self.bore_sizer_row2.Add(self.bore_sizer_strip)
         self.bore_sizer_row2.AddSpacer(10)
+        self.bore_sizer_row2.Add(self.bore_orientation_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.bore_sizer_row2.AddSpacer(10)
         self.bore_sizer_row2.Add(self.read_peaks_button, 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.main_bore_sizer.Add(self.bore_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
@@ -2892,6 +2933,176 @@ class SpinBore(wx.Frame):
         )
         self.peak_lists3D.Show()
 
+
+    def OnBoreOrientationCombo(self, event):
+        """
+        Show the plane of another data orientation, as can be done from the 3D
+        window. The 3D window is turned to the same orientation, since it holds
+        the data which the bore dimension is read from.
+        """
+
+        self.change_projection(self.bore_orientation_chooser.GetSelection())
+
+    def change_projection(self, selection):
+        """
+        Show the plane of the given data orientation: read its projection, turn
+        the 3D window to match, and put any peaklist which is loaded into the
+        order of the new plane.
+        """
+
+        if selection == self.orientation_selection:
+            return
+
+        projection = self.main_frame.find_projection_file(selection)
+
+        if projection == None:
+            dlg = wx.MessageDialog(
+                self,
+                "There is no projection file for this plane. The projection "
+                "files are named after the two dimensions they hold, such as "
+                "15N.1H.dat, and one of them has to be in this directory for "
+                "the plane to be shown.",
+                "Warning",
+                wx.OK | wx.ICON_WARNING,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            # Leaving the box showing the plane which is actually being shown
+            self.bore_orientation_chooser.SetSelection(self.orientation_selection)
+            return
+
+        # The 3D window holds the data of the bore dimension, so it is turned to
+        # the same orientation. It is told not to turn this window back again.
+        self.changing_projection = True
+        try:
+            self.main_frame.orientation_chooser.SetSelection(selection)
+            options = list(self.main_frame.orientation_chooser.GetItems())
+            if selection < len(options):
+                if self.main_frame.orientation_chooser.GetValue() != options[selection]:
+                    self.main_frame.orientation_chooser.SetValue(options[selection])
+            self.main_frame.OnOrientationCombo(None)
+        finally:
+            self.changing_projection = False
+
+        self.show_projection(projection, selection)
+
+    def follow_orientation(self):
+        """
+        Show the plane which the 3D window has been turned to. The 3D window
+        calls this when its own orientation is changed, so that the two always
+        show the same plane.
+        """
+
+        selection = self.main_frame.orientation_chooser.GetSelection()
+
+        if selection == self.orientation_selection:
+            return
+
+        projection = self.main_frame.find_projection_file(selection)
+
+        if projection == None:
+            # Nothing can be shown for this plane, so the window is left showing
+            # the plane it has along with a warning that the two now differ
+            dlg = wx.MessageDialog(
+                self,
+                "There is no projection file for the plane the 3D window has "
+                "been turned to, so the bore window still shows "
+                + str(self.projection_file)
+                + ". The peaks of the bore window belong to the plane it is "
+                "showing, not to the 3D window.",
+                "Warning",
+                wx.OK | wx.ICON_WARNING,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        self.show_projection(projection, selection)
+
+    def show_projection(self, projection, selection):
+        """
+        Read a projection file and draw everything again from it: the plane, the
+        bore dimension, the strip plot and any peaklist which is loaded.
+        """
+
+        # The dimension which was looked down the bore of, so that the peaks can
+        # be told whether it is a different one now
+        try:
+            previous_bore = self.ax_bore_2.get_ylabel()
+        except (AttributeError, RuntimeError):
+            previous_bore = ""
+
+        self.projection_file = projection
+        self.orientation_selection = selection
+
+        try:
+            self.bore_orientation_chooser.SetSelection(selection)
+        except (AttributeError, RuntimeError):
+            pass
+
+        self.nmrdata = ReadProjection(projection)
+        self.check_for_transpose()
+
+        # The plots are made again from the new projection, so the handlers of
+        # the old ones are let go of first rather than left on the canvas
+        for name in ["click_press_connect", "key_press_connect"]:
+            try:
+                self.fig_bore.canvas.mpl_disconnect(getattr(self, name))
+            except (AttributeError, RuntimeError):
+                continue
+
+        self.selected_bore_peaks = []
+        self.fig_bore.clear()
+        self.plot_bore_data()
+
+        # A peaklist holds a shift for each of the three dimensions, and which
+        # dimension is shown where has changed, so its columns are put back into
+        # the order of the plots
+        self.adjust_peaklists(previous_bore)
+
+        self.OnBoreSlider(wx.EVT_BUTTON)
+        self.toolbar_bore.update()
+
+    def adjust_peaklists(self, previous_bore=""):
+        """
+        Put any peaklist which is loaded into the order of the plane which is
+        now shown. The peaks do not move: each of their three shifts belongs to
+        a dimension, and it is only which dimension is shown where that has
+        changed.
+        """
+
+        window = None
+        for child in wx.GetTopLevelWindows():
+            if (
+                isinstance(child, wx.Frame)
+                and child.GetTitle() == "3D Peak List - " + self.title
+                and child.IsBeingDeleted() == False
+            ):
+                window = child
+                break
+
+        if window == None:
+            return None
+
+        answer = window.realign_peaklists(
+            previous_bore != window.find_axis_labels()[2]
+        )
+
+        if answer != None and len(answer["refused"]) > 0:
+            dlg = wx.MessageDialog(
+                self,
+                "The shifts of "
+                + ", ".join(answer["refused"])
+                + " do not fit the plane which is now shown, so they have been "
+                "left as they were. This happens when a peaklist has no shift "
+                "in one of the dimensions of the new plane.",
+                "Peaklists",
+                wx.OK | wx.ICON_WARNING,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+
+        return answer
 
     def check_for_transpose(self):
         """
