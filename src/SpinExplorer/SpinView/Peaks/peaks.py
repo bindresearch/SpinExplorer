@@ -56,6 +56,90 @@ PEAK_ENTRY_KEYS = [
 ] + PEAK_LINEWIDTH_KEYS
 
 
+def find_pick_thresholds(data, percent, sign_option):
+    """
+    The two thresholds to hand nmrglue for picking peaks of the wanted sign.
+
+    nmrglue takes the smallest height a positive peak may have and the largest
+    height a negative peak may have, the latter as a negative number, and None
+    for a sign which is not being looked for. Both are the same fraction of the
+    largest intensity in the data, so that the two signs are treated alike.
+    """
+    try:
+        scale = abs(float(np.max(np.abs(np.asarray(data)))))
+    except (TypeError, ValueError):
+        scale = 0.0
+
+    height = abs(float(percent)) / 100 * scale
+
+    if sign_option == "Positive Peaks":
+        return height, None
+
+    if sign_option == "Negative Peaks":
+        return None, -height
+
+    return height, -height
+
+
+def pick_peaks(data, pthres, nthres, algorithm, msep=None):
+    """
+    Pick the peaks of a spectrum with nmrglue, of either sign or of both.
+
+    nmrglue only picks negative peaks properly with some of its algorithms: with
+    "thres" it runs an older version which no longer works, and with
+    "thres-fast" it measures the peaks it finds as though they were positive.
+    Negative peaks are therefore found by picking the positive peaks of the
+    spectrum turned upside down, which every algorithm does properly and which
+    gives the same answer as asking for negative peaks where that works. The
+    heights are turned back the right way up, so that a negative peak keeps a
+    negative height, and peaks of both signs come back in one table.
+
+    Nothing is given back when no peak of either sign clears its threshold.
+    """
+    tables = []
+
+    for height, upwards in [(pthres, True), (nthres, False)]:
+        if height == None:
+            continue
+
+        values = np.asarray(data)
+        if upwards == False:
+            values = values * -1
+
+        extra = {}
+        if msep != None:
+            extra["msep"] = msep
+
+        try:
+            table = ng.peakpick.pick(
+                values,
+                pthres=abs(float(height)),
+                nthres=None,
+                algorithm=algorithm,
+                **extra
+            )
+        except IndexError:
+            # nmrglue raises rather than giving back an empty table when nothing
+            # clears the threshold
+            continue
+
+        if upwards == False:
+            # The heights belong to the spectrum the right way up
+            amplitude = table.dtype.names[-1]
+            table = table.copy()
+            table[amplitude] = -table[amplitude]
+
+        tables.append(table)
+
+    if len(tables) == 0:
+        return None
+
+    if len(tables) == 1:
+        return tables[0]
+
+    return np.concatenate(tables).view(np.recarray)
+
+
 def find_axis_column_label(name, number: int) -> str:
     """
     How a chemical shift column is named in the peaklist table and in the header
@@ -3295,24 +3379,24 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
                 return
 
 
-        threshold = float(threshold_box_value)/100 *np.max(data)
-
         algorithm_selection = self.peak_picking_algorithm_box.GetValue()
         sign_option = self.peak_picking_type.GetValue()
+
+        # A sign which is not being looked for is turned off with None, and the
+        # threshold for negative peaks is a negative height
+        pthres, nthres = find_pick_thresholds(data, threshold_box_value, sign_option)
+
         if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
-            if(sign_option == 'Positive Peaks'):
-                peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1])
-            elif(sign_option == 'Negative Peaks'):
-                peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection, msep=[1,1])
-            else:
-                peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection, msep=[1,1])
+            peaks = pick_peaks(data, pthres, nthres, algorithm_selection, msep=[1,1])
         else:
-            if(sign_option == 'Positive Peaks'):
-                peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
-            elif(sign_option == 'Negative Peaks'):
-                peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection)
-            else:
-                peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection)
+            peaks = pick_peaks(data, pthres, nthres, algorithm_selection)
+
+        if peaks is None:
+            message = ('No peaks were found. Nothing in the spectrum reaches '
+                       'the threshold of {}% of the largest intensity, so try '
+                       'a lower threshold.'.format(threshold_box_value))
+            dlg = wx.MessageBox(message, "Pick Peaks", wx.OK)
+            return
         
 
         if(self.main_frame.multiplot_mode==False):
@@ -4277,9 +4361,14 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         data = viewer.nmrdata.data
 
         try:
-            threshold = float(self.peak_picking_threshold_box.GetValue()) / 100 * np.max(
-                data
+            # A sign which is not being looked for is turned off with None, and
+            # the threshold for negative peaks is a negative height
+            pthres, nthres = find_pick_thresholds(
+                data,
+                self.peak_picking_threshold_box.GetValue(),
+                self.peak_picking_type.GetValue(),
             )
+            threshold = abs(pthres if pthres != None else nthres)
         except (ValueError, TypeError):
             dlg = wx.MessageDialog(
                 self,
@@ -4306,38 +4395,11 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             found = None
             try:
                 if algorithm in ["thres", "thres-fast"]:
-                    if sign_option == "Negative Peaks":
-                        found = ng.peakpick.pick(
-                            trace, nthres=threshold, algorithm=algorithm, msep=1
-                        )
-                    elif sign_option == "Positive Peaks":
-                        found = ng.peakpick.pick(
-                            trace, pthres=threshold, algorithm=algorithm, msep=1
-                        )
-                    else:
-                        found = ng.peakpick.pick(
-                            trace,
-                            pthres=threshold,
-                            nthresh=threshold,
-                            algorithm=algorithm,
-                            msep=1,
-                        )
+                    found = pick_peaks(
+                        trace, pthres, nthres, algorithm, msep=1
+                    )
                 else:
-                    if sign_option == "Negative Peaks":
-                        found = ng.peakpick.pick(
-                            trace, nthres=threshold, algorithm=algorithm
-                        )
-                    elif sign_option == "Positive Peaks":
-                        found = ng.peakpick.pick(
-                            trace, pthres=threshold, algorithm=algorithm
-                        )
-                    else:
-                        found = ng.peakpick.pick(
-                            trace,
-                            pthres=threshold,
-                            nthresh=threshold,
-                            algorithm=algorithm,
-                        )
+                    found = pick_peaks(trace, pthres, nthres, algorithm)
             except Exception:
                 # The peak picker found nothing down the bore here
                 found = None
@@ -5596,24 +5658,27 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             y = self.main_frame.ppms_1
             z = self.main_frame.ppms_2
 
-            threshold = float(threshold_box_value)/100 *np.max(data)
-
             algorithm_selection =self.peak_picking_algorithm_box.GetValue()
             sign_option = self.peak_picking_type.GetValue()
+
+            # A sign which is not being looked for is turned off with None, and
+            # the threshold for negative peaks is a negative height
+            pthres, nthres = find_pick_thresholds(
+                data, threshold_box_value, sign_option
+            )
+
             if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
-                if(sign_option=='Positive Peaks'):
-                    peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection, msep=[1,1,1])
-                elif(sign_option=='Negative Peaks'):
-                    peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection, msep=[1,1,1])
-                else:
-                    peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection, msep=[1,1,1])
+                peaks = pick_peaks(data, pthres, nthres, algorithm_selection, msep=[1,1,1])
             else:
-                if(sign_option=='Positive Peaks'):
-                    peaks = ng.peakpick.pick(data, pthres=threshold, algorithm=algorithm_selection)
-                elif(sign_option=='Negative Peaks'):
-                    peaks = ng.peakpick.pick(data, nthres=threshold, algorithm=algorithm_selection)
-                else:
-                    peaks = ng.peakpick.pick(data, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection)
+                peaks = pick_peaks(data, pthres, nthres, algorithm_selection)
+
+            if peaks is None:
+                message = ('No peaks were found. Nothing in the spectrum '
+                           'reaches the threshold of {}% of the largest '
+                           'intensity, so try a lower '
+                           'threshold.'.format(threshold_box_value))
+                dlg = wx.MessageBox(message, "Pick Peaks", wx.OK)
+                return
             
             x, y, z = self.find_picked_shifts(peaks)
 
@@ -5708,36 +5773,27 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
             )
 
 
-            threshold = float(threshold_box_value)/100 *np.max(data)
-
-
             algorithm_selection =self.peak_picking_algorithm_box.GetValue()
             sign_option = self.peak_picking_type.GetValue()
-            if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
-                peaks = []
-                for k, data_slice in enumerate(data_1D_slices):
-                    try:
-                        if(sign_option=='Positive Peaks'):
-                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, algorithm=algorithm_selection, msep=1))
-                        elif(sign_option=='Negative Peaks'):
-                            peaks.append(ng.peakpick.pick(data_slice, nthres=threshold, algorithm=algorithm_selection, msep=1))
-                        else:
-                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection, msep=1))
 
-                    except:
-                        peaks.append(0)
-            else:
-                peaks = []
-                for k, data_slice in enumerate(data_1D_slices):
-                    try:
-                        if(sign_option=='Positive Peaks'):
-                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, algorithm=algorithm_selection))
-                        elif(sign_option=='Negative Peaks'):
-                            peaks.append(ng.peakpick.pick(data_slice, nthres=threshold, algorithm=algorithm_selection))
-                        else:
-                            peaks.append(ng.peakpick.pick(data_slice, pthres=threshold, nthresh=threshold, algorithm=algorithm_selection))
-                    except:
-                        peaks.append(0)
+            # A sign which is not being looked for is turned off with None, and
+            # the threshold for negative peaks is a negative height. The
+            # thresholds come from the whole 3D rather than from each trace, so
+            # that the same height is asked for all the way through.
+            pthres, nthres = find_pick_thresholds(
+                data, threshold_box_value, sign_option
+            )
+            threshold = abs(pthres if pthres != None else nthres)
+
+            peaks = []
+            for k, data_slice in enumerate(data_1D_slices):
+                try:
+                    if(algorithm_selection == 'thres' or algorithm_selection == 'thres-fast'):
+                        peaks.append(pick_peaks(data_slice, pthres, nthres, algorithm_selection, msep=1))
+                    else:
+                        peaks.append(pick_peaks(data_slice, pthres, nthres, algorithm_selection))
+                except:
+                    peaks.append(0)
             
             # The maxima found down the bore of each reference peak, which are
             # then shared out between peaks which are close to one another in
