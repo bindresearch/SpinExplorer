@@ -3983,7 +3983,10 @@ class Stack2D(wx.Frame):
                 (self.height - self.viewer_oneD.bottom_sizer.GetMinSize()[1] - 100)
                 * 0.0104,
             )
-            self.viewer_oneD.UpdateFrame()
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.viewer_oneD.UpdateFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):

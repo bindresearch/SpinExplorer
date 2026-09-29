@@ -2117,12 +2117,11 @@ class ProjectionFrame(wx.Frame):
                 * 0.0104,
             )
 
-            # Resize to ensure that the canvas gets the correct DPI of the current display
-            w, h = self.GetSize()
-            self.SetSize(w + 1, h)
-            self.SetSize(w, h)
-
-            self.UpdateProjectionFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateProjectionFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2255,11 +2254,11 @@ class WaterfallFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            # Resize to ensure that the canvas gets the correct DPI of the current display
-            w, h = self.GetSize()
-            self.SetSize(w + 1, h)
-            self.SetSize(w, h)
-            self.UpdateWaterfallFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateWaterfallFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2404,11 +2403,11 @@ class Plot3DFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            # Resize to ensure that the canvas gets the correct DPI of the current display
-            w, h = self.GetSize()
-            self.SetSize(w + 1, h)
-            self.SetSize(w, h)
-            self.Update3DFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.Update3DFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2729,11 +2728,11 @@ class SpinBore(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.bore_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            # Resize to ensure that the canvas gets the correct DPI of the current display
-            w, h = self.GetSize()
-            self.SetSize(w + 1, h)
-            self.SetSize(w, h)
-            self.UpdateBoreFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateBoreFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):

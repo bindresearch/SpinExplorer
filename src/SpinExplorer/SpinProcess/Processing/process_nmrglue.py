@@ -604,20 +604,16 @@ class ProcessNMRGlue:
 
         ng.pipe.write(nmrfile, dic, data, overwrite=True)
 
-    def check_nus_smile(self, include_dim2, include_dim3) -> list[int]:
+    def check_nus_smile(self, include_dim2, include_dim3) -> bool:
 
         # this function is problematic -> currently returning True, False and
         # integers need to fix
 
         """
-        Checking if NUS reconstruction has been selected.
+        Checking if SMILE NUS reconstruction or linear prediction has been selected.
         Output:
-        [0] - no NUS reconstruction for any indirect dimension
-        [1] - NUS reconstruction for the first indirect dimension
-        [2] - NUS reconstruction for the second indirect dimension
-              (if present)
-        [1,2] - NUS reconstruction for the first and second indirect
-                dimensions.
+        False - Linear prediction or SMILE NUS reconstruction is selected
+        True - No linear prediction or SMILE NUS reconstruction is selected
         """
 
         if(include_dim2):

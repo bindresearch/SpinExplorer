@@ -95,11 +95,11 @@ class DiffusionFit(wx.Frame):
                 (self.height - self.diffusion_sizer_total.GetMinSize()[1] - 100)
                 * 0.0104,
             )
-            # Resize to ensure that the canvas gets the correct DPI of the current display
-            w, h = self.GetSize()
-            self.SetSize(w + 1, h)
-            self.SetSize(w, h)
-            self.UpdateDiffusionFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateDiffusionFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):

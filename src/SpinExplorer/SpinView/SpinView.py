@@ -370,11 +370,12 @@ class SpinView(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.viewer.bottom_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            w, h = self.GetSize()
-            self.SetSize(w + 1, h)
-            self.SetSize(w, h)
-            self.viewer.UpdateFrame()
             self.display_index_current = display_index
+
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.viewer.UpdateFrame()
 
         event.Skip()
 

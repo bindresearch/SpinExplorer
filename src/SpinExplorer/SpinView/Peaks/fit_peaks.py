@@ -619,6 +619,19 @@ class fit_peaks_2D_window(wx.Frame):
         
         self.Show()
 
+        # Bind method to check/resize the window when the frame is moved
+        self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
+
+
+    def OnMoveFrame(self, event):
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateFrame()
+
+        event.Skip()
+
         
     def make_fit_window(self):
 
