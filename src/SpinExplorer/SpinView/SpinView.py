@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-"""
-MIT License
+"""MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
+Copyright (c) 2025 James Eaton, Andrew Baldwin
               2025-2026, Bind Research
-
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +27,10 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                          SpinView                           ")
 print("-------------------------------------------------------------")
-print("               (version 1.4) 13th March 2026                 ")
+print("             (version 1.5) 29th September 2026               ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
-print("-------------------------------------------------------------")
-print("              Viewing and analysing NMR spectra              ")
 print("-------------------------------------------------------------")
 print(" Video tutorials at:")
 print(" https://www.youtube.com/@BindResearch")
@@ -136,11 +132,20 @@ class SpinView(wx.Frame):
 
         window_found=False
 
+
+        matches = 0
+
+
         if(session_file==''):
             for window in wx.GetTopLevelWindows():
+                if(window.GetTitle()=='SpinExplorer'):
+                    continue
                 if isinstance(window, wx.Frame) and window.GetTitle() == self.title:
-                    # A window is already open containing this data
-                    window_found = True
+                    matches+=1
+        
+        # A window is already open containing this data
+        if(matches>1):
+            window_found = True
         
 
         # Setup the dock/task bar with the logo
@@ -365,6 +370,9 @@ class SpinView(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.viewer.bottom_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
             self.viewer.UpdateFrame()
             self.display_index_current = display_index
 

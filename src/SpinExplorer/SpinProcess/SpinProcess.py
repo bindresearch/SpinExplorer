@@ -25,14 +25,12 @@ SOFTWARE."""
 
 
 print("-------------------------------------------------------------")
-print("                         SpinProcess                         ")
+print("                        SpinProcess                          ")
 print("-------------------------------------------------------------")
-print("               (version 1.4) 13th March 2026                 ")
+print("             (version 1.5) 29th September 2026               ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
-print("-------------------------------------------------------------")
-print("                     Processing NMR Data                     ")
 print("-------------------------------------------------------------")
 print(" Video tutorials at:")
 print(" https://www.youtube.com/@BindResearch")

@@ -92,6 +92,11 @@ class CESTFrame(wx.Frame):
         self.plot_CEST_data()
         self.Show()
 
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
 
@@ -187,6 +192,10 @@ class CESTFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.CEST_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
+            # Resize to ensure that the canvas gets the correct DPI of the current display
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
             self.UpdateCESTFrame()
         event.Skip()
 

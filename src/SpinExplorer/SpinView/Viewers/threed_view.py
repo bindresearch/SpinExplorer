@@ -2035,6 +2035,11 @@ class ProjectionFrame(wx.Frame):
         self.Show()
         self.Centre()
 
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
 
@@ -2111,6 +2116,12 @@ class ProjectionFrame(wx.Frame):
                 )
                 * 0.0104,
             )
+
+            # Resize to ensure that the canvas gets the correct DPI of the current display
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
+
             self.UpdateProjectionFrame()
         event.Skip()
 
@@ -2213,6 +2224,10 @@ class WaterfallFrame(wx.Frame):
 
         self.plot_waterfall()
         self.Show()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
@@ -2240,6 +2255,10 @@ class WaterfallFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
             )
+            # Resize to ensure that the canvas gets the correct DPI of the current display
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
             self.UpdateWaterfallFrame()
         event.Skip()
 
@@ -2354,6 +2373,11 @@ class Plot3DFrame(wx.Frame):
         self.plot3d()
         self.Show()
 
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
 
@@ -2380,6 +2404,10 @@ class Plot3DFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
             )
+            # Resize to ensure that the canvas gets the correct DPI of the current display
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
             self.Update3DFrame()
         event.Skip()
 
@@ -2670,6 +2698,10 @@ class SpinBore(wx.Frame):
         self.plot_bore_data()
         self.Show()
         self.Centre()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
@@ -2697,6 +2729,10 @@ class SpinBore(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.bore_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
+            # Resize to ensure that the canvas gets the correct DPI of the current display
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
             self.UpdateBoreFrame()
         event.Skip()
 

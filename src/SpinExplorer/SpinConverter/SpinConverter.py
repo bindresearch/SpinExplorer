@@ -2,7 +2,7 @@
 
 """MIT License
 
-Copyright (c) 2025 James Eaton, Andrew Baldwin (University of Oxford)
+Copyright (c) 2025 James Eaton, Andrew Baldwin
               2025-2026, Bind Research
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,15 +23,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
+
 print("-------------------------------------------------------------")
 print("                        SpinConverter                        ")
 print("-------------------------------------------------------------")
-print("               (version 1.4) 13th March 2026                 ")
+print("             (version 1.5) 29th September 2026               ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
-print("-------------------------------------------------------------")
-print("            Converting NMR data to nmrPipe format            ")
 print("-------------------------------------------------------------")
 print(" Video tutorials at:")
 print(" https://www.youtube.com/@BindResearch")

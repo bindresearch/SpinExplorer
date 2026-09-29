@@ -63,6 +63,10 @@ class DiffusionFit(wx.Frame):
         self.plot_diffusion_data()
         self.Show()
         self.Centre()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
 
@@ -91,6 +95,10 @@ class DiffusionFit(wx.Frame):
                 (self.height - self.diffusion_sizer_total.GetMinSize()[1] - 100)
                 * 0.0104,
             )
+            # Resize to ensure that the canvas gets the correct DPI of the current display
+            w, h = self.GetSize()
+            self.SetSize(w + 1, h)
+            self.SetSize(w, h)
             self.UpdateDiffusionFrame()
         event.Skip()
 

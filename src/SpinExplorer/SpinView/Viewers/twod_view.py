@@ -272,13 +272,14 @@ class TwoDViewer(wx.Panel):
         )
         self.fit_relax_button.Bind(wx.EVT_BUTTON, self.OnFitRelaxButton)
 
-        # Create a button which will open a CESTView panel to analyse pseudo2D CEST data
-        self.CEST_button = wx.Button(self, label="CEST Analysis", size=(width, height1))
-        self.CEST_button.Bind(wx.EVT_BUTTON, self.OnCESTButton)
+        # The following features are not production ready yet so hiding these buttons for now
+        # # Create a button which will open a CESTView panel to analyse pseudo2D CEST data
+        # self.CEST_button = wx.Button(self, label="CEST Analysis", size=(width, height1))
+        # self.CEST_button.Bind(wx.EVT_BUTTON, self.OnCESTButton)
 
-        # Create a button which will make the correct files in order to perform uSTA analysis
-        self.uSTA_button = wx.Button(self, label="uSTA", size=(width, height1))
-        self.uSTA_button.Bind(wx.EVT_BUTTON, self.OnuSTAButton)
+        # # Create a button which will make the correct files in order to perform uSTA analysis
+        # self.uSTA_button = wx.Button(self, label="uSTA", size=(width, height1))
+        # self.uSTA_button.Bind(wx.EVT_BUTTON, self.OnuSTAButton)
 
         # Create a button to toggle the main sizer between shown and hidden
         self.toggle_button = wx.Button(self, label="Hide Options", size=(width, height1))
@@ -317,10 +318,10 @@ class TwoDViewer(wx.Panel):
             self.hide_sizer = wx.BoxSizer(wx.HORIZONTAL)
             self.hide_sizer.Add(self.toggle_button)
             self.hide_sizer.AddSpacer(5)
-            self.hide_sizer.Add(self.CEST_button)
-            self.hide_sizer.AddSpacer(5)
-            self.hide_sizer.Add(self.uSTA_button)
-            self.hide_sizer.AddSpacer(5)
+            # self.hide_sizer.Add(self.CEST_button)
+            # self.hide_sizer.AddSpacer(5)
+            # self.hide_sizer.Add(self.uSTA_button)
+            # self.hide_sizer.AddSpacer(5)
             self.hide_sizer.Add(self.peaklist_button)
             self.hide_sizer.AddSpacer(5)
             self.hide_sizer.Add(self.calc_intensity_button)
@@ -3906,6 +3907,7 @@ class Stack2D(wx.Frame):
         self.SetSizer(self.main_stack_sizer)
 
 
+
         try:
             dic, dat = ng.pipe.read(nmr_data_0.file)
         except:
@@ -3941,6 +3943,11 @@ class Stack2D(wx.Frame):
 
         self.Show()
         self.Centre()
+
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         try:
             if self.main_frame.parent.file_parser == True:
