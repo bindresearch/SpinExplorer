@@ -168,9 +168,6 @@ class SpinExplorer(wx.Frame):
         
         bmp = SpinExplorerHeader.GetBitmap()
         img = bmp.ConvertToImage()
-        img = img.Scale(
-            int(img.GetWidth() * 0.8), int(img.GetHeight() * 0.8), wx.IMAGE_QUALITY_HIGH
-        )
         bmp = wx.Bitmap(img)
         bmp.SetScaleFactor(2)
         top = wx.StaticBitmap(self, -1, bitmap=bmp)
@@ -335,9 +332,6 @@ class SpinExplorer(wx.Frame):
 
         bmp = Logo.GetBitmap()
         img = bmp.ConvertToImage()
-        img = img.Scale(
-            int(img.GetWidth() * 0.8), int(img.GetHeight() * 0.8), wx.IMAGE_QUALITY_HIGH
-        )
         bmp = wx.Bitmap(img)
         bmp.SetScaleFactor(2)
         logo = wx.StaticBitmap(self, -1, bitmap=bmp)
