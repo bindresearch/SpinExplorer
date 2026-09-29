@@ -1741,7 +1741,7 @@ class ThreeDViewer(wx.Panel):
             self.OnMinContour3D(event)
         
         if self.mouse_wheel_mode == ScrollMode.PLANE:
-            delta = 0.1 if event.GetWheelRotation() > 0 else -0.1 
+            delta = 1 if event.GetWheelRotation() > 0 else -1 
             current = float(self.z_slider.GetValue())
             self.z_slider.SetValue(current+delta)
             self.OnZScroll3D(event)

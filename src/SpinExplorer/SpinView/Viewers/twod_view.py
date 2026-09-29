@@ -2545,6 +2545,7 @@ class TwoDViewer(wx.Panel):
         self.UpdateFrame()
 
 
+
     def OnMinContour2D(self, event, textcontrol=False, showpeaks=True):
         """Triggered by slider."""
         if not textcontrol:
@@ -2577,7 +2578,7 @@ class TwoDViewer(wx.Panel):
             self.contour_value_label.SetValue(
                 "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
             )
-            self.DrawContours2D()
+            self.DrawContours2D(wx.EVT_SCROLL, textcontrol=True, showpeaks=True)
 
     # def OnMouseWheel(self, event):
     #     """Triggered by mouse wheel."""
