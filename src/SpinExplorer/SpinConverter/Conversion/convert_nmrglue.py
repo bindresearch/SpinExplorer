@@ -24,6 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 import numpy as np
+
+from SpinExplorer.SpinExplorer_CL_tools import quadrature
 import nmrglue as ng
 from typing import Dict
 from numpy.typing import NDArray
@@ -564,48 +566,15 @@ class Convert_nmrglue:
 
         # Finding which dimensions in udic are Rance-Kay
         rance_kay_dimensions = []
-        for i, box in enumerate(self.app.format.acqusition_combo_boxes):
-            box = box.GetValue().strip()
-            if box == "Echo-AntiEcho" or box == "Rance-Kay":
+        for i, val in enumerate(self.acq_modes):
+            if val == "Echo-AntiEcho" or val == "Rance-Kay":
                 rance_kay_dimensions.append((len(data.shape) - 1) - i)
 
-        # Creating an empty array to store the reshuffled data
-        shuffled_data = np.empty(data.shape, data.dtype)
-        # If final dimension is Rance-Kay/Echo-AntiEcho
-        if rance_kay_dimensions == [0]:
-            for i in range(0, data.shape[0], 2):
-                shuffled_data[i] = (
-                    1.0 * (data[i].real - data[i + 1].real)
-                    + 1.0 * (data[i].imag - data[i + 1].imag) * 1j
-                )
-                if rotate_phase is True:
-                    shuffled_data[i + 1] = (
-                        -1.0 * (data[i].imag + data[i + 1].imag)
-                        + 1.0 * (data[i].real + data[i + 1].real) * 1j
-                    )
-                else:
-                    shuffled_data[i + 1] = (
-                        1.0 * (data[i].real + data[i + 1].real)
-                        + 1.0 * (data[i].imag + data[i + 1].imag) * 1j
-                    )
-
-        # If second to last dimension is Rance-Kay/Echo-AntiEcho
-        elif rance_kay_dimensions == [1]:
-            if len(data.shape) == 3:
-                for i in range(0, data.shape[1], 2):
-                    shuffled_data[:, i, :] = (
-                        1.0 * (data[:, i, :].real - data[:, i + 1, :].real)
-                        + 1.0 * (data[:, i, :].imag - data[:, i + 1, :].imag) * 1j
-                    )
-                    if rotate_phase is True:
-                        shuffled_data[:, i + 1, :] = (
-                            -1.0 * (data[:, i, :].imag + data[:, i + 1, :].imag)
-                            + 1.0 * (data[:, i, :].real + data[:, i + 1, :].real) * 1j
-                        )
-                    else:
-                        shuffled_data[:, i + 1, :] = (
-                            1.0 * (data[:, i, :].real + data[:, i + 1, :].real)
-                            + 1.0 * (data[:, i, :].imag + data[:, i + 1, :].imag) * 1j
-                        )
+        # Each of those dimensions is combined in turn. A triple-resonance 3D
+        # can have both of its indirect dimensions collected this way, so there
+        # can be more than one of them.
+        shuffled_data = quadrature.shuffle_rance_kay(
+            data, rance_kay_dimensions, rotate_phase=rotate_phase
+        )
 
         return dic, shuffled_data

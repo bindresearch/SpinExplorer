@@ -33,6 +33,25 @@ warnings.simplefilter("ignore", UserWarning)
 from typing import List
 
 
+def find_nus_recorded(value) -> bool:
+    """
+    Whether a number of non-uniformly sampled points was actually recorded in
+    the parameter file.
+
+    The NUSTD entry holds how many increments were collected when non-uniform
+    sampling was used. It is missing from files of uniformly sampled data, and
+    is written as zero by some versions, and in both cases it says nothing about
+    the size of the data, so the TD entry is the one to go by.
+    """
+    if isinstance(value, bool) == True:
+        return False
+
+    if isinstance(value, int) == False and isinstance(value, float) == False:
+        return False
+
+    return value > 0
+
+
 class ParameterExtractorBruker:
     def __init__(self, nmrdata) -> None:
         """
@@ -160,9 +179,14 @@ class ParameterExtractorBruker:
                     if "##$TD=" in file_lines[i]:
                         line = file_lines[i].split()
                         self.sizes_dim2 = int(line[1])
+            # The TD entry says how big the dimension is, unless non-uniform
+            # sampling collected fewer points than that, which NUSTD then says
             if (
                 self.sizes_dim2 != []
-                and self.sizes_dim2 < self.sizes_dim2_nus
+                and (
+                    find_nus_recorded(self.sizes_dim2_nus) == False
+                    or self.sizes_dim2 < self.sizes_dim2_nus
+                )
                 and self.sizes_dim2 != 1
             ):
                 if self.sizes_dim2 % 2 != 0:
@@ -186,9 +210,14 @@ class ParameterExtractorBruker:
                     if "##$TD=" in file_lines[i]:
                         line = file_lines[i].split()
                         self.sizes_dim3 = int(line[1])
+            # The TD entry says how big the dimension is, unless non-uniform
+            # sampling collected fewer points than that, which NUSTD then says
             if (
                 self.sizes_dim3 != []
-                and self.sizes_dim3 < self.sizes_dim3_nus
+                and (
+                    find_nus_recorded(self.sizes_dim3_nus) == False
+                    or self.sizes_dim3 < self.sizes_dim3_nus
+                )
                 and self.sizes_dim3 != 1
             ):
                 if self.sizes_dim3 % 2 != 0:
@@ -248,9 +277,14 @@ class ParameterExtractorBruker:
                         nuc = line.split("<")[1].split(">")[0]
 
             try:
+                # As above, NUSTD is only the size when non-uniform sampling
+                # collected fewer points than the TD entry says
                 if (
                     td == True
-                    and self.sizes_dim2 < self.sizes_dim2_nus
+                    and (
+                        find_nus_recorded(self.sizes_dim2_nus) == False
+                        or self.sizes_dim2 < self.sizes_dim2_nus
+                    )
                     and self.sizes_dim2 != 1
                 ):
                     if self.sizes_dim2 % 2 != 0:
@@ -285,9 +319,14 @@ class ParameterExtractorBruker:
                         nuc = line.split("<")[1].split(">")[0]
 
             try:
+                # As above, NUSTD is only the size when non-uniform sampling
+                # collected fewer points than the TD entry says
                 if (
                     td == True
-                    and self.sizes_dim3 < self.sizes_dim3_nus
+                    and (
+                        find_nus_recorded(self.sizes_dim3_nus) == False
+                        or self.sizes_dim3 < self.sizes_dim3_nus
+                    )
                     and self.sizes_dim3 != 1
                 ):
                     if nuc not in self.indirect_sizes_dict.keys():

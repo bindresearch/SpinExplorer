@@ -75,6 +75,9 @@ from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import read_sched
 import wx
 import numpy as np
 import nmrglue as ng
+
+from SpinExplorer.SpinProcess.Processing import transposes
+from SpinExplorer.SpinProcess.Processing import projections
 import os
 import json
 import copy
@@ -731,102 +734,19 @@ class ProcessNMRGlue:
 
     def projection_name(self, dic) -> str:
         """
-        The file name for a projection. Once the first axis of the data has
-        been collapsed, the remaining axes of the plane are FDDIMORDER[1]
-        (rows) and FDDIMORDER[0] (columns). The labels are written in that
-        order so that they match the data when the projection is displayed.
+        The file name for a projection. The work is done in
+        Processing/projections.py, which the automatic processing uses as well.
         """
-        rows = "FDF" + str(int(dic["FDDIMORDER"][1])) + "LABEL"
-        columns = "FDF" + str(int(dic["FDDIMORDER"][0])) + "LABEL"
-
-        return dic[rows] + "." + dic[columns] + ".dat"
+        return projections.find_projection_name(dic)
 
     def create_3D_projections(self, dic, data):
         """
         This function will form skyline projections over the data along a given
-        axis. e.g. a HNCO will have H-N, H-CO, N-CO planes.
+        axis. e.g. a HNCO will have H-N, H-CO and N-CO planes. The work is done
+        in Processing/projections.py, which the automatic processing uses as
+        well.
         """
-        # Move all existing .dat files to a folder called OldProjections
-
-        current_dir = os.getcwd()
-        old_dir = os.path.join(current_dir, "OldProjections")
-        
-        # Create 'Old' directory if it doesn't exist
-        os.makedirs(old_dir, exist_ok=True)
-        
-        # Loop through files in the current directory
-        for filename in os.listdir(current_dir):
-            if filename.endswith(".dat") and os.path.isfile(filename):
-                source = os.path.join(current_dir, filename)
-                destination = os.path.join(old_dir, filename)
-                shutil.move(source, destination)
-
-        data0 = np.max(data, axis=0)
-        data0_1 = np.min(data, axis=0)
-        dic0 = copy.deepcopy(dic)
-
-        dim_0 = dic["FDDIMORDER"][2]
-        fn = "FDF" + str(int(dim_0))
-        dic0["FDDIMCOUNT"] = 2
-        dic0[fn + "SIZE"] = 0
-        dic0[fn + "TDSIZE"] = 0
-        dic0[fn + "FTSIZE"] = 0
-        dic0[fn + "APOD"] = 0
-        dic0[fn + "APODSIZE"] = 0
-        dic0[fn + "SW"] = 0
-        dic0[fn + "CENTER"] = 0
-        # dic0[fn + "LABEL"] = ""
-
-        name = self.projection_name(dic0)
-
-        ng.pipe.write(name, dic0, data0+data0_1, overwrite=True)
-
-        dic1, data1 = self.zero_transpose_3d(dic, data)
-        data1_1 = np.max(data1, axis=0)
-        data1_2 = np.min(data1, axis=0)
-        dic1 = copy.deepcopy(dic1)
-
-        dim_1 = dic1["FDDIMORDER"][2]
-        fn = "FDF" + str(int(dim_1))
-        dic1["FDDIMCOUNT"] = 2
-        dic1[fn + "SIZE"] = 0
-        dic1[fn + "TDSIZE"] = 0
-        dic1[fn + "FTSIZE"] = 0
-        dic1[fn + "APOD"] = 0
-        dic1[fn + "APODSIZE"] = 0
-        dic1[fn + "SW"] = 0
-        dic1[fn + "CENTER"] = 0
-        # dic1[fn + "LABEL"] = ""
-
-        name = self.projection_name(dic1)
-
-        ng.pipe.write(name, dic1, data1_1+data1_2, overwrite=True)
-
-        dic2, data2 = self.transpose_3d(dic, data)
-        dic2, data2 = self.zero_transpose_3d(dic2, data2)
-
-        data2_1 = np.max(data2, axis=0)
-        data2_2 = np.min(data2,axis=0)
-        dic2 = copy.deepcopy(dic2)
-
-        dim_2 = dic2["FDDIMORDER"][2]
-        fn = "FDF" + str(int(dim_2))
-        dic2["FDDIMCOUNT"] = 2
-        dic2[fn + "SIZE"] = 0
-        dic2[fn + "TDSIZE"] = 0
-        dic2[fn + "FTSIZE"] = 0
-        dic2[fn + "APOD"] = 0
-        dic2[fn + "APODSIZE"] = 0
-        dic2[fn + "SW"] = 0
-        dic2[fn + "CENTER"] = 0
-        # dic2[fn + "LABEL"] = ""
-
-        name = self.projection_name(dic2)
-
-        ng.pipe.write(name, dic2, data2_1+data2_2, overwrite=True)
-
-        # front = np.max(data, axis=1)
-        # side = np.max(data, axis=2)
+        return projections.write_3d_projections(dic, data)
 
     def add_truncation(self, dic, data, dimension, dimension_tab):
         """
@@ -1559,162 +1479,23 @@ class ProcessNMRGlue:
 
     def zero_transpose_3d(self, dic, data, nohyper=False):
         """
-        Transpose NMRPipe-style data from (X, Y, Z) to (Z, Y, X),
-        including correct updates to the NMRPipe dictionary.
-
-        Parameters:
-            dic (dict): NMRPipe dictionary
-            data (ndarray): NMRPipe data, assumed shape (X, Y, Z)
-
-        Returns:
-            new_dic (dict): Transposed dictionary
-            new_data (ndarray): Transposed data, shape (Z, Y, X)
+        Transpose NMRPipe-style data from (X, Y, Z) to (Z, Y, X), including
+        correct updates to the NMRPipe dictionary. The work is done in
+        Processing/transposes.py, which the automatic processing uses as well.
         """
-        # Transpose data from (X, Y, Z) to (Z, Y, X)
-        new_data = np.transpose(data, axes=(2, 1, 0))
-
-        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
-        fn3 = "FDF" + str(int(dic["FDDIMORDER"][2]))  # F1, F2, etc
-
-        # Create new dictionary
-        new_dic = copy.deepcopy(dic)
-
-        # for i, new_i in enumerate(
-        #     new_axis_order
-        # ):  # i = new dim index, new_i = old dim index
-        #     for key in dic:
-        #         if key.startswith(axis_keys[new_i]):
-        #             # e.g., FDF1SW -> FDF1SW, becomes FDF3SW when i == 0 (Z)
-        #             suffix = key[len(axis_keys[new_i]) :]  # e.g. SW, ORIG
-        #             new_key = axis_keys[i] + suffix  # FDF1SW, FDF2SW, etc.
-        #             new_dic[new_key] = dic[key]
-
-        # swapping the FDDIMORDER1 and FDDIMORDER3 values
-        order1 = dic["FDDIMORDER1"]
-        order3 = dic["FDDIMORDER3"]
-        new_dic["FDDIMORDER1"] = order3
-        new_dic["FDDIMORDER3"] = order1
-
-        new_dic["FDDIMORDER"] = [
-            new_dic["FDDIMORDER1"],
-            new_dic["FDDIMORDER2"],
-            new_dic["FDDIMORDER3"],
-            new_dic["FDDIMORDER4"],
-        ]
-
-        new_dic["FDSLICECOUNT"] = new_data.shape[-2]
-        new_dic["FDSPECNUM"] = new_dic["FDSLICECOUNT"]
-        new_dic["FDSIZE"] = new_data.shape[-1]
-
-        if(nohyper==False):
-            if dic[fn3 + "QUADFLAG"] != 1:
-                # unpack complex as needed
-                new_data = np.array(ng.proc_base.c2ri(new_data), dtype="complex64")
-                if fn3 + "SIZE" in new_dic:
-                    # F1/F2 sizes are not stored in the nmrPipe header
-                    new_dic[fn3 + "SIZE"] = int(new_dic[fn3 + "SIZE"] / 2)
-
-        return new_dic, new_data
-
-    """
-    Obtained from nmrglue followed by customisation
-    
-    Copyright Notice and Statement for the nmrglue Project
-    Copyright (c) 2010-2015 Jonathan J. Helmus
-    All rights reserved.
-    """
+        return transposes.zero_transpose_3d(dic, data, nohyper=nohyper)
 
     def transpose_3d(
         self, dic, data, hyper=False, nohyper=False, auto=False, nohdr=False
     ):
         """
-        Transpose data (2D).
-
-        Parameters
-        ----------
-        dic : dict
-            Dictionary of NMRPipe parameters.
-        data : ndarray
-            Array of NMR data.
-        hyper : bool
-            True to perform hypercomplex transpose.
-        nohyper : bool
-            True to suppress hypercomplex transpose.
-        auto : bool
-            True to choose transpose mode automatically.
-        nohdr : bool
-            True to not update the transpose parameters in ndic.
-
-        Returns
-        -------
-        ndic : dict
-            Dictionary of updated NMRPipe parameters.
-        ndata : ndarray
-            Array of NMR data which has been transposed.
-
+        Exchange the last two axes of 3D data, so that the second dimension
+        becomes the one which is processed. The work is done in
+        Processing/transposes.py, which the automatic processing uses as well.
         """
-        # XXX test if works with TPPI
-        if nohyper:
-            hyper = False
-
-        fn = "FDF" + str(int(dic["FDDIMORDER"][0]))  # F1, F2, etc
-        fn2 = "FDF" + str(int(dic["FDDIMORDER"][1]))  # F1, F2, etc
-
-        if auto:
-            if (dic[fn + "QUADFLAG"] != 1) and (dic[fn2 + "QUADFLAG"] != 1):
-                hyper = True
-            else:
-                hyper = False
-
-        if hyper:  # Hypercomplex transpose need type recast
-            data = np.array(ng.proc_base.tp_hyper(data), dtype="complex64")
-        else:
-            data = np.transpose(data, axes=(0, 2, 1))
-            if dic[fn2 + "QUADFLAG"] != 1 and nohyper is False:
-                # unpack complex as needed
-                data = np.array(ng.proc_base.c2ri(data), dtype="complex64")
-
-        # update the dimensionality and order
-        dic["FDSLICECOUNT"] = data.shape[-2]
-        if (data.dtype == "float32") and (nohyper is True):
-            # when nohyper is True and the new last dimension was complex
-            # prior to transposing then FDSIZE is set as if the dimension was
-            # converted to complex data, that is half the actual size.
-            dic["FDSIZE"] = data.shape[-1] / 2
-        else:
-            dic["FDSIZE"] = data.shape[-1]
-
-        dic["FDSPECNUM"] = dic["FDSLICECOUNT"]
-        dic["FDDIMORDER1"], dic["FDDIMORDER2"] = (
-            dic["FDDIMORDER2"],
-            dic["FDDIMORDER1"],
+        return transposes.transpose_3d(
+            dic, data, hyper=hyper, nohyper=nohyper, auto=auto, nohdr=nohdr
         )
-        dic["FDDIMORDER"] = [
-            dic["FDDIMORDER1"],
-            dic["FDDIMORDER2"],
-            dic["FDDIMORDER3"],
-            dic["FDDIMORDER4"],
-        ]
-
-        if dic["FD2DPHASE"] == 0:
-            dic["FDF1QUADFLAG"], dic["FDF2QUADFLAG"] = (
-                dic["FDF2QUADFLAG"],
-                dic["FDF1QUADFLAG"],
-            )
-
-        if nohdr is not True:
-            dic["FDTRANSPOSED"] = (dic["FDTRANSPOSED"] + 1) % 2
-
-        dic = ng.pipe_proc.clean_minmax(dic)
-        return dic, data
-
-    """
-    Obtained from nmrglue followed by customisation
-    
-    Copyright Notice and Statement for the nmrglue Project
-    Copyright (c) 2010-2015 Jonathan J. Helmus
-    All rights reserved.
-    """
 
     def ext(self, dic, data, x1, xn, sw):
         """
