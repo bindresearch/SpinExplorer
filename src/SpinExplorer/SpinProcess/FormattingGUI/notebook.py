@@ -104,7 +104,7 @@ class NotebookProcess(wx.Notebook):
         self.tabDim1.dimension_size.set_data_dimension(0)
         if self.nmr_data.dim == 2 and self.nmr_data.pseudo_axis == False:
             self.tabDim2 = IndirectDimensionFrame(
-                self.parent, self, info_buttons, self.tabDim1
+                self.parent, self, info_buttons, self.tabDim1, dimension=1
             )
             self.tabs.append(self.tabDim2)
             self.AddPage(
@@ -114,7 +114,7 @@ class NotebookProcess(wx.Notebook):
         if self.nmr_data.dim == 3 and self.nmr_data.pseudo_axis == True:
             if self.nmr_data.index == 2:
                 self.tabDim2 = IndirectDimensionFrame(
-                    self.parent, self, info_buttons, self.tabDim1
+                    self.parent, self, info_buttons, self.tabDim1, 1
                 )
                 self.tabs.append(self.tabDim2)
                 self.AddPage(
@@ -123,7 +123,7 @@ class NotebookProcess(wx.Notebook):
                 self.tabDim2.dimension_size.set_data_dimension(1)
             else:
                 self.tabDim2 = IndirectDimensionFrame(
-                    self.parent, self, info_buttons, self.tabDim1
+                    self.parent, self, info_buttons, self.tabDim1, 2
                 )
                 self.tabs.append(self.tabDim2)
                 self.AddPage(
@@ -132,7 +132,7 @@ class NotebookProcess(wx.Notebook):
                 self.tabDim2.dimension_size.set_data_dimension(2)
         if self.nmr_data.dim == 3 and self.nmr_data.pseudo_axis == False:
             self.tabDim2 = IndirectDimensionFrame(
-                self.parent, self, info_buttons, self.tabDim1
+                self.parent, self, info_buttons, self.tabDim1, 1
             )
             self.tabs.append(self.tabDim2)
             self.AddPage(
@@ -140,7 +140,7 @@ class NotebookProcess(wx.Notebook):
             )
             self.tabDim2.dimension_size.set_data_dimension(1)
             self.tabDim3 = IndirectDimensionFrame(
-                self.parent, self, info_buttons, self.tabDim1
+                self.parent, self, info_buttons, self.tabDim1, 2
             )
             self.tabs.append(self.tabDim3)
             self.AddPage(

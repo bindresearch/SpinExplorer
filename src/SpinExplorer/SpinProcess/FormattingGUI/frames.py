@@ -223,7 +223,7 @@ class DirectDimensionFrame(ScrollingTab):
 
 class IndirectDimensionFrame(ScrollingTab):
 
-    def __init__(self, app, parent, info_buttons, direct_dimension_frame):
+    def __init__(self, app, parent, info_buttons, direct_dimension_frame, dimension):
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 0.7 * self.monitorWidth
         self.height = 0.75 * self.monitorHeight
@@ -241,6 +241,7 @@ class IndirectDimensionFrame(ScrollingTab):
         self.app = app
 
         self.direct_dimension_frame = direct_dimension_frame
+        self.dimension = dimension
 
         self.create_menu_bar_indirect()
 
@@ -257,7 +258,7 @@ class IndirectDimensionFrame(ScrollingTab):
 
         # Add all the processing modules
 
-        self.dimension_size = p.DimensionSize(self.app, self.nmr_data, self, 1)
+        self.dimension_size = p.DimensionSize(self.app, self.nmr_data, self, self.dimension)
         self.truncation = p.Truncation(
             self.app, self.nmr_data, self, self.info_buttons
         )
@@ -270,7 +271,7 @@ class IndirectDimensionFrame(ScrollingTab):
             self,
             self.info_buttons,
             [self.linear_prediction],
-            1,
+            self.dimension,
         )
         self.linear_prediction.apodization_class = self.apodization
 
@@ -280,7 +281,7 @@ class IndirectDimensionFrame(ScrollingTab):
             self,
             self.info_buttons,
             [self.linear_prediction, self.apodization],
-            1,
+            self.dimension,
         )
         self.fourier_transform = p.FourierTransform(
             self.app,
