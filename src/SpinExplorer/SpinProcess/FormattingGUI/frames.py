@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 import wx
+from wx.lib.scrolledpanel import ScrolledPanel
 import os
 import pkgutil
 import importlib
@@ -33,14 +34,44 @@ import inspect
 import SpinExplorer.SpinProcess.FormattingGUI.ProcessingComponents as p
 
 
-class DirectDimensionFrame(wx.Panel):
+class ScrollingTab(ScrolledPanel):
+    """
+    A processing tab which can be scrolled.
+
+    The options of a tab change with what is chosen in it, and some of them need
+    more room than the screen has. The window cannot grow past the screen, or its
+    top would be out of reach, so the tab scrolls instead and nothing in it is
+    ever unreachable.
+    """
+
+    def update_scrolling(self):
+        """
+        Follow the room the options now need. This is called after the tab has
+        been built or built again, as the options are destroyed and remade when
+        the choices in them change.
+        """
+        try:
+            self.SetupScrolling(scroll_x=True, scroll_y=True, scrollToTop=False)
+        except Exception:
+            # A tab which cannot scroll is still usable, so this is not worth
+            # stopping for
+            pass
+
+
+class DirectDimensionFrame(ScrollingTab):
 
     def __init__(self, app, parent, info_buttons):
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 0.7 * self.monitorWidth
         self.height = 0.75 * self.monitorHeight
         self.parent = parent
-        wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
+        ScrolledPanel.__init__(
+            self,
+            parent,
+            id=wx.ID_ANY,
+            size=(int(self.width), int(self.height)),
+            style=wx.TAB_TRAVERSAL,
+        )
         # Create panel for processing dimension 1 of the data
         self.nmr_data = parent.nmr_data
         self.info_buttons = info_buttons
@@ -146,6 +177,7 @@ class DirectDimensionFrame(wx.Panel):
 
         self.SetSizerAndFit(self.main_sizer)
         self.Layout()
+        self.update_scrolling()
 
         # Get the size of the main sizer and set the window size to 1.05 times the size of the main sizer
         self.width, self.height = self.main_sizer.GetSize()
@@ -180,6 +212,7 @@ class DirectDimensionFrame(wx.Panel):
         self.main_sizer.Add(self.sizer_1, 0, wx.EXPAND)
         self.SetSizerAndFit(self.main_sizer)
         self.Layout()
+        self.update_scrolling()
 
         # Get the size of the main sizer and set the window size to 1.05 times the size of the main sizer
         self.width, self.height = self.main_sizer.GetSize()
@@ -188,14 +221,20 @@ class DirectDimensionFrame(wx.Panel):
         )
 
 
-class IndirectDimensionFrame(wx.Panel):
+class IndirectDimensionFrame(ScrollingTab):
 
     def __init__(self, app, parent, info_buttons, direct_dimension_frame):
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 0.7 * self.monitorWidth
         self.height = 0.75 * self.monitorHeight
         self.parent = parent
-        wx.Panel.__init__(self, parent, id=wx.ID_ANY, size=(self.width, self.height))
+        ScrolledPanel.__init__(
+            self,
+            parent,
+            id=wx.ID_ANY,
+            size=(int(self.width), int(self.height)),
+            style=wx.TAB_TRAVERSAL,
+        )
         # Create panel for processing dimension 1 of the data
         self.nmr_data = parent.nmr_data
         self.info_buttons = info_buttons
@@ -272,6 +311,7 @@ class IndirectDimensionFrame(wx.Panel):
 
         self.SetSizerAndFit(self.main_sizer)
         self.Layout()
+        self.update_scrolling()
 
         # Get the size of the main sizer and set the window size to 1.05 times the size of the main sizer
         self.width, self.height = self.main_sizer.GetSize()
@@ -306,6 +346,7 @@ class IndirectDimensionFrame(wx.Panel):
         self.main_sizer.Add(self.sizer_1, 0, wx.EXPAND)
         self.SetSizerAndFit(self.main_sizer)
         self.Layout()
+        self.update_scrolling()
 
         # Get the size of the main sizer and set the window size to 1.05 times the size of the main sizer
         self.width, self.height = self.main_sizer.GetSize()
