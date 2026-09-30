@@ -3937,8 +3937,11 @@ class Stack2D(wx.Frame):
                 self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.filename], '')
         else:
             for p, path in enumerate(multiplot_paths):
-                self.viewer_oneD.files.OnDropFiles(0, 0, [path], titles[p])
-        self.viewer_oneD.files.stackmode = False
+                if(p==0):
+                    self.viewer_oneD.files.OnDropFiles(0, 0, [path], titles[p], multiplot_stack=False)
+                else:
+                    self.viewer_oneD.files.OnDropFiles(0, 0, [path], titles[p], multiplot_stack=True)
+        # self.viewer_oneD.files.stackmode = False
 
         
 

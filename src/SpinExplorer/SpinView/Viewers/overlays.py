@@ -1072,7 +1072,7 @@ class FileDrop(wx.FileDropTarget):
                                 ]["title"] = title+' ' + str(i + 1)
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
-                                ]["linewidth"] = self.linewidth
+                                ]["linewidth"] = self.parent.linewidth
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
                                 ]["color index"] = (len(self.parent.extra_plots) + 1)
