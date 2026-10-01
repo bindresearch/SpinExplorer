@@ -23,7 +23,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
+import os
 import numpy as np
+
+from SpinExplorer.SpinExplorer_CL_tools import quadrature
+from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import (
+    read_sched,
+    inflate_spectra_2D_signal,
+    inflate_spectra_3D_signal,
+)
 import nmrglue as ng # type: ignore
 from typing import Dict
 from numpy.typing import NDArray
@@ -47,13 +55,29 @@ class Convert_nmrglue:
         self.ndim = len(self.params.size_indirect)+1
         self.get_scaling()
         self.get_complex_and_real_sizes()
+
+        # Non-uniformly sampled data holds only the increments which were
+        # collected, so it is read as a list of them and spread out over the
+        # whole grid afterwards, with zeros where nothing was collected
+        self.nusfile = self.find_nus_file()
+        self.NUS_tick = False
+        if self.nusfile != "" and len(self.complex_sizes) > 1:
+            self.NUS_tick = True
+            self.prepare_nus_sizes()
+
         self.sizes = [int(self.complex_sizes[0]/2), *self.complex_sizes[1:]]
+
+        if self.NUS_tick == True:
+            read_shape = (self.nus_rows, int(self.sizes[0]))
+        else:
+            read_shape = tuple(self.sizes[::-1])
+
         C = ng.convert.converter()
         # Obtain first guesses of dictionary values
         if self.nmrdata.spectrometer == "Bruker":
-            dic, data = ng.fileio.bruker.read("./", shape=tuple(self.sizes[::-1]))
+            dic, data = ng.fileio.bruker.read("./", shape=read_shape)
         else:
-            dic, data = ng.fileio.varian.read("./", shape=tuple(self.sizes[::-1]))
+            dic, data = ng.fileio.varian.read("./", shape=read_shape)
 
        
         
@@ -62,8 +86,7 @@ class Convert_nmrglue:
         self.get_nuclei_frequencies()
         self.get_carrier_frequencies()
         self.get_nucelus_type()
-        self.NUS_tick = False
-        
+
         u = self.create_conversion_dictionary()
 
         try:
@@ -243,7 +266,7 @@ class Convert_nmrglue:
 
             if(nusbox == True):
                 if self.NUS_tick == True:
-                    data = self.reshape_nus_data(data)
+                    dic, data = self.reshape_nus_data(dic, data)
 
         # Rance-Kay/Echo-Antiecho reshuffling
         if self.rance_kay == True:
@@ -421,27 +444,94 @@ class Convert_nmrglue:
             # Multiplication by scaling number did not work
             return pdata
 
-    def reshape_nus_data(self, data: NDArray) -> NDArray:
+    def find_nus_file(self) -> str:
         """
-        Reshaping the NUS FID to the correct order and inserting
-        zeros into the missing gaps.
+        The sampling schedule of non-uniformly sampled data, which Bruker writes
+        next to the raw data as a nuslist file. An empty name means the data was
+        sampled uniformly and nothing has to be spread out.
         """
-        # Need to reshape the data
-        shape = []
-        for k, value in enumerate(self.complex_sizes):
-            if k == 0:
-                # Taking the real size for the direct dimension
-                shape.append(self.real_sizes[0])
+        for name in ["nuslist", "nusList", "nuslist.txt"]:
+            if os.path.exists(name) == True:
+                return name
+
+        return ""
+
+    def find_nus_schedule(self):
+        """
+        The increments which were collected, read from the sampling schedule.
+        """
+        return np.asarray(read_sched(self.nusfile))
+
+    def prepare_nus_sizes(self) -> None:
+        """
+        Work out how much data was collected, for non-uniformly sampled data.
+
+        The TD entry of each indirect dimension is the size of the whole grid,
+        the same as it would be for uniformly sampled data, and the sampling
+        schedule says which points of that grid were collected. The schedule is
+        therefore what says how much data there is to read, and the sizes which
+        have already been worked out are the grid it belongs to.
+        """
+        schedule = self.find_nus_schedule()
+
+        # Each collected increment of a single indirect dimension is a pair of
+        # points, and of two indirect dimensions four of them
+        if schedule.ndim == 1:
+            self.nus_rows = len(schedule) * 2
+        else:
+            self.nus_rows = len(schedule) * 4
+
+        for dimension in range(1, len(self.complex_sizes)):
+            points = int(int(self.complex_sizes[dimension]) / 2)
+
+            # Every point the schedule names has to fit inside the grid, so a
+            # grid which is too small for the schedule is widened to hold it
+            if schedule.ndim == 1:
+                highest = int(np.max(schedule)) + 1
             else:
-                shape.append(value)
-        shape.reverse()
-        shape = tuple(shape)
-        nuslist_tuple = ng.bruker.read_nuslist(
-            fname=self.nusfile
+                highest = int(np.max(schedule[:, dimension - 1])) + 1
+
+            if points < highest:
+                points = highest
+
+            self.complex_sizes[dimension] = points * 2
+            self.real_sizes[dimension] = points
+
+        print(
+            "Non-uniformly sampled data: {} increments collected, which will be "
+            "spread over a grid of {} with zeros in the gaps".format(
+                len(schedule), [int(size / 2) for size in self.complex_sizes[1:]]
+            )
         )
-        
-        data = ng.proc_base.expand_nus(data, shape, nuslist_tuple)
-        return data
+
+    def reshape_nus_data(self, dic, data: NDArray):
+        """
+        Spread the increments which were collected over the whole grid, putting
+        zeros where nothing was collected. The spectrum can then be processed and
+        phased as it is, and reconstructed afterwards.
+        """
+        schedule = self.find_nus_schedule()
+
+        if schedule.ndim == 1:
+            data, dic = inflate_spectra_2D_signal(
+                data,
+                dic,
+                sampling_schedule=schedule,
+                max_points=int(self.real_sizes[-1]),
+            )
+        else:
+            # The schedule holds the dimensions the other way round from the way
+            # the data does
+            schedule = schedule[:, ::-1]
+            data, dic = inflate_spectra_3D_signal(
+                data,
+                dic,
+                sampling_schedule=schedule,
+                max_points=[int(self.real_sizes[-1]), int(self.real_sizes[-2])],
+                acq_ord=0,
+            )
+
+        return dic, data
     
     
     
@@ -620,43 +710,11 @@ class Convert_nmrglue:
             if val == "Echo-AntiEcho" or val == "Rance-Kay":
                 rance_kay_dimensions.append((len(data.shape) - 1) - i)
 
-        # Creating an empty array to store the reshuffled data
-        shuffled_data = np.empty(data.shape, data.dtype)
-        # If final dimension is Rance-Kay/Echo-AntiEcho
-        if rance_kay_dimensions == [0]:
-            for i in range(0, data.shape[0], 2):
-                shuffled_data[i] = (
-                    1.0 * (data[i].real - data[i + 1].real)
-                    + 1.0 * (data[i].imag - data[i + 1].imag) * 1j
-                )
-                if rotate_phase is True:
-                    shuffled_data[i + 1] = (
-                        -1.0 * (data[i].imag + data[i + 1].imag)
-                        + 1.0 * (data[i].real + data[i + 1].real) * 1j
-                    )
-                else:
-                    shuffled_data[i + 1] = (
-                        1.0 * (data[i].real + data[i + 1].real)
-                        + 1.0 * (data[i].imag + data[i + 1].imag) * 1j
-                    )
-
-        # If second to last dimension is Rance-Kay/Echo-AntiEcho
-        elif rance_kay_dimensions == [1]:
-            if len(data.shape) == 3:
-                for i in range(0, data.shape[1], 2):
-                    shuffled_data[:, i, :] = (
-                        1.0 * (data[:, i, :].real - data[:, i + 1, :].real)
-                        + 1.0 * (data[:, i, :].imag - data[:, i + 1, :].imag) * 1j
-                    )
-                    if rotate_phase is True:
-                        shuffled_data[:, i + 1, :] = (
-                            -1.0 * (data[:, i, :].imag + data[:, i + 1, :].imag)
-                            + 1.0 * (data[:, i, :].real + data[:, i + 1, :].real) * 1j
-                        )
-                    else:
-                        shuffled_data[:, i + 1, :] = (
-                            1.0 * (data[:, i, :].real + data[:, i + 1, :].real)
-                            + 1.0 * (data[:, i, :].imag + data[:, i + 1, :].imag) * 1j
-                        )
+        # Each of those dimensions is combined in turn. A triple-resonance 3D
+        # can have both of its indirect dimensions collected this way, so there
+        # can be more than one of them.
+        shuffled_data = quadrature.shuffle_rance_kay(
+            data, rance_kay_dimensions, rotate_phase=rotate_phase
+        )
 
         return dic, shuffled_data

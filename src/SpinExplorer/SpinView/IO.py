@@ -1,11 +1,17 @@
 import wx # type: ignore
-import os 
+import os
+import traceback 
 import nmrglue as ng # type: ignore
 import numpy as np
 from natsort import natsorted
 
 from SpinExplorer.SpinExplorer_CL_tools.processSpec import FindingParameters
-from SpinExplorer.SpinExplorer_CL_tools.pulse_sequence_parsing import PulseSequenceParser
+from SpinExplorer.SpinExplorer_CL_tools.pulse_sequence_parsing import (
+    PulseSequenceParser,
+    PulseSequenceError,
+    PulseProgramNotFoundError,
+    NoConfigurationError,
+)
 from SpinExplorer.SpinExplorer_CL_tools.make_parameter_file_cl import parameter_write_cl
 from SpinExplorer.SpinExplorer_CL_tools.convert_nmrglue_cl import Convert_nmrglue
 from SpinExplorer.SpinExplorer_CL_tools.config_register import registry
@@ -25,6 +31,11 @@ class GetData:
         if self.file == "":
             self.get_filename()
         self.read_data()
+
+        if getattr(self, "auto_failed", False) == True:
+            # Why there is nothing to show has been said already
+            return
+
         self.dim = self.get_dimensions()
         if self.file != ".":
             # NMRPipe data
@@ -71,42 +82,10 @@ class GetData:
 
         if len(spectrum_file) == 0:
             try:
-                dlg = wx.MessageDialog(
-                    self.tempframe,
-                    "No NMRPipe or Bruker data files in current directory. We will attempt to auto-analyse.",
-                    "Information",
-                    wx.OK | wx.ICON_INFORMATION,
-                )
-                input_dat = FindingParameters()
-                pp_parser = PulseSequenceParser()
-                sequence = pp_parser.parse()
+                self.file = self.auto_process()
+            except Exception as problem:
+                self.report_auto_failure(problem)
 
-                config = registry.get_default_config(sequence)
-
-                nmr_glue_conv = Convert_nmrglue(input_dat.params, input_dat)
-
-                params = parameter_write_cl(nmr_glue_conv, config)
-                params.write_out_dict(params.dictionary)
-
-                if(nmr_glue_conv.params.remove_filter_before_processing==True):
-                    remove_filter=False
-                else:
-                    remove_filter=True
-        
-                config.process_data(pseudo_flag=nmr_glue_conv.params.pseudo_flag, filter_removal=remove_filter)
-                self.file = config.ft_name
-            except:
-                dlg = wx.MessageDialog(
-                    self.tempframe,
-                    "No NMRPipe or Bruker data files in current directory and automatic processing failed.",
-                    "Error",
-                    wx.OK | wx.ICON_INFORMATION,
-                )
-                self.tempframe.Raise()
-                self.tempframe.SetFocus()
-                dlg.ShowModal()
-                dlg.Destroy()
-                self.app.Destroy()
         if len(spectrum_file) == 1:
             self.file = spectrum_file[0]
         if len(spectrum_file) > 1:
@@ -116,8 +95,107 @@ class GetData:
             res.ShowModal()
             res.Destroy()
 
+    def auto_process(self) -> str:
+        """
+        Convert and process the raw data in this directory, which is done when
+        there is no processed spectrum to show. The recipe is the one registered
+        for the pulse programme which was run.
+        """
+        print("No processed data found, so the raw data will be processed.")
+
+        parameters = FindingParameters()
+
+        self.auto_sequence = PulseSequenceParser().parse()
+        print("Pulse programme: {}".format(self.auto_sequence))
+
+        config = registry.get_default_config(self.auto_sequence)
+
+        converted = Convert_nmrglue(parameters.params, parameters)
+
+        # The sizes are what the conversion depends on, so they are worth saying
+        # out loud: a dimension which was not read from the parameter files
+        # leaves the data with fewer dimensions than the experiment has
+        print("Direct dimension: {} points, indirect: {}".format(
+            parameters.params.size_direct, parameters.params.size_indirect))
+        print("Dimensions being converted: {}".format(converted.complex_sizes))
+
+        written = parameter_write_cl(converted, config)
+        written.write_out_dict(written.dictionary)
+
+        if converted.params.remove_filter_before_processing == True:
+            remove_filter = False
+        else:
+            remove_filter = True
+
+        config.process_data(
+            pseudo_flag=converted.params.pseudo_flag, filter_removal=remove_filter
+        )
+
+        if os.path.exists(config.ft_name) == False:
+            raise RuntimeError(
+                "the processing finished without writing " + str(config.ft_name)
+            )
+
+        return config.ft_name
+
+    def report_auto_failure(self, problem):
+        """
+        Say why the raw data could not be processed. The whole of what went
+        wrong is printed to the terminal, and the window says which step it was,
+        as each one fails for its own reasons and needs something different
+        doing about it.
+        """
+        print(traceback.format_exc())
+
+        # The reason is given here, so reading the data is not tried again and
+        # does not add a second message of its own
+        self.auto_failed = True
+
+        sequence = getattr(self, "auto_sequence", "")
+
+        if isinstance(problem, NoConfigurationError) == True:
+            message = (
+                "The pulse programme which was run ({}) is not one of the "
+                "experiments which can be processed automatically. Process the "
+                "data with SpinProcess instead.".format(sequence)
+            )
+        elif isinstance(problem, PulseProgramNotFoundError) == True:
+            message = (
+                "No processed data was found in this directory, and the "
+                "pulseprogram file which says which experiment was run is not "
+                "here either, so the raw data cannot be processed "
+                "automatically. Process the data with SpinProcess instead."
+            )
+        elif isinstance(problem, PulseSequenceError) == True:
+            message = (
+                "No processed data was found in this directory, and the name of "
+                "the experiment could not be read from the pulseprogram file. "
+                "Process the data with SpinProcess instead."
+            )
+        else:
+            message = (
+                "No processed data was found in this directory, and processing "
+                "the raw data did not work. The reason was:\n\n{}\n\nThe whole "
+                "of what went wrong has been printed to the terminal. Process "
+                "the data with SpinProcess to look at it step by "
+                "step.".format(problem)
+            )
+
+        dlg = wx.MessageDialog(
+            self.tempframe, message, "Error", wx.OK | wx.ICON_INFORMATION
+        )
+        self.tempframe.Raise()
+        self.tempframe.SetFocus()
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.app.Destroy()
+
     # Read in the NMRPipe data file
     def read_data(self):
+        if getattr(self, "auto_failed", False) == True:
+            # There is nothing to read, and why has already been said
+            return
+
         self.found_file = False
         try:
             if self.file != ".":
