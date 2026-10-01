@@ -3316,37 +3316,10 @@ class SpinBore(wx.Frame):
         # Get the ppm values for the strip plot
         self.ppms_2 = self.main_frame.ppms_2
 
-        self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-        self.ax_bore_3.set_xlim(max(self.ppms_0), min(self.ppms_0))
-        self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-        if self.Xstrip.shape != self.bore_data_strip1.shape:
-            self.alternative_orientation = True
-            self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-            self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
-            self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-            self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-        self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_strip,
-            colors=self.cmap,
-            linewidths=0.5,
-        )
-        self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_neg_strip,
-            colors=self.cmap_neg,
-            linewidths=0.5,
-        )
-        self.line3 = self.ax_bore_3.axvline(
-            x=self.bore_initial[0], color="black", linewidth=0.5
-        )
-
+        # Which axis the strip plot holds is worked out from the chemical
+        # shifts, as the number of points can be the same for both
         self.ax_bore_3.set_title("Strip Plot")
+        self.draw_strip_plot(keep_limits=False)
 
         self.original_limits = [
             (ax.get_xlim(), ax.get_ylim()) for ax in [self.ax_bore_2, self.ax_bore_3]
@@ -3407,6 +3380,45 @@ class SpinBore(wx.Frame):
 
         self.canvas_bore.draw_idle()
 
+    def find_plane_swapped(self) -> bool:
+        """
+        Whether the plane is shown the other way round from the way the 3D
+        window holds the data, which is what decides which coordinate of the
+        plane goes with which axis of the 3D data.
+
+        The names of the dimensions settle it, as two dimensions can share the
+        same number of points and even the same chemical shifts, such as the two
+        15N dimensions of an HNCANNH. The chemical shifts are only used when the
+        names do not match, which happens when the labels have been changed.
+        """
+        viewer = self.main_frame
+
+        try:
+            held = [
+                viewer.axis_name(label)
+                for label in viewer.orientation_chooser.GetValue()[1:]
+                .split(")")[0]
+                .split(",")
+            ]
+            across = viewer.axis_name(self.ax_bore.get_xlabel())
+            up = viewer.axis_name(self.ax_bore.get_ylabel())
+
+            if [across, up] == [held[0], held[1]]:
+                return False
+            if [across, up] == [held[1], held[0]]:
+                return True
+        except (AttributeError, IndexError, RuntimeError, TypeError):
+            pass
+
+        try:
+            same = len(self.new_x_ppms) == len(viewer.ppms_0) and np.allclose(
+                self.new_x_ppms[:3], viewer.ppms_0[:3]
+            )
+        except (AttributeError, TypeError, ValueError):
+            same = True
+
+        return same == False
+
     def find_bore_indexes(self, x, y):
         """
         The point of the 3D data which the position marker sits on. The data is
@@ -3419,14 +3431,7 @@ class SpinBore(wx.Frame):
         across = viewer.ppms_0
         up = viewer.ppms_1
 
-        try:
-            same = len(self.new_x_ppms) == len(across) and np.allclose(
-                self.new_x_ppms[:3], across[:3]
-            )
-        except (AttributeError, TypeError, ValueError):
-            same = True
-
-        if same == False:
+        if self.find_plane_swapped() == True:
             # The plane is shown the other way round from the 3D window
             x, y = y, x
 
@@ -3434,6 +3439,148 @@ class SpinBore(wx.Frame):
             int(np.argmin(np.abs(np.array(across) - x))),
             int(np.argmin(np.abs(np.array(up) - y))),
         )
+
+    def find_strip_axis(self):
+        """
+        The axis the strip plot runs along: its chemical shifts, its name, and
+        whether it is the one shown across the plane.
+
+        The strip is a slice through the first of the two plane axes of the 3D
+        data, so what is left is always the second one. Which of the two is
+        shown across the plane depends on the orientation and on whether the
+        plane has been transposed, which find_plane_swapped works out.
+        """
+        viewer = self.main_frame
+        values = viewer.ppms_1
+
+        # The strip holds the second axis of the 3D data, which is the one
+        # across the plane only when the plane is shown the other way round
+        across = self.find_plane_swapped()
+
+        if across == True:
+            name = self.ax_bore.get_xlabel()
+        else:
+            name = self.ax_bore.get_ylabel()
+
+        return values, name, across
+
+    def find_strip_position(self):
+        """
+        Where the marker is along the axis the strip plot holds, which is one
+        of its two coordinates in the plane depending on which way round the
+        plane is shown.
+        """
+        try:
+            x, y = self.bore_initial
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+        values, name, across = self.find_strip_axis()
+
+        if across == True:
+            return x
+
+        return y
+
+    def set_bore_limits(self) -> None:
+        """
+        Show the whole of the bore dimension in the 1D bore and the strip plot,
+        and the whole of the axis the strip plot holds. The limits are worked
+        out from what is shown rather than kept from when the window was
+        opened, as the plane can be turned and transposed since then.
+        """
+        values, name, across = self.find_strip_axis()
+        bore = self.main_frame.ppms_2
+
+        try:
+            self.ax_bore_2.set_ylim(max(bore), min(bore))
+            self.ax_bore_3.set_xlim(max(values), min(values))
+            self.ax_bore_3.set_ylim(max(bore), min(bore))
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            pass
+
+    def draw_strip_plot(self, keep_limits=True) -> None:
+        """
+        Draw the strip plot: the bore dimension against one of the axes of the
+        plane, at the position of the marker, with a line where the marker is.
+
+        keep_limits leaves the strip zoomed as it was, which is what is wanted
+        when only the contour levels change.
+        """
+        xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
+        title = self.ax_bore_3.get_title()
+        self.ax_bore_3.clear()
+
+        # The naming has to come after the clearing, which wipes it
+        self.update_strip_axis()
+
+        try:
+            self.contour1 = self.ax_bore_3.contour(
+                self.Xstrip,
+                self.Ystrip,
+                self.bore_data_strip1,
+                self.cl_strip,
+                colors=self.cmap,
+                linewidths=0.5,
+            )
+            self.contour1_neg = self.ax_bore_3.contour(
+                self.Xstrip,
+                self.Ystrip,
+                self.bore_data_strip1,
+                self.cl_neg_strip,
+                colors=self.cmap_neg,
+                linewidths=0.5,
+            )
+        except (TypeError, ValueError):
+            # Nothing reaches the contour levels, which leaves an empty strip
+            pass
+
+        position = self.find_strip_position()
+        if position != None:
+            self.line3 = self.ax_bore_3.axvline(
+                x=position, color="black", linewidth=0.5
+            )
+
+        self.ax_bore_3.set_title(title)
+
+        if keep_limits == True:
+            self.ax_bore_3.set_xlim(xlim3)
+            self.ax_bore_3.set_ylim(ylim3)
+        else:
+            self.set_bore_limits()
+
+    def update_strip_axis(self) -> str:
+        """
+        Put the strip plot on the axis it holds, naming it after that dimension,
+        and say which shift of a peaklist belongs to it so that peaks are drawn
+        in the right place on it.
+        """
+        values, name, across = self.find_strip_axis()
+
+        self.ppms_2 = self.main_frame.ppms_2
+        self.Xstrip, self.Ystrip = np.meshgrid(values, self.ppms_2)
+
+        # Kept for anything which still asks whether the strip holds the axis
+        # up the plane rather than the one across it
+        self.alternative_orientation = across == False
+
+        try:
+            self.ax_bore_3.set_xlabel(name)
+        except (AttributeError, RuntimeError):
+            pass
+
+        strip_axis = "shift1" if across == True else "shift2"
+
+        # The peaks drawn on the strip plot follow whichever of the two plane
+        # axes it is showing
+        peaks = getattr(self, "peak_lists3D", None)
+        if peaks != None:
+            try:
+                peaks.bore_xdim = strip_axis
+            except (RuntimeError, AttributeError):
+                pass
+
+        return strip_axis
 
     def draw_bore_trace(self):
         """
@@ -3476,21 +3623,7 @@ class SpinBore(wx.Frame):
         self.line2 = self.ax_bore_2.axhline(y=y, color="black", linewidth=0.5)
 
         # The strip plot is taken at the same position
-        self.ppms_2 = viewer.ppms_2
-        self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-        strip_axis = "shift1"
-        if self.Xstrip.shape != self.bore_data_strip1.shape:
-            self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-            strip_axis = "shift2"
-
-        # The peaks drawn on the strip plot follow whichever of the two plane
-        # axes it is showing
-        peaks = getattr(self, "peak_lists3D", None)
-        if peaks != None:
-            try:
-                peaks.bore_xdim = strip_axis
-            except (RuntimeError, AttributeError):
-                pass
+        self.update_strip_axis()
 
         self.plot_peak_bore_lines()
 
@@ -3547,229 +3680,34 @@ class SpinBore(wx.Frame):
             self.toolbar_bore.forward()
 
     def on_click_bore(self, event):
-        intensity_percent = 10 ** float(self.bore_intensity_slider.GetValue())
-        if self.ax_bore_2.get_title() == "":
-            title = ""
-        else:
-            title = self.ax_bore_2.get_title()
+        """
+        Move the position marker to where the plane was clicked, and show the
+        bore dimension and the strip plot there.
+
+        Which way round the plane is shown compared with the 3D data is worked
+        out in one place, from the chemical shifts of the axes, so that it is
+        right whatever the orientation, whether the plane has been transposed,
+        and however many points each dimension holds.
+        """
         if event.inaxes == self.ax_bore:
-            # print(event.xdata, event.ydata)
             self.cross.set_xdata([event.xdata])
             self.cross.set_ydata([event.ydata])
 
-            # Change the bore slice shown on the plot on the right
-            if len(self.new_x_ppms) != len(self.main_frame.ppms_0):
-                self.bore_initial = event.xdata, event.ydata
-                self.bore_initial_index = np.argmin(
-                    np.abs(self.main_frame.ppms_1 - self.bore_initial[0])
-                ), np.argmin(np.abs(self.main_frame.ppms_0 - self.bore_initial[1]))
-                self.bore_data = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    self.bore_data.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[1]][
-                            self.bore_initial_index[0]
-                        ]
-                    )
-                self.bore_data = np.array(self.bore_data)
-                ylabel = self.ax_bore_2.get_ylabel()
-                self.ax_bore_2.clear()
-                self.ax_bore_2.set_title(title)
-                self.ax_bore_2.plot(
-                    self.bore_data, self.main_frame.ppms_2, color="red", linewidth=0.5
-                )
-                self.ax_bore_2.set_ylim(
-                    max(self.main_frame.ppms_2), min(self.main_frame.ppms_2)
-                )
-                self.ax_bore_2.set_xlim(
-                    -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
-                    np.max(self.nmrdata.data) / (intensity_percent / 100),
-                )
-                self.ax_bore_2.set_ylabel(ylabel)
+            self.bore_initial = event.xdata, event.ydata
 
-                self.line1 = self.ax_bore_2.axhline(
-                    y=event.xdata, color="black", linewidth=0.5
-                )
-                self.line2 = self.ax_bore_2.axhline(
-                    y=event.ydata, color="black", linewidth=0.5
-                )
+            # The 1D bore and the data of the strip plot
+            self.draw_bore_trace()
 
-                self.plot_peak_bore_lines()
-
-                self.bore_data_strip1 = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    # Get the contour data for the strip plot
-                    self.bore_data_strip1.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[1]]
-                    )
-
-                self.bore_data_strip1 = np.array(self.bore_data_strip1)
-
-                # Get the ppm values for the strip plot
-                self.ppms_2 = self.main_frame.ppms_2
-
-                title = self.ax_bore_3.get_title()
-                xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
-                self.ax_bore_3.clear()
-
-                self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-                if self.Xstrip.shape != self.bore_data_strip1.shape:
-                    self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-                    self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
-                    self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_strip,
-                    colors=self.cmap,
-                    linewidths=0.5,
-                )
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_neg_strip,
-                    colors=self.cmap_neg,
-                    linewidths=0.5,
-                )
-
-                self.line3 = self.ax_bore_3.axvline(
-                    x=self.bore_initial[0], color="black", linewidth=0.5
-                )
-                self.ax_bore_3.set_xlim(xlim3)
-                self.ax_bore_3.set_title(title)
-                self.ax_bore_3.set_ylim(ylim3)
-
-                # for window in wx.GetTopLevelWindows():
-                #     if (
-                #         isinstance(window, wx.Frame)
-                #         and window.GetTitle() == "3D Peak List - " + self.title
-                #     ):
-                #         if(self.selected_bore_peaks!=[]):
-                #             # Plot these bore peaks
-                #             xvals = []
-                #             yvals = []
-                #             names = []
-                #             for index in self.selected_bore_peaks:
-                #                 names.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['peak_names'][index])
-                #                 xvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift1'][index])
-                #                 yvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift3'][index])
-
-                #             self.scatter_strip = self.ax_bore_3.scatter(xvals, yvals, s=5,
-                #             marker="o",
-                #             picker=5,
-                #             zorder=2)
-
-                #     # Annotation for hover
-                #             self.annotations_strip = self.ax_bore_3.annotate(
-                #                 "",
-                #                 xy=(0, 0),
-                #                 xytext=(15, 15),
-                #                 textcoords="offset points",
-                #                 bbox=dict(boxstyle="round", fc="w"),
-                #                 arrowprops=dict(arrowstyle="->"))
-                #             self.annotations[-1].set_visible(False)
-
-                #             # Connect event
-                #             self.hover_connect_strip = self.canvas_bore.mpl_connect(
-                #                 "motion_notify_event", self.on_hover_strip
-                #             )
-
-            else:
-                self.bore_initial = event.xdata, event.ydata
-                self.bore_initial_index = np.argmin(
-                    np.abs(self.main_frame.ppms_0 - self.bore_initial[0])
-                ), np.argmin(np.abs(self.main_frame.ppms_1 - self.bore_initial[1]))
-                self.bore_data = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    self.bore_data.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[0]][
-                            self.bore_initial_index[1]
-                        ]
-                    )
-                self.bore_data = np.array(self.bore_data)
-                ylabel = self.ax_bore_2.get_ylabel()
-                self.ax_bore_2.clear()
-                self.ax_bore_2.set_title(title)
-                self.ax_bore_2.plot(
-                    self.bore_data, self.main_frame.ppms_2, color="red", linewidth=0.5
-                )
-                self.ax_bore_2.set_ylim(
-                    max(self.main_frame.ppms_2), min(self.main_frame.ppms_2)
-                )
-                self.ax_bore_2.set_xlim(
-                    -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
-                    np.max(self.nmrdata.data) / (intensity_percent / 100),
-                )
-                self.ax_bore_2.set_ylabel(ylabel)
-                self.line1 = self.ax_bore_2.axhline(
-                    y=event.xdata, color="black", linewidth=0.5
-                )
-                self.line2 = self.ax_bore_2.axhline(
-                    y=event.ydata, color="black", linewidth=0.5
-                )
-
-                self.plot_peak_bore_lines()
-
-                self.bore_data_strip1 = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    # Get the contour data for the strip plot
-                    self.bore_data_strip1.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[0]]
-                    )
-
-                self.bore_data_strip1 = np.array(self.bore_data_strip1)
-
-                # Get the ppm values for the strip plot
-                self.ppms_2 = self.main_frame.ppms_2
-
-                self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-                if self.Xstrip.shape != self.bore_data_strip1.shape:
-                    self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-                    self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
-                    self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-
-                title = self.ax_bore_3.get_title()
-                xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
-                self.ax_bore_3.clear()
-
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_strip,
-                    colors=self.cmap,
-                    linewidths=0.5,
-                )
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_neg_strip,
-                    colors=self.cmap_neg,
-                    linewidths=0.5,
-                )
-
-                self.line3 = self.ax_bore_3.axvline(
-                    x=self.bore_initial[1], color="black", linewidth=0.5
-                )
-                self.ax_bore_3.set_xlim(xlim3)
-                self.ax_bore_3.set_title(title)
-                self.ax_bore_3.set_ylim(ylim3)
+            # The strip plot itself, put on the axis it holds
+            self.draw_strip_plot(keep_limits=False)
+            self.overlay_peaklist()
 
             self.OverlayBore()
-            self.ax_bore_2.set_ylim(self.original_limits[0][1])
-            self.ax_bore_3.set_xlim(self.original_limits[1][0])
-            self.ax_bore_3.set_ylim(self.original_limits[1][1])
-        # try:
-        #     self.overlay_peaklist()
-        # except:
-        #     pass
-        # self.canvas_bore.draw_idle()
+
+            # The amino acid overlay can move the limits, so the bore and the
+            # strip are put back on the dimensions they show
+            self.set_bore_limits()
+
         self.UpdateBoreFrame()
 
     def show_bore_position(self, x, y):
@@ -3924,13 +3862,10 @@ class SpinBore(wx.Frame):
                             colors.append('k')
                 
 
-                        s = self.peak_lists3D.bore_xdim 
-                        if(self.alternative_orientation == True):
-                            if(s == 'shift1'):
-                                s = 'shift2'
-                            else:
-                                s = 'shift1'
-                        
+                        # bore_xdim already names the shift the strip plot
+                        # holds, so it is used as it is
+                        s = self.peak_lists3D.bore_xdim
+
                         xvals.append(
                             self.peak_lists3D.peak_list_dictionary[
                                 self.peak_lists3D.peak_list_choices[0]
@@ -4027,46 +3962,9 @@ class SpinBore(wx.Frame):
             * self.contour_factor_strip ** np.flip(np.arange(self.contour_num_strip))
         )
 
-        try:
-            xvalue = self.line3.get_ydata()
-        except:
-            xvalue = "1"
-
-        xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
-        xlabel = self.ax_bore_3.get_xlabel()
-        title = self.ax_bore_3.get_title()
-        self.ax_bore_3.clear()
-        self.contour1 = self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_strip,
-            colors=self.cmap,
-            linewidths=0.5,
-        )
-        self.contour1_neg = self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_neg_strip,
-            colors=self.cmap_neg,
-            linewidths=0.5,
-        )
-        self.line3 = self.ax_bore_3.axvline(
-            x=self.bore_initial[1], color="black", linewidth=0.5
-        )
-        self.ax_bore_3.set_xlim(xlim3)
-        self.ax_bore_3.set_ylim(ylim3)
-        self.ax_bore_3.set_xlabel(xlabel)
-        self.ax_bore_3.set_title(title)
-
-        if xvalue != "1":
-            if self.transposed2D == False:
-                xvalue = self.bore_initial[0]
-            else:
-                xvalue = self.bore_initial[1]
-
-            self.line3 = self.ax_bore_3.axvline(x=xvalue, color="black", linewidth=0.5)
+        # Only the contour levels have changed, so the strip stays zoomed as it
+        # was
+        self.draw_strip_plot(keep_limits=True)
 
         self.overlay_peaklist()
 
@@ -4297,13 +4195,9 @@ class SpinBore(wx.Frame):
                     + ")"
                 )
 
-                s = self.peak_lists3D.bore_xdim 
-                if(self.alternative_orientation == True):
-                    if(s == 'shift1'):
-                        s = 'shift2'
-                    else:
-                        s = 'shift1'
-                
+                # bore_xdim already names the shift the strip plot holds
+                s = self.peak_lists3D.bore_xdim
+
                 x = dictionary[s][self.selected_bore_peaks[index]]
                 y = dictionary["shift3"][self.selected_bore_peaks[index]]
                 self.annotations_strip.xy = (x, y)
