@@ -147,6 +147,8 @@ class Convert_nmrglue:
         if len(self.app.format.N_real_boxes) == 2:
             # If have 2D data but nmrglue has read it in as a 1D, need to split it up
             if len(data.shape) == 1:
+                print(data.shape)
+                print(self.app.format.N_real_boxes[-1].GetValue())
                 data = np.array(
                     np.split(data, int(self.app.format.N_real_boxes[-1].GetValue()))
                 )
@@ -566,9 +568,14 @@ class Convert_nmrglue:
 
         # Finding which dimensions in udic are Rance-Kay
         rance_kay_dimensions = []
-        for i, val in enumerate(self.acq_modes):
-            if val == "Echo-AntiEcho" or val == "Rance-Kay":
+        for i, box in enumerate(self.app.format.acqusition_combo_boxes):
+            box = box.GetValue().strip()
+            if box == "Echo-AntiEcho" or box == "Rance-Kay":
                 rance_kay_dimensions.append((len(data.shape) - 1) - i)
+        # rance_kay_dimensions = []
+        # for i, val in enumerate(self.acq_modes):
+        #     if val == "Echo-AntiEcho" or val == "Rance-Kay":
+        #         rance_kay_dimensions.append((len(data.shape) - 1) - i)
 
         # Each of those dimensions is combined in turn. A triple-resonance 3D
         # can have both of its indirect dimensions collected this way, so there

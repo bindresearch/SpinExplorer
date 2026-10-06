@@ -212,27 +212,6 @@ class InteractivePhasingFrame(wx.Frame):
         self.zoom_sizer.AddSpacer(5)
         self.zoom_sizer.Add(self.intensity_slider)
 
-        # Create a sizer for choosing which FID to phase on
-        self.fid_label = wx.StaticBox(self, -1, "FID Number:")
-        self.fid_number_sizer = wx.StaticBoxSizer(self.fid_label, wx.HORIZONTAL)
-        self.fid_number = wx.SpinCtrl(
-            self.fid_label,
-            -1,
-            value="1",
-            min=1,
-            max=len(self.fids),
-            initial=1,
-            size=(80, -1),
-        )
-        self.fid_number.Bind(wx.EVT_SPINCTRL, self.OnFIDNumber)
-        self.fid_number_total = wx.StaticText(
-            self.fid_label, label="of {}".format(len(self.fids))
-        )
-        self.fid_number_sizer.AddSpacer(10)
-        self.fid_number_sizer.Add(self.fid_number, 0, wx.ALIGN_CENTER_VERTICAL)
-        self.fid_number_sizer.AddSpacer(10)
-        self.fid_number_sizer.Add(self.fid_number_total, 0, wx.ALIGN_CENTER_VERTICAL)
-        self.fid_number_sizer.AddSpacer(10)
 
         # Have a save and close button
         self.save_button = wx.Button(self, label="Save and Close")
@@ -245,6 +224,27 @@ class InteractivePhasingFrame(wx.Frame):
         self.sizer2.AddSpacer(20)
         self.sizer2.Add(self.zoom_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
         if len(self.fids) > 1:
+            # Create a sizer for choosing which FID to phase on
+            self.fid_label = wx.StaticBox(self, -1, "FID Number:")
+            self.fid_number_sizer = wx.StaticBoxSizer(self.fid_label, wx.HORIZONTAL)
+            self.fid_number = wx.SpinCtrl(
+                self.fid_label,
+                -1,
+                value="1",
+                min=1,
+                max=len(self.fids),
+                initial=1,
+                size=(80, -1),
+            )
+            self.fid_number.Bind(wx.EVT_SPINCTRL, self.OnFIDNumber)
+            self.fid_number_total = wx.StaticText(
+                self.fid_label, label="of {}".format(len(self.fids))
+            )
+            self.fid_number_sizer.AddSpacer(10)
+            self.fid_number_sizer.Add(self.fid_number, 0, wx.ALIGN_CENTER_VERTICAL)
+            self.fid_number_sizer.AddSpacer(10)
+            self.fid_number_sizer.Add(self.fid_number_total, 0, wx.ALIGN_CENTER_VERTICAL)
+            self.fid_number_sizer.AddSpacer(10)
             # 1D data only has the one FID to phase on
             self.sizer2.AddSpacer(20)
             self.sizer2.Add(self.fid_number_sizer, 0, wx.ALIGN_CENTER_VERTICAL)

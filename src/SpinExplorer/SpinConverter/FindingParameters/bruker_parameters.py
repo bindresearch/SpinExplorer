@@ -596,17 +596,18 @@ class ParameterExtractorBruker:
         be reversed.
         """
 
-        self.size_indirect.reverse()
-        self.sw_indirect.reverse()
-        freq1 = self.nucleus_frequencies[1]
-        freq2 = self.nucleus_frequencies[2]
-        self.nucleus_frequencies[1] = freq2
-        self.nucleus_frequencies[2] = freq1
-        self.acqusition_modes_indirect.reverse()
-        lab1 = self.labels_correct_order[1]
-        lab2 = self.labels_correct_order[2]
-        self.labels_correct_order[1] = lab2
-        self.labels_correct_order[2] = lab1
+        if(len(self.size_indirect)>1):
+            self.size_indirect.reverse()
+            self.sw_indirect.reverse()
+            freq1 = self.nucleus_frequencies[1]
+            freq2 = self.nucleus_frequencies[2]
+            self.nucleus_frequencies[1] = freq2
+            self.nucleus_frequencies[2] = freq1
+            self.acqusition_modes_indirect.reverse()
+            lab1 = self.labels_correct_order[1]
+            lab2 = self.labels_correct_order[2]
+            self.labels_correct_order[1] = lab2
+            self.labels_correct_order[2] = lab1
 
 
     def find_gamma_bruker(self) -> None:
