@@ -218,9 +218,12 @@ class SharedFormatting:
                 self.scaling_NC.SetValue(True)
         self.scaling_by_number.SetValue(True)
         if self.nmrdata.spectrometer == "Bruker":
-            self.params.scaling_factor = (
-                (1 / self.params.NS) * (2**self.params.NC) * 1000
-            )
+            if(self.params.NS==0):
+                self.params.scaling_factor = 1
+            else:
+                self.params.scaling_factor = (
+                    (1 / self.params.NS) * (2**self.params.NC) * 1000
+                )
         else:
             self.params.scaling_factor = (1 / self.params.NS) * 1000
         self.scaling_text = wx.StaticText(self.scaling_box, label="Scaling Factor:")
