@@ -2,6 +2,7 @@ from .phasing import PhasingIndirect
 from .phasing import PhasingDirect
 from .apodization import Apodization
 from .baseline_correction import BaselineCorrection
+from .dimension_size import DimensionSize
 from .extraction import Extraction
 from .fourier_transform import FourierTransform
 from .info_buttons import InfoButtons
@@ -9,6 +10,7 @@ from .interactive_phasing import InteractivePhasingFrame
 from .linear_prediction import LinearPrediction
 from .nus_panel import NonUniformSampling
 from .solvent_suppression import SolventSuppression
+from .truncation import Truncation
 from .zero_filling import ZeroFilling
 
 

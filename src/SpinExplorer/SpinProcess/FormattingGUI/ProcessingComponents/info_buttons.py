@@ -671,6 +671,43 @@ class InfoButtons:
         )
         self.phase_correction_info_window.Show()
 
+    def on_truncation_info(self, event):
+        """
+        Creating a popout with information on truncating the data
+        """
+        truncation_text = """Truncation processes only the first points of a
+        dimension and discards the points recorded after them. This can be
+        used to see the effect of recording fewer points, for example when
+        the later points of an indirect dimension contain mostly noise. The
+        points are removed before any other processing is applied, so linear
+        prediction, NUS data extension and zero filling all start from the
+        truncated data. By default all of the recorded points are used."""
+
+        truncation_text = " ".join(truncation_text.split())
+
+        # Create a popup window with the information
+        self.truncation_info_window = wx.Frame(
+            self.app, -1, "Truncation Information", size=(450, 200)
+        )
+
+        self.truncation_info_window_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.truncation_info_window.SetSizer(self.truncation_info_window_sizer)
+        self.truncation_info_window_sizer.AddSpacer(10)
+        self.truncation_info_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.truncation_info_sizer.AddSpacer(10)
+        self.truncation_info_sizer.Add(
+            wx.StaticText(
+                self.truncation_info_window, -1, truncation_text, size=(400, 120)
+            ),
+            0,
+            wx.ALIGN_CENTER,
+        )
+        self.truncation_info_sizer.AddSpacer(10)
+        self.truncation_info_window_sizer.Add(
+            self.truncation_info_sizer, 0, wx.ALIGN_CENTER
+        )
+        self.truncation_info_window.Show()
+
     def on_extraction_info(self, event):
         """
         Creating a popout with information on data extraction
@@ -874,6 +911,10 @@ class InfoButtons:
         )
         self.linear_prediction_info_sizer_window.AddSpacer(10)
 
+
+
+        self.smile_info_sizer = wx.BoxSizer(wx.VERTICAL)
+
         # Have text to explain SMILE NUS reconstruction
         smile_nus_text = """SMILE NUS reconstruction is a method 
         used to reconstruct non-uniformly sampled data. The NUS 
@@ -890,23 +931,57 @@ class InfoButtons:
             self.linear_prediction_info_frame,
             -1,
             smile_nus_text,
-            size=(450, 150),
+            size=(450, 115),
             style=wx.ALIGN_CENTER_HORIZONTAL,
         )
-        self.linear_prediction_info_sizer_window.Add(
+        self.smile_info_sizer.Add(
             self.smile_nus_text, 0, wx.ALIGN_CENTER_HORIZONTAL
         )
 
 
-        # Have text to explain SMILE NUS reconstruction
-        ist_nus_text = """SpinExplorer IST NUS reconstruction is a method 
+
+        # Add a url to the nmrPipe help page
+        url = "https://spin.niddk.nih.gov/bax/software/smile/"
+        self.smile_info_url = hl.HyperLinkCtrl(
+            self.linear_prediction_info_frame,
+            -1,
+            "Further information for SMILE",
+            URL=url,
+        )
+        self.smile_info_url.SetColours(
+            self.colour, self.colour, self.colour
+        )
+        self.smile_info_url.SetUnderlines(False, False, False)
+        self.smile_info_url.UpdateLink()
+
+        # Add url to the sizer
+        self.smile_info_sizer.Add(
+            self.smile_info_url, 0, wx.ALIGN_CENTER_HORIZONTAL
+        )
+
+
+
+        # Add the sizer to the window sizer
+        self.linear_prediction_info_sizer_window.Add(
+            self.smile_info_sizer, 0, wx.ALIGN_CENTER
+        )
+        self.linear_prediction_info_sizer_window.AddSpacer(20)
+
+        
+
+
+        # Have text to explain SpinExplorer IST NUS reconstruction
+        ist_nus_text = """SpinExplorer IST (Iterative Soft Threshold) NUS reconstruction is a method 
         used to reconstruct non-uniformly sampled data. The NUS 
         file is a list of points that have been sampled in the FID.
         \nThe maximum number of iterations can be changed
-        (default=2000) and points can be added onto the end of the FID (data extension)\n
-        to perform NUS zero filling (an alternative to linear prediction). If the data was
-        uniformly sampled but you wish to apply NUS zero filling, click the linear prediction
-        only checkbox.\nSpinExplorer IST reconstruction is available only through NMRGlue processing."""
+        (default=1000) and points can be added onto the end of the FID (data extension)\n
+        to perform NUS data extrapolation (an alternative to zero-filling or linear prediction). If the data was
+        uniformly sampled but you wish to apply NUS extrapolation, click the data extension 
+        only checkbox.\nThe reconstruction of a slice stops once the remaining signal falls below the convergence
+        tolerance (default=1e-06) relative to the signal removed in the first iteration. A larger tolerance
+        stops the reconstruction sooner.\nSpinExplorer IST reconstruction is available only through NMRGlue processing. Please ensure that
+        the data is correctly phased before performing SpinExplorer IST reconstruction/extension."""
 
         ist_nus_text = " ".join(ist_nus_text.split())
 

@@ -62,7 +62,7 @@ class SolventSuppression:
             self.solvent_suppression_box, wx.HORIZONTAL
         )
         self.solvent_suppression_checkbox = wx.CheckBox(
-            parent, -1, "Apply solvent suppression"
+            self.solvent_suppression_box, -1, "Apply solvent suppression"
         )
         self.solvent_suppression_checkbox.SetValue(
             self.solvent_suppression_checkbox_value
@@ -72,7 +72,7 @@ class SolventSuppression:
         )
         self.solvent_suppression_sizer.AddSpacer(10)
         self.solvent_suppression_extra_options = wx.Button(
-            parent, -1, "Advanced Options"
+            self.solvent_suppression_box, -1, "Advanced Options"
         )
         self.solvent_suppression_sizer.Add(
             self.solvent_suppression_extra_options, 0, wx.ALIGN_CENTER_VERTICAL
@@ -82,7 +82,7 @@ class SolventSuppression:
             wx.EVT_BUTTON, self.solvent_suppression_extra_options_click
         )
         # Have a button showing information on solvent suppression
-        self.solvent_suppression_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.solvent_suppression_info = wx.Button(self.solvent_suppression_box, -1, "\u24d8", size=(25, 32))
         self.solvent_suppression_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_solvent_suppression_info
         )

@@ -57,20 +57,20 @@ class Extraction:
         """
         self.extraction_box = wx.StaticBox(parent, -1, "Extraction")
         self.extraction_sizer = wx.StaticBoxSizer(self.extraction_box, wx.HORIZONTAL)
-        self.extraction_checkbox = wx.CheckBox(parent, -1, "Include data extraction")
+        self.extraction_checkbox = wx.CheckBox(self.extraction_box, -1, "Include data extraction")
         self.extraction_checkbox.Bind(wx.EVT_CHECKBOX, self.on_extraction_checkbox)
         self.extraction_checkbox.SetValue(self.extraction_checkbox_value)
         self.extraction_sizer.Add(self.extraction_checkbox, 0, wx.ALIGN_CENTER_VERTICAL)
         self.extraction_sizer.AddSpacer(10)
         # Have a textcontrol for the ppm start value
         self.extraction_ppm_start_label = wx.StaticText(
-            parent, -1, "Start chemical shift (ppm):"
+            self.extraction_box, -1, "Start chemical shift (ppm):"
         )
         self.extraction_sizer.Add(
             self.extraction_ppm_start_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.extraction_ppm_start_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.extraction_ppm_start), size=(40, 20)
+            self.extraction_box, -1, str(self.extraction_ppm_start), size=(40, 20)
         )
         self.extraction_ppm_start_textcontrol.Bind(
             wx.EVT_TEXT, self.on_extraction_textcontrol
@@ -81,13 +81,13 @@ class Extraction:
         self.extraction_sizer.AddSpacer(10)
         # Have a textcontrol for the ppm end value
         self.extraction_ppm_end_label = wx.StaticText(
-            parent, -1, "End chemical shift (ppm):"
+            self.extraction_box, -1, "End chemical shift (ppm):"
         )
         self.extraction_sizer.Add(
             self.extraction_ppm_end_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.extraction_ppm_end_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.extraction_ppm_end), size=(40, 20)
+            self.extraction_box, -1, str(self.extraction_ppm_end), size=(40, 20)
         )
         self.extraction_ppm_end_textcontrol.Bind(
             wx.EVT_TEXT, self.on_extraction_textcontrol
@@ -97,7 +97,7 @@ class Extraction:
         )
         self.extraction_sizer.AddSpacer(10)
         # Have a button showing information on extraction
-        self.extraction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.extraction_info = wx.Button(self.extraction_box, -1, "\u24d8", size=(25, 32))
         self.extraction_info.Bind(wx.EVT_BUTTON, self.info_buttons.on_extraction_info)
         self.extraction_sizer.Add(self.extraction_info, 0, wx.ALIGN_CENTER_VERTICAL)
         parent.sizer_1.Add(self.extraction_sizer)

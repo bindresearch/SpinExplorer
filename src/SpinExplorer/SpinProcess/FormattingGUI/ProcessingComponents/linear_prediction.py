@@ -25,6 +25,8 @@ SOFTWARE."""
 
 import wx
 
+from .dimension_size import update_dimension_size
+
 
 class LinearPrediction:
     def __init__(self, app, nmr_data, parent, info_buttons):
@@ -44,12 +46,13 @@ class LinearPrediction:
         """
         Create a box for the linear prediction options
         """
+        self.parent = parent
         self.linear_prediction_box = wx.StaticBox(parent, -1, "Linear Prediction")
         self.linear_prediction_sizer = wx.StaticBoxSizer(
             self.linear_prediction_box, wx.HORIZONTAL
         )
         self.linear_prediction_checkbox = wx.CheckBox(
-            parent, -1, "Apply linear prediction"
+            self.linear_prediction_box, -1, "Apply linear prediction"
         )
         self.linear_prediction_checkbox.SetValue(self.linear_prediction_checkbox_value)
         self.linear_prediction_checkbox.Bind(
@@ -61,7 +64,7 @@ class LinearPrediction:
         self.linear_prediction_sizer.AddSpacer(10)
         # Have a combobox for linear prediction options
         self.linear_prediction_options_text = wx.StaticText(
-            parent, -1, "Add Predicted Points:"
+            self.linear_prediction_box, -1, "Add Predicted Points:"
         )
         self.linear_prediction_sizer.Add(
             self.linear_prediction_options_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -69,7 +72,7 @@ class LinearPrediction:
         self.linear_prediction_sizer.AddSpacer(5)
         self.linear_prediction_options = ["After FID", "Before FID"]
         self.linear_prediction_combobox = wx.ComboBox(
-            parent, -1, choices=self.linear_prediction_options, style=wx.CB_READONLY
+            self.linear_prediction_box, -1, choices=self.linear_prediction_options, style=wx.CB_READONLY
         )
         self.linear_prediction_combobox.Bind(
             wx.EVT_COMBOBOX, self.on_linear_prediction_combobox_options
@@ -83,7 +86,7 @@ class LinearPrediction:
         self.linear_prediction_sizer.AddSpacer(10)
         # Have a combobox of predicted coefficient options
         self.linear_prediction_coefficients_text = wx.StaticText(
-            parent, -1, "Predicted Coefficients:"
+            self.linear_prediction_box, -1, "Predicted Coefficients:"
         )
         self.linear_prediction_sizer.Add(
             self.linear_prediction_coefficients_text, 0, wx.ALIGN_CENTER_VERTICAL
@@ -91,7 +94,7 @@ class LinearPrediction:
         self.linear_prediction_sizer.AddSpacer(5)
         self.linear_prediction_coefficients_options = ["Forward", "Backward", "Both"]
         self.linear_prediction_coefficients_combobox = wx.ComboBox(
-            parent,
+            self.linear_prediction_box,
             -1,
             choices=self.linear_prediction_coefficients_options,
             style=wx.CB_READONLY,
@@ -108,7 +111,7 @@ class LinearPrediction:
         self.linear_prediction_sizer.AddSpacer(10)
 
         # Have a button showing information on linear prediction
-        self.linear_prediction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.linear_prediction_info = wx.Button(self.linear_prediction_box, -1, "\u24d8", size=(25, 32))
         self.linear_prediction_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_linear_prediction_info
         )
@@ -137,6 +140,8 @@ class LinearPrediction:
         else:
             self.linear_prediction_checkbox_value = False
 
+        update_dimension_size(self.parent)
+
     def on_linear_prediction_combobox_options(self, event):
         """
         Change the current linear prediction option when the
@@ -146,6 +151,8 @@ class LinearPrediction:
             self.linear_prediction_combobox.GetSelection()
         )
 
+        update_dimension_size(self.parent)
+
     def on_linear_prediction_coefficients_combobox(self, event):
         """
         Change the linear prediction coefficient selection when
@@ -154,3 +161,5 @@ class LinearPrediction:
         self.linear_prediction_coefficients_selection = (
             self.linear_prediction_coefficients_combobox.GetSelection()
         )
+
+        update_dimension_size(self.parent)

@@ -31,6 +31,7 @@ from SpinExplorer.SpinView.config import *
 
 # A class to create a panel for viewing 2D NMR spectra
 class TwoDViewer(wx.Panel):
+
     def __init__(self, parent, nmrdata, threeDprojection=False, fid_viewer=False, title=''):
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
@@ -180,6 +181,28 @@ class TwoDViewer(wx.Panel):
             self.panel.Refresh()
             self.panel.Update()
 
+    def x_index(self, value) -> int:
+        """
+        Convert a value on the x axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_0 == True:
+            return self.uc0(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_0) - 1))
+
+    def y_index(self, value) -> int:
+        """
+        Convert a value on the y axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_1 == True:
+            return self.uc1(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_1) - 1))
+
     def create_button_panel_2D(self):
 
         # Create a sizer to choose a plot when in multiplot mode
@@ -187,14 +210,14 @@ class TwoDViewer(wx.Panel):
         self.select_plot_sizer = wx.StaticBoxSizer(self.select_plot_label, wx.VERTICAL)
         self.select_plot_sizer.AddSpacer(5)
         # Create a checkbox to select all plots
-        self.select_all_checkbox = wx.CheckBox(self, label="Select All")
+        self.select_all_checkbox = wx.CheckBox(self.select_plot_label, label="Select All")
         self.select_all_checkbox.SetValue(False)
 
-        self.hide_checkbox = wx.CheckBox(self, label="Hide")
+        self.hide_checkbox = wx.CheckBox(self.select_plot_label, label="Hide")
         self.hide_checkbox.Bind(wx.EVT_CHECKBOX, self.OnHideSpectrum)
 
         self.plot_combobox = wx.ComboBox(
-            self, choices=["Main Plot"], style=wx.CB_READONLY
+            self.select_plot_label, choices=["Main Plot"], style=wx.CB_READONLY
         )
         self.plot_combobox.Bind(wx.EVT_COMBOBOX, self.OnSelectPlot2D)
         self.select_plot_sizer.Add(self.plot_combobox, 1, wx.ALIGN_CENTER_HORIZONTAL, 5)
@@ -249,13 +272,14 @@ class TwoDViewer(wx.Panel):
         )
         self.fit_relax_button.Bind(wx.EVT_BUTTON, self.OnFitRelaxButton)
 
-        # Create a button which will open a CESTView panel to analyse pseudo2D CEST data
-        self.CEST_button = wx.Button(self, label="CEST Analysis", size=(width, height1))
-        self.CEST_button.Bind(wx.EVT_BUTTON, self.OnCESTButton)
+        # The following features are not production ready yet so hiding these buttons for now
+        # # Create a button which will open a CESTView panel to analyse pseudo2D CEST data
+        # self.CEST_button = wx.Button(self, label="CEST Analysis", size=(width, height1))
+        # self.CEST_button.Bind(wx.EVT_BUTTON, self.OnCESTButton)
 
-        # Create a button which will make the correct files in order to perform uSTA analysis
-        self.uSTA_button = wx.Button(self, label="uSTA", size=(width, height1))
-        self.uSTA_button.Bind(wx.EVT_BUTTON, self.OnuSTAButton)
+        # # Create a button which will make the correct files in order to perform uSTA analysis
+        # self.uSTA_button = wx.Button(self, label="uSTA", size=(width, height1))
+        # self.uSTA_button.Bind(wx.EVT_BUTTON, self.OnuSTAButton)
 
         # Create a button to toggle the main sizer between shown and hidden
         self.toggle_button = wx.Button(self, label="Hide Options", size=(width, height1))
@@ -294,10 +318,10 @@ class TwoDViewer(wx.Panel):
             self.hide_sizer = wx.BoxSizer(wx.HORIZONTAL)
             self.hide_sizer.Add(self.toggle_button)
             self.hide_sizer.AddSpacer(5)
-            self.hide_sizer.Add(self.CEST_button)
-            self.hide_sizer.AddSpacer(5)
-            self.hide_sizer.Add(self.uSTA_button)
-            self.hide_sizer.AddSpacer(5)
+            # self.hide_sizer.Add(self.CEST_button)
+            # self.hide_sizer.AddSpacer(5)
+            # self.hide_sizer.Add(self.uSTA_button)
+            # self.hide_sizer.AddSpacer(5)
             self.hide_sizer.Add(self.peaklist_button)
             self.hide_sizer.AddSpacer(5)
             self.hide_sizer.Add(self.calc_intensity_button)
@@ -330,10 +354,10 @@ class TwoDViewer(wx.Panel):
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
         self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
         self.phasing_sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.P0_label = wx.StaticText(self, label="P0 (Coarse):")
-        self.P1_label = wx.StaticText(self, label="P1 (Coarse):")
+        self.P0_label = wx.StaticText(self.phasing_label, label="P0 (Coarse):")
+        self.P1_label = wx.StaticText(self.phasing_label, label="P1 (Coarse):")
         self.P0_slider = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-180,
@@ -342,7 +366,7 @@ class TwoDViewer(wx.Panel):
             size=(int(self.width / 6.5), height),
         )
         self.P1_slider = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-180,
@@ -352,10 +376,10 @@ class TwoDViewer(wx.Panel):
         )
         self.P0_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
         self.P1_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
-        self.P0_label_fine = wx.StaticText(self, label="P0 (Fine):")
-        self.P1_label_fine = wx.StaticText(self, label="P1 (Fine):")
+        self.P0_label_fine = wx.StaticText(self.phasing_label, label="P0 (Fine):")
+        self.P1_label_fine = wx.StaticText(self.phasing_label, label="P1 (Fine):")
         self.P0_slider_fine = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-10,
@@ -364,7 +388,7 @@ class TwoDViewer(wx.Panel):
             size=(int(self.width / 6.5), height),
         )
         self.P1_slider_fine = FloatSlider(
-            self,
+            self.phasing_label,
             id=-1,
             value=0,
             minval=-10,
@@ -374,17 +398,16 @@ class TwoDViewer(wx.Panel):
         )
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll2D)
-        self.P0_total = wx.StaticText(self, label="P0 (Total):")
+        self.P0_total = wx.StaticText(self.phasing_label, label="P0 (Total):")
 
 
         
-        self.P1_total = wx.StaticText(self, label="P1 (Total):")
-        self.P0_total_value = wx.StaticText(self, label="0")
-        self.P0_total_value = wx.TextCtrl(self, value = "0", 
+        self.P1_total = wx.StaticText(self.phasing_label, label="P1 (Total):")
+        self.P0_total_value = wx.TextCtrl(self.phasing_label, value = "0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.P0_total_value.Bind(wx.EVT_TEXT_ENTER, self.P0_text_change)
 
-        self.P1_total_value = wx.TextCtrl(self, value = "0", 
+        self.P1_total_value = wx.TextCtrl(self.phasing_label, value = "0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.P1_total_value.Bind(wx.EVT_TEXT_ENTER, self.P1_text_change)
 
@@ -418,11 +441,11 @@ class TwoDViewer(wx.Panel):
         self.P1_slider_sizer.AddSpacer(10)
 
         # Adding a button to change the range of the coarse and fine sliders (default to +/-180 and +/-10 degrees)
-        self.update_phasing_range = wx.Button(self, label="Change slider range")
+        self.update_phasing_range = wx.Button(self.phasing_label, label="Change slider range")
         self.update_phasing_range.Bind(wx.EVT_BUTTON, self.OnSliderRange2D)
 
         # Add a button to set the pivot point for phasing
-        self.pivot_button = wx.Button(self, label="Set Pivot Point")
+        self.pivot_button = wx.Button(self.phasing_label, label="Set Pivot Point")
         self.pivot_button.Bind(wx.EVT_BUTTON, self.OnPivotButton2D)
         self.pivot_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.pivot_sizer.Add(self.update_phasing_range)
@@ -430,7 +453,7 @@ class TwoDViewer(wx.Panel):
         self.pivot_sizer.Add(self.pivot_button)
 
         # Add a button to remove the pivot point
-        self.remove_pivot_button = wx.Button(self, label="Remove Pivot Point")
+        self.remove_pivot_button = wx.Button(self.phasing_label, label="Remove Pivot Point")
         self.remove_pivot_button.Bind(wx.EVT_BUTTON, self.OnRemovePivotButton2D)
         self.pivot_sizer.AddSpacer(20)
         self.pivot_sizer.Add(self.remove_pivot_button)
@@ -454,9 +477,9 @@ class TwoDViewer(wx.Panel):
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.csizer = wx.BoxSizer(wx.HORIZONTAL)
         self.x_val = 10.00
-        self.contour2_label = wx.StaticText(self, label="x:")
+        self.contour2_label = wx.StaticText(self.contour_label, label="x:")
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, height)
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.1, size=(200, height)
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnMinContour2D)
         self.csizer.Add(self.contour2_label)
@@ -468,7 +491,7 @@ class TwoDViewer(wx.Panel):
         self.contour_value_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.contour_value_sizer.AddSpacer(75)
         self.contour_value_label = wx.TextCtrl(
-            self, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
+            self.contour_label, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
         )
         self.contour_value_label.Bind(wx.EVT_TEXT_ENTER, self.OnTextContour2D)
         self.contour_value_sizer.Add(self.contour_value_label)
@@ -478,7 +501,7 @@ class TwoDViewer(wx.Panel):
         self.intensity_label = wx.StaticBox(self, -1, "1D Y Axis Zoom (%):")
         self.intensity_sizer = wx.StaticBoxSizer(self.intensity_label, wx.VERTICAL)
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(250, height)
+            self.intensity_label, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(250, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScroll2D)
         self.intensity_sizer.AddSpacer(5)
@@ -491,7 +514,7 @@ class TwoDViewer(wx.Panel):
         self.multiply_inner_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.multiply_ranges = multiply_range_values
         self.multiply_slider = FloatSlider(
-            self,
+            self.multiply_label,
             id=-1,
             value=1.0,
             minval=0,
@@ -506,21 +529,21 @@ class TwoDViewer(wx.Panel):
         self.multiply_sizer.Add(self.multiply_inner_sizer)
         self.multiply_sizer.AddSpacer(5)
         self.multiply_value_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.multiply_value_n_label = wx.StaticText(self, label="n: ")
-        self.multiply_value_label = wx.TextCtrl(self, value = "1.0", 
+        self.multiply_value_n_label = wx.StaticText(self.multiply_label, label="n: ")
+        self.multiply_value_label = wx.TextCtrl(self.multiply_label, value = "1.0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.multiply_value_label.Bind(wx.EVT_TEXT_ENTER, self.multiply_text_change)
         self.multiply_value_sizer.Add(self.multiply_value_n_label)
         self.multiply_value_sizer.AddSpacer(5)
         self.multiply_value_sizer.Add(self.multiply_value_label)
 
-        self.multiply_value_range_label = wx.StaticText(self, label="Range:")
+        self.multiply_value_range_label = wx.StaticText(self.multiply_label, label="Range:")
         self.multiply_value_sizer.AddSpacer(30)
         self.multiply_value_sizer.Add(self.multiply_value_range_label)
 
         # Make a combobox to select the multiply range
         self.multiply_range_chooser2d = wx.ComboBox(
-            self, value=self.multiply_ranges[0], choices=self.multiply_ranges
+            self.multiply_label, value=self.multiply_ranges[0], choices=self.multiply_ranges
         )
         self.multiply_range_chooser2d.Bind(wx.EVT_COMBOBOX, self.OnMultiplyCombo2D)
         self.multiply_value_sizer.AddSpacer(5)
@@ -535,7 +558,7 @@ class TwoDViewer(wx.Panel):
         self.contour_levels = wx.StaticBoxSizer(self.contour_levels_label, wx.VERTICAL)
         self.contour_levels.AddSpacer(5)
         self.contour_levels_slider = FloatSlider(
-            self, id=-1, value=20, minval=1, maxval=30, res=1, size=(215, height)
+            self.contour_levels_label, id=-1, value=20, minval=1, maxval=30, res=1, size=(215, height)
         )
         self.contour_levels_slider.Bind(wx.EVT_SLIDER, self.OnContourLevels)
         self.contour_levels.Add(self.contour_levels_slider)
@@ -548,13 +571,13 @@ class TwoDViewer(wx.Panel):
         self.move_x = wx.BoxSizer(wx.HORIZONTAL)
         self.move_y = wx.BoxSizer(wx.HORIZONTAL)
         self.move_ranges = wx.BoxSizer(wx.VERTICAL)
-        self.move_x.Add(wx.StaticText(self, label="X:"))
-        self.move_y.Add(wx.StaticText(self, label="Y:"))
+        self.move_x.Add(wx.StaticText(self.move_label, label="X:"))
+        self.move_y.Add(wx.StaticText(self.move_label, label="Y:"))
         self.move_x.AddSpacer(5)
         self.move_y.AddSpacer(5)
 
         self.move_x_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeX,
@@ -563,7 +586,7 @@ class TwoDViewer(wx.Panel):
             size=(int(self.width / 3.5), height),
         )
         self.move_y_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeY,
@@ -574,13 +597,13 @@ class TwoDViewer(wx.Panel):
         self.move_x_slider.Bind(wx.EVT_SLIDER, self.OnMoveX)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY)
         self.reference_range_chooserX = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
         self.reference_range_chooserX.Bind(wx.EVT_COMBOBOX, self.OnReferenceComboX)
         self.reference_range_chooserY = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
@@ -602,7 +625,7 @@ class TwoDViewer(wx.Panel):
         )
         self.move_ranges.AddSpacer(5)
         self.move_ranges.Add(
-            wx.StaticText(self, label="Range (ppm)"), 0, wx.ALIGN_CENTER_HORIZONTAL
+            wx.StaticText(self.move_label, label="Range (ppm)"), 0, wx.ALIGN_CENTER_HORIZONTAL
         )
         self.move_sizer.Add(self.move_x)
         self.move_sizer.AddSpacer(10)
@@ -610,16 +633,16 @@ class TwoDViewer(wx.Panel):
         self.move_sizer.AddSpacer(5)
         self.move_values = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.move_values.Add(wx.StaticText(self, label="X Movement (ppm):"))
+        self.move_values.Add(wx.StaticText(self.move_label, label="X Movement (ppm):"))
         self.move_values.AddSpacer(10)
-        self.move_x_value_label = wx.TextCtrl(self, value = "0.0", 
+        self.move_x_value_label = wx.TextCtrl(self.move_label, value = "0.0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.move_x_value_label.Bind(wx.EVT_TEXT_ENTER, self.move_xtext_change)
         self.move_values.Add(self.move_x_value_label)
         self.move_values.AddSpacer(50)
-        self.move_values.Add(wx.StaticText(self, label="Y Movement (ppm):"))
+        self.move_values.Add(wx.StaticText(self.move_label, label="Y Movement (ppm):"))
         self.move_values.AddSpacer(10)
-        self.move_y_value_label = wx.TextCtrl(self, value = "0.0", 
+        self.move_y_value_label = wx.TextCtrl(self.move_label, value = "0.0", 
                                     size = (50,height), style = wx.TE_PROCESS_ENTER)
         self.move_y_value_label.Bind(wx.EVT_TEXT_ENTER, self.move_ytext_change)
         self.move_values.Add(self.move_y_value_label)
@@ -639,7 +662,7 @@ class TwoDViewer(wx.Panel):
         self.contour_width = wx.StaticBoxSizer(self.contour_width_label, wx.VERTICAL)
         self.contour_width.AddSpacer(5)
         self.contour_width_slider = FloatSlider(
-            self, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(215, height)
+            self.contour_width_label, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(215, height)
         )
         self.contour_width_slider.Bind(wx.EVT_SLIDER, self.OnContourWidth)
         self.contour_width.Add(self.contour_width_slider)
@@ -649,7 +672,7 @@ class TwoDViewer(wx.Panel):
         self.line_width = wx.StaticBoxSizer(self.linewidth_label, wx.VERTICAL)
         self.line_width.AddSpacer(5)
         self.line_width_slider = FloatSlider(
-            self, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(250, height)
+            self.linewidth_label, id=-1, value=1, minval=0.1, maxval=2, res=0.1, size=(250, height)
         )
         self.line_width_slider.Bind(wx.EVT_SLIDER, self.On2DLinewidth)
         self.line_width.Add(self.line_width_slider)
@@ -1128,18 +1151,18 @@ class TwoDViewer(wx.Panel):
                 self.P1_slider.SetValue(0)
                 self.P0_slider_fine.SetValue(0)
                 self.P1_slider_fine.SetValue(0)
-                self.P0_total_value.SetLabel("0.00")
-                self.P1_total_value.SetLabel("0.00")
+                self.P0_total_value.SetValue("0.00")
+                self.P1_total_value.SetValue("0.00")
                 self.contour_width_slider.SetValue(1)
                 self.contour_slider.SetValue(1)
                 self.contour_value_label.SetValue("10")
                 self.contour_levels_slider.SetValue(20)
                 self.move_x_slider.SetValue(0)
                 self.move_y_slider.SetValue(0)
-                self.move_x_value_label.SetLabel("0.00")
-                self.move_y_value_label.SetLabel("0.00")
+                self.move_x_value_label.SetValue("0.00")
+                self.move_y_value_label.SetValue("0.00")
                 self.multiply_slider.SetValue(1.0)
-                self.multiply_value_label.SetLabel("1.0")
+                self.multiply_value_label.SetValue("1.0")
                 self.line_width_slider.SetValue(1)
                 # if(self.transposed2D==True):
                 #     self.OnTransposeButton(event)
@@ -1458,9 +1481,15 @@ class TwoDViewer(wx.Panel):
 
         for window in wx.GetTopLevelWindows():
             if isinstance(window, wx.Frame) and window.GetTitle() == "Peak Lists - "+self.title:
-                # The window already exists - move it to the foreground and then return
-                self.peaklist_frame.Raise()
-                self.peaklist_frame.SetFocus()
+                if window.IsBeingDeleted() == True:
+                    # The window is on its way out, so a new one is needed
+                    continue
+
+                # The window already exists, holding the peaklists which are
+                # shown, so it is brought back rather than made again
+                window.Show()
+                window.Raise()
+                window.SetFocus()
                 return
 
         self.peaklist_frame = PeakListWindow2D(title="Peak Lists - "+self.title, parent=self)
@@ -1510,12 +1539,38 @@ class TwoDViewer(wx.Panel):
             udic = ng.bruker.guess_udic(self.nmrdata.dic, self.nmrdata.data)
             self.uc0 = ng.fileiobase.uc_from_udic(udic, dim=0)
             self.uc1 = ng.fileiobase.uc_from_udic(udic, dim=1)
+
+
         if(self.fid_viewer==False):
             self.ppms_0 = self.uc0.ppm_scale()
+            self.ppm_axis_0 = True
             self.ppms_1 = self.uc1.ppm_scale()
+            self.ppm_axis_1 = True
+            if(self.nmrdata.dic['FDDIMORDER'][0]==2.0):
+                self.ft1_flg = 'FDF1FTFLAG'
+                self.ft2_flg = 'FDF2FTFLAG'
+            else:
+                self.ft1_flg = 'FDF2FTFLAG'
+                self.ft2_flg = 'FDF1FTFLAG'
+            if(self.nmrdata.dic[self.ft1_flg]==1):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppm_axis_0 = True
+            else:
+                self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
+            if(self.nmrdata.dic[self.ft2_flg]==1):
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppm_axis_1 = True
+            else:
+                self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
         else:
+            self.ft1_flg = 'FDF2FTFLAG'
+            self.ft2_flg = 'FDF1FTFLAG'
             self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            self.ppm_axis_0 = False
             self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+            self.ppm_axis_1 = False
         self.new_x_ppms = self.ppms_0
         self.new_y_ppms = self.ppms_1
         self.X, self.Y = np.meshgrid(self.ppms_1, self.ppms_0)
@@ -1536,11 +1591,35 @@ class TwoDViewer(wx.Panel):
             colors=self.cmap_neg,
             linewidths=self.linewidth,
         )
+
+        if(self.nmrdata.dic[self.ft1_flg]==1):
+            if('(ppm)' not in self.nmrdata.axislabels[1]):
+                self.nmrdata.axislabels[1]+= ' (ppm)'
+        else:
+            if('(points)' not in self.nmrdata.axislabels[1]):
+                self.nmrdata.axislabels[1]+= ' (points)'
+
+        if(self.nmrdata.dic[self.ft2_flg]==1):
+            if('(ppm)' not in self.nmrdata.axislabels[0]):
+                self.nmrdata.axislabels[0]+= ' (ppm)'
+        else:
+            if('(points)' not in self.nmrdata.axislabels[0]):
+                self.nmrdata.axislabels[0]+= ' (points)'
+        
+
         self.ax.set_xlabel(self.nmrdata.axislabels[1])
         self.ax.set_ylabel(self.nmrdata.axislabels[0])
+
         if(self.fid_viewer==False):
-            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+            if(self.nmrdata.dic[self.ft1_flg]==1):
+                self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
+            else:
+                self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
+            if(self.nmrdata.dic[self.ft2_flg]==1):
+                self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
+            else:
+                self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
+
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
             self.nmrdata.data[:, 1] * self.multiply_factor,
@@ -1814,8 +1893,25 @@ class TwoDViewer(wx.Panel):
                 linewidths=self.linewidth,
             )
             if(self.fid_viewer==False):
-                self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
-                self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+                if(self.transposed2D==False):
+                    if(self.nmrdata.dic[self.ft1_flg]==1):
+                        self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
+                    else:
+                        self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
+                    if(self.nmrdata.dic[self.ft2_flg]==1):
+                        self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+                    else:
+                        self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
+                else:
+                    if(self.nmrdata.dic[self.ft2_flg]==1):
+                        self.ax.set_xlim([max(self.new_x_ppms), min(self.new_x_ppms)])
+                    else:
+                        self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
+                    if(self.nmrdata.dic[self.ft1_flg]==1):
+                        self.ax.set_ylim([max(self.new_y_ppms), min(self.new_y_ppms)])
+                    else:
+                        self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
+
             else:
                 self.ax.set_xlim([min(self.new_x_ppms), max(self.new_x_ppms)])
                 self.ax.set_ylim([min(self.new_y_ppms), max(self.new_y_ppms)])
@@ -1827,6 +1923,8 @@ class TwoDViewer(wx.Panel):
 
             self.uc0 = uc1
             self.uc1 = uc0
+
+            self.ppm_axis_0, self.ppm_axis_1 = self.ppm_axis_1, self.ppm_axis_0
 
             self.ax.set_xlabel(self.nmrdata.axislabels[1])
             self.ax.set_ylabel(self.nmrdata.axislabels[0])
@@ -1881,6 +1979,8 @@ class TwoDViewer(wx.Panel):
         else:
 
             # Add in the ability to transpose the data in multiplot mode
+            
+            xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
             self.ax.clear()
             self.twoD_spectra = []
             self.twoD_slices_horizontal = []
@@ -1955,6 +2055,7 @@ class TwoDViewer(wx.Panel):
                     )
                 )
 
+
             self.line_h = self.ax.axhline(
                 y=self.values_dictionary[i]["new_x_ppms"][1], color="black", lw=1.5
             )
@@ -1969,18 +2070,8 @@ class TwoDViewer(wx.Panel):
                 self.twoD_slices_vertical[i][0].set_visible(False)
 
             if(self.fid_viewer==False):
-                self.ax.set_xlim(
-                    [
-                        max(self.values_dictionary[0]["new_x_ppms"]),
-                        min(self.values_dictionary[0]["new_x_ppms"]),
-                    ]
-                )
-                self.ax.set_ylim(
-                    [
-                        max(self.values_dictionary[0]["new_y_ppms"]),
-                        min(self.values_dictionary[0]["new_y_ppms"]),
-                    ]
-                )
+                self.ax.set_xlim(ylim)
+                self.ax.set_ylim(xlim)
             self.axislabels_old = self.nmrdata.axislabels[0], self.nmrdata.axislabels[1]
             self.nmrdata.axislabels[1] = self.axislabels_old[0]
             self.nmrdata.axislabels[0] = self.axislabels_old[1]
@@ -2059,40 +2150,55 @@ class TwoDViewer(wx.Panel):
 
     def OnStackButton(self, event):
 
-        if self.multiplot_mode == False:
-            # If the number of slices is greater than 30, pop up a window to ask the user if they want to continue
-            if len(self.nmrdata.data.T) > 30:
-                self.continue_window = wx.MessageDialog(
-                    self,
-                    "There are "
-                    + str(len(self.nmrdata.data.T))
-                    + " slices along y axis. Stacking may take a long time. Consider transposing the spectrum and trying again. Do you want to continue?",
-                    "Warning",
-                    wx.YES_NO | wx.ICON_WARNING,
-                )
-                if self.continue_window.ShowModal() == wx.ID_NO:
-                    self.continue_window.Destroy()
-                    return
-                else:
-                    self.continue_window.Destroy()
-            if self.transposed2D == False:
-                self.stacks = Stack2D(
-                    title="Stacked Slices - " + self.parent.title, parent=self
-                )
-            else:
-                self.stacks = Stack2D(
-                    title="Stacked Slices - " + self.parent.title, parent=self
-                )
+        
+        # If the number of slices is greater than 30, pop up a window to ask the user if they want to continue
+        
+        if(self.multiplot_mode==False):
+            size = len(self.nmrdata.data.T)
         else:
-            # Pop up a window to say that this feature is not available in multiplot mode
-            self.error_window = wx.MessageDialog(
+            size = len(self.values_dictionary[0]["z_data"].T)
+        if size > 30:
+            self.continue_window = wx.MessageDialog(
                 self,
-                "Stacking is not available in multiplot mode",
-                "Error",
-                wx.OK | wx.ICON_ERROR,
+                "There are "
+                + str(size)
+                + " slices along y axis. Stacking may take a long time. Consider transposing the spectrum and trying again. Do you want to continue?",
+                "Warning",
+                wx.YES_NO | wx.ICON_WARNING,
             )
-            self.error_window.ShowModal()
-            self.error_window.Destroy()
+            if self.continue_window.ShowModal() == wx.ID_NO:
+                self.continue_window.Destroy()
+                return
+            else:
+                self.continue_window.Destroy()
+
+        titles = []
+        multiplot_paths = []
+        if(self.multiplot_mode):
+            # Add the file paths of all spectra
+            for k in range(len(list(self.values_dictionary.keys()))):
+                multiplot_paths.append(self.values_dictionary[k]['path'])
+                titles.append(self.values_dictionary[k]['title'])
+
+
+        if self.transposed2D == False:
+            self.stacks = Stack2D(
+                title="Stacked Slices - " + self.parent.title, parent=self, multiplot_paths=multiplot_paths, titles=titles
+            )
+        else:
+            self.stacks = Stack2D(
+                title="Stacked Slices - " + self.parent.title, parent=self, multiplot_paths=multiplot_paths, titles=titles
+            )
+        # else:
+        #     # Pop up a window to say that this feature is not available in multiplot mode
+        #     self.error_window = wx.MessageDialog(
+        #         self,
+        #         "Stacking is not available in multiplot mode",
+        #         "Error",
+        #         wx.OK | wx.ICON_ERROR,
+        #     )
+        #     self.error_window.ShowModal()
+        #     self.error_window.Destroy()
 
     def OnFitDiffusionButton(self, event):
         if self.multiplot_mode == False:
@@ -2439,6 +2545,7 @@ class TwoDViewer(wx.Panel):
         self.UpdateFrame()
 
 
+
     def OnMinContour2D(self, event, textcontrol=False, showpeaks=True):
         """Triggered by slider."""
         if not textcontrol:
@@ -2471,7 +2578,7 @@ class TwoDViewer(wx.Panel):
             self.contour_value_label.SetValue(
                 "{:.2f}".format(10 ** float(self.contour_slider.GetValue()))
             )
-            self.DrawContours2D()
+            self.DrawContours2D(wx.EVT_SCROLL, textcontrol=True, showpeaks=True)
 
     # def OnMouseWheel(self, event):
     #     """Triggered by mouse wheel."""
@@ -2544,7 +2651,7 @@ class TwoDViewer(wx.Panel):
 
     def OnMultiplyScroll2D(self, event):
         self.multiply_factor = float(self.multiply_slider.GetValue())
-        self.multiply_value_label.SetLabel(
+        self.multiply_value_label.SetValue(
             "{:.2f}".format(float(self.multiply_slider.GetValue()))
         )
         self.ApplyMultiplication(event)
@@ -2622,7 +2729,7 @@ class TwoDViewer(wx.Panel):
     def OnMoveX(self, event):
         # update x-axis
         self.x_movement = float(self.move_x_slider.GetValue())
-        self.move_x_value_label.SetLabel("{:.4f}".format(self.x_movement))
+        self.move_x_value_label.SetValue("{:.4f}".format(self.x_movement))
         self.MoveX()
     
     def MoveX(self):
@@ -2704,7 +2811,7 @@ class TwoDViewer(wx.Panel):
     def OnMoveY(self, event):
         # update y-axis
         self.y_movement = float(self.move_y_slider.GetValue())
-        self.move_y_value_label.SetLabel("{:.4f}".format(self.y_movement))
+        self.move_y_value_label.SetValue("{:.4f}".format(self.y_movement))
         self.MoveY()
 
     def MoveY(self):
@@ -2900,9 +3007,18 @@ class TwoDViewer(wx.Panel):
 
                     self.slice_mode = "x"
                     if(self.fid_viewer==False):
-                        data = self.nmrdata.data[
-                                :, self.uc1(str(self.new_y_ppms[1]) + "ppm")
-                            ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                        :, self.y_index(self.new_y_ppms[1])
+                                    ]
+                            else:
+                                data = self.nmrdata.data[:, int(self.new_y_ppms[1])]
+                        else:
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[:, self.y_index(self.new_y_ppms[1])]
+                            else:
+                                data = self.nmrdata.data[:, int(self.new_y_ppms[1])]
                     else:
                         data = self.nmrdata.data[
                                 :, int(self.new_y_ppms[1])
@@ -2934,9 +3050,20 @@ class TwoDViewer(wx.Panel):
                     self.line3.set_visible = True
                     self.line4.set_visible = True
                     if(self.fid_viewer==False):
-                        data = self.nmrdata.data[
-                            self.uc0(str(self.new_x_ppms[1]) + "ppm"), :
-                        ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.x_index(self.new_x_ppms[1]), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[int(self.new_x_ppms[1]), :]
+                        else:
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.x_index(self.new_x_ppms[1]), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[int(self.new_x_ppms[1]), :]
                     else:
                         data = self.nmrdata.data[
                             int(self.new_x_ppms[1]), :
@@ -2973,27 +3100,44 @@ class TwoDViewer(wx.Panel):
                         multiply_factor = self.values_dictionary[i][
                             "multiply factor"
                         ]
+
                         try:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_y_ppms"][1])
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_y_ppms"][1])
                             self.twoD_slices_horizontal[i] = self.axes1D.plot(
                                 self.values_dictionary[i]["new_x_ppms"],
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.new_y_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor,
                                 color=self.twoD_label_colours[i],
                                 linewidth=self.values_dictionary[i]["linewidth 1D"],
                             )
                         except:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = self.values_dictionary[i]["uc0"](str(self.new_y_ppms[1]) + "ppm")
+                                else:
+                                    slice_index = self.values_dictionary[i]["new_y_ppms"][1]
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = self.values_dictionary[i]["uc0"](str(self.new_y_ppms[1]) + "ppm")
+                                else:
+                                    slice_index = self.values_dictionary[i]["new_y_ppms"][1]
                             self.twoD_slices_horizontal[i] = self.axes1D.plot(
                                 self.values_dictionary[i]["new_x_ppms"],
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.new_y_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor,
                                 color=self.twoD_label_colours[i],
@@ -3024,11 +3168,19 @@ class TwoDViewer(wx.Panel):
                             "multiply factor"
                         ]
                         try:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc0"](str(self.new_x_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc0"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
                             self.twoD_slices_vertical[i] = self.axes1D_2.plot(
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.new_x_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor,
@@ -3037,11 +3189,19 @@ class TwoDViewer(wx.Panel):
                                 linewidth=self.values_dictionary[i]["linewidth 1D"],
                             )
                         except:
+                            if(self.transposed2D==False):
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_x_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
+                            else:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = int(self.values_dictionary[i]["uc1"](str(self.new_y_ppms[1]) + "ppm"))
+                                else:
+                                    slice_index = int(self.values_dictionary[i]["new_x_ppms"][1])
                             self.twoD_slices_vertical[i] = self.axes1D_2.plot(
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.new_x_ppms[1]) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor,
@@ -3067,13 +3227,27 @@ class TwoDViewer(wx.Panel):
 
                 if self.line1.get_visible() == True:
                     if(self.fid_viewer==False):
-                        data = self.nmrdata.data[
-                            :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                        ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                    :, self.y_index(self.y1 - self.y_movement)
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            :, round(self.y1 - self.y_movement)
+                                                        ]
+                        else:
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[
+                                    :, self.y_index(self.y1 - self.y_movement)
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            :, round(self.y1 - self.y_movement)
+                                                        ]
                     else:
                         data = self.nmrdata.data[
-                            :, int(self.y1 - self.y_movement)
-                        ]
+                            :, round(self.y1 - self.y_movement)]
                     self.line1.set_ydata(data*self.multiply_factor)
                     self.line2.set_ydata([self.y1])
                     self.line1.set_xdata(self.ppms_0 + self.x_movement)
@@ -3081,12 +3255,27 @@ class TwoDViewer(wx.Panel):
                     self.UpdateFrame()
                 if self.line3.get_visible() == True:
                     if(self.fid_viewer == False):
-                        data = self.nmrdata.data[
-                            self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                        ]
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.x_index(self.x1 - self.x_movement), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            round(self.x1 - self.x_movement), :
+                                                        ]
+                        else:
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = self.nmrdata.data[
+                                    self.x_index(self.x1 - self.x_movement), :
+                                ]
+                            else:
+                                data = self.nmrdata.data[
+                                                            round(self.x1 - self.x_movement), :
+                                                        ]
                     else:
                         data = self.nmrdata.data[
-                            int(self.x1 - self.x_movement), :
+                            round(self.x1 - self.x_movement), :
                         ]
                     self.line3.set_xdata(
                         data
@@ -3102,27 +3291,39 @@ class TwoDViewer(wx.Panel):
                     for i in range(len(self.twoD_slices_horizontal)):
                         multiply_factor = self.values_dictionary[i]["multiply factor"]
                         self.y_difference = self.values_dictionary[i]["move y"]
+                        
                         try:
                             if self.transposed2D == False:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = round(self.values_dictionary[i]["uc1"](
+                                                                                str(self.y1 - self.y_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = round(self.y1 - self.y_difference)
+                                                            
+                                                                
                                 self.twoD_slices_horizontal[i][0].set_ydata(
                                     self.values_dictionary[i]["z_data"][
                                         :,
-                                        self.values_dictionary[i]["uc1"](
-                                            str(self.y1 - self.y_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                     ]
                                     * multiply_factor
                                 )
                                 self.twoD_slices_horizontal[i][0].set_xdata(
                                     self.values_dictionary[i]["new_x_ppms"]
                                 )
+        
                             else:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = round(self.values_dictionary[i]["uc0"](
+                                                                                str(self.y1 - self.y_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = round(self.y1 - self.y_difference)
                                 self.twoD_slices_horizontal[i][0].set_ydata(
                                     self.values_dictionary[i]["z_data"][
                                         :,
-                                        self.values_dictionary[i]["uc0"](
-                                            str(self.y1 - self.y_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                     ]
                                     * multiply_factor
                                 )
@@ -3163,11 +3364,15 @@ class TwoDViewer(wx.Panel):
                         self.x_difference = self.values_dictionary[i]["move x"]
                         try:
                             if self.transposed2D == False:
+                                if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                    slice_index = round(self.values_dictionary[i]["uc0"](
+                                                                                str(self.x1 - self.x_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = round(self.x1 - self.x_difference)
                                 self.twoD_slices_vertical[i][0].set_xdata(
                                     self.values_dictionary[i]["z_data"][
-                                        self.values_dictionary[i]["uc0"](
-                                            str(self.x1 - self.x_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                         :,
                                     ]
                                     * multiply_factor
@@ -3176,11 +3381,15 @@ class TwoDViewer(wx.Panel):
                                     self.values_dictionary[i]["new_y_ppms"]
                                 )
                             else:
+                                if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                    slice_index = round(self.values_dictionary[i]["uc1"](
+                                                                                str(self.x1 - self.x_difference) + "ppm"
+                                                                            ))
+                                else:
+                                    slice_index = round(self.x1 - self.x_difference)
                                 self.twoD_slices_vertical[i][0].set_xdata(
                                     self.values_dictionary[i]["z_data"][
-                                        self.values_dictionary[i]["uc1"](
-                                            str(self.x1 - self.x_difference) + "ppm"
-                                        ),
+                                        slice_index,
                                         :,
                                     ]
                                     * multiply_factor
@@ -3220,8 +3429,8 @@ class TwoDViewer(wx.Panel):
         # Get all the slider values for P0 and P1 (coarse and fine), put the combined coarse and fine values on the screen
         self.total_P0 = self.P0_slider.GetValue() + self.P0_slider_fine.GetValue()
         self.total_P1 = self.P1_slider.GetValue() + self.P1_slider_fine.GetValue()
-        self.P0_total_value.SetLabel("{:.2f}".format(self.total_P0))
-        self.P1_total_value.SetLabel("{:.2f}".format(self.total_P1))
+        self.P0_total_value.SetValue("{:.2f}".format(self.total_P0))
+        self.P1_total_value.SetValue("{:.2f}".format(self.total_P1))
         self.phase2D()
     
     def P0_text_change(self, event):
@@ -3244,16 +3453,40 @@ class TwoDViewer(wx.Panel):
             try:
                 if self.line1.get_visible() == True:
                     if(self.fid_viewer==False):
-                        data = (
-                            self.nmrdata.data[
-                                :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                            ]
-                            * self.multiply_factor
-                        )
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        :, self.y_index(self.y1 - self.y_movement)
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                        self.nmrdata.data[
+                                            :, round(self.y1 - self.y_movement)
+                                        ]
+                                        * self.multiply_factor
+                                )
+                        else:
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        :, self.y_index(self.y1 - self.y_movement)
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                        self.nmrdata.data[
+                                            :, round(self.y1 - self.y_movement)
+                                        ]
+                                        * self.multiply_factor
+                                )
                     else:
                         data = (
                             self.nmrdata.data[
-                                :, int(self.y1 - self.y_movement)
+                                :, round(self.y1 - self.y_movement)
                             ]
                             * self.multiply_factor
                         )
@@ -3283,16 +3516,41 @@ class TwoDViewer(wx.Panel):
                     self.UpdateFrame()
                 if self.line3.get_visible() == True:
                     if(self.fid_viewer==False):
-                        data = (
-                            self.nmrdata.data[
-                                self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                            ]
-                            * self.multiply_factor
-                        )
+                        if(self.transposed2D==False):
+                            if(self.nmrdata.dic[self.ft1_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        self.x_index(self.x1 - self.x_movement), :
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                         self.nmrdata.data[
+                                            round(self.x1 - self.x_movement), :
+                                        ]
+                                        * self.multiply_factor
+                                    )
+                        else:
+                            if(self.nmrdata.dic[self.ft2_flg]==1):
+                                data = (
+                                    self.nmrdata.data[
+                                        self.x_index(self.x1 - self.x_movement), :
+                                    ]
+                                    * self.multiply_factor
+                                )
+                            else:
+                                data = (
+                                         self.nmrdata.data[
+                                            round(self.x1 - self.x_movement), :
+                                        ]
+                                        * self.multiply_factor
+                                    )
+
                     else:
                         data = (
                             self.nmrdata.data[
-                                int(self.x1 - self.x_movement), :
+                                round(self.x1 - self.x_movement), :
                             ]
                             * self.multiply_factor
                         )
@@ -3351,23 +3609,33 @@ class TwoDViewer(wx.Panel):
                     self.values_dictionary[self.active_plot_index][
                         "p1 Fine"
                     ] = self.P1_slider_fine.GetValue()
+                    self.y_difference = self.values_dictionary[self.active_plot_index]["move y"]
                     if self.transposed2D == False:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft2_flg]==1):
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc1"](
+                                                                        str(self.y1 - self.y_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = round(self.y1 - self.y_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 :,
-                                self.values_dictionary[self.active_plot_index]["uc1"](
-                                    str(self.y1 - self.y_difference) + "ppm"
-                                ),
+                                slice_index,
                             ]
                             * multiply_factor
                         )
                     else:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft1_flg]==1):
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc0"](
+                                                                        str(self.y1 - self.y_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = round(self.y1 - self.y_difference)
+                        
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
                                 :,
-                                self.values_dictionary[self.active_plot_index]["uc0"](
-                                    str(self.y1 - self.y_difference) + "ppm"
-                                ),
+                                slice_index
                             ]
                             * multiply_factor
                         )
@@ -3407,23 +3675,32 @@ class TwoDViewer(wx.Panel):
                         self.values_dictionary[i][
                             "p1 Fine"
                         ] = self.P1_slider_fine.GetValue()
+                        self.y_difference = self.values_dictionary[i]["move y"]
                         if self.transposed2D == False:
+                            if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                slice_index = round(self.values_dictionary[i]["uc1"](
+                                                                            str(self.y1 - self.y_difference) + "ppm"
+                                                                        ))
+                            else:
+                                slice_index = round(self.y1 - self.y_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.y1 - self.y_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor
                             )
                         else:
+                            if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                slice_index = round(self.values_dictionary[i]["uc0"](
+                                                            str(self.y1 - self.y_difference) + "ppm"
+                                                                                                    ))
+                            else:
+                                slice_index = round(self.y1 - self.y_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
                                     :,
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.y1 - self.y_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                 ]
                                 * multiply_factor
                             )
@@ -3451,21 +3728,29 @@ class TwoDViewer(wx.Panel):
                         "move x"
                     ]
                     if self.transposed2D == False:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft1_flg]==1):
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc0"](
+                                                                        str(self.x1 - self.x_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = round(self.x1 - self.x_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
-                                self.values_dictionary[self.active_plot_index]["uc0"](
-                                    str(self.x1 - self.x_difference) + "ppm"
-                                ),
+                                slice_index,
                                 :,
                             ]
                             * multiply_factor
                         )
                     else:
+                        if(self.values_dictionary[self.active_plot_index]['dic'][self.ft2_flg]==1):
+                            slice_index = round(self.values_dictionary[self.active_plot_index]["uc1"](
+                                                                        str(self.x1 - self.x_difference) + "ppm"
+                                                                    ))
+                        else:
+                            slice_index = round(self.x1 - self.x_difference)
                         data = (
                             self.values_dictionary[self.active_plot_index]["z_data"][
-                                self.values_dictionary[self.active_plot_index]["uc1"](
-                                    str(self.x1 - self.x_difference) + "ppm"
-                                ),
+                                slice_index,
                                 :,
                             ]
                             * multiply_factor
@@ -3505,21 +3790,29 @@ class TwoDViewer(wx.Panel):
                         ] = self.P1_slider_fine.GetValue()
                         self.x_difference = self.values_dictionary[i]["move x"]
                         if self.transposed2D == False:
+                            if(self.values_dictionary[i]['dic'][self.ft1_flg]==1):
+                                slice_index = round(self.values_dictionary[i]["uc0"](
+                                                                            str(self.x1 - self.x_difference) + "ppm"
+                                                                        ))
+                            else:
+                                slice_index = round(self.x1 - self.x_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc0"](
-                                        str(self.x1 - self.x_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor
                             )
                         else:
+                            if(self.values_dictionary[i]['dic'][self.ft2_flg]==1):
+                                slice_index = round(self.values_dictionary[i]["uc1"](
+                                                                            str(self.x1 - self.x_difference) + "ppm"
+                                                                        ))
+                            else:
+                                slice_index = round(self.x1 - self.x_difference)
                             data = (
                                 self.values_dictionary[i]["z_data"][
-                                    self.values_dictionary[i]["uc1"](
-                                        str(self.x1 - self.x_difference) + "ppm"
-                                    ),
+                                    slice_index,
                                     :,
                                 ]
                                 * multiply_factor
@@ -3572,7 +3865,7 @@ class TwoDViewer(wx.Panel):
                 self.UpdateFrame()
 
 class Stack2D(wx.Frame):
-    def __init__(self, title, parent):
+    def __init__(self, title, parent, multiplot_paths=[], titles=[]):
         self.main_frame = parent
         self.width = wx.GetDisplaySize()[0]
         try:
@@ -3580,6 +3873,7 @@ class Stack2D(wx.Frame):
                 os.chdir(self.main_frame.parent.path)
         except:
             pass
+
         if self.main_frame.parent.nmrdata.dim == 2:
             nmr_data_0 = GetData(self, file=self.main_frame.parent.nmrdata.file)
         else:
@@ -3593,10 +3887,12 @@ class Stack2D(wx.Frame):
 
         if parent.transposed2D == True:
             nmr_data_0.data = nmr_data_0.data[0]
-            nmr_data_0.axislabels = nmr_data_0.axislabels[0]
+            nmr_data_0.axislabels[0] = nmr_data_0.axislabels[0]
         else:
             nmr_data_0.data = nmr_data_0.data.T[0]
-            nmr_data_0.axislabels = nmr_data_0.axislabels[1]
+            nmr_data_0.axislabels[0] = nmr_data_0.axislabels[1]
+
+
         # Get the monitor size and set the window size to 85% of the monitor size
         displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
         sizes = [display.GetGeometry().GetSize() for display in displays]
@@ -3610,6 +3906,7 @@ class Stack2D(wx.Frame):
         self.panel_stack = wx.Panel(self, -1)
         self.main_stack_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.main_stack_sizer)
+
 
 
         try:
@@ -3633,14 +3930,28 @@ class Stack2D(wx.Frame):
         if parent.transposed2D == True:
             self.viewer_oneD.files.transposed_stack = True
         self.viewer_oneD.files.nmrdata_original = parent.nmrdata
-        try:
-            self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.file])
-        except:
-            self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.filename])
-        self.viewer_oneD.files.stackmode = False
+        if multiplot_paths == []:
+            try:
+                self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.file], '')
+            except:
+                self.viewer_oneD.files.OnDropFiles(0, 0, [nmr_data_0.filename], '')
+        else:
+            for p, path in enumerate(multiplot_paths):
+                if(p==0):
+                    self.viewer_oneD.files.OnDropFiles(0, 0, [path], titles[p], multiplot_stack=False)
+                else:
+                    self.viewer_oneD.files.OnDropFiles(0, 0, [path], titles[p], multiplot_stack=True)
+        # self.viewer_oneD.files.stackmode = False
+
+        
 
         self.Show()
         self.Centre()
+
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         try:
             if self.main_frame.parent.file_parser == True:
@@ -3676,7 +3987,10 @@ class Stack2D(wx.Frame):
                 (self.height - self.viewer_oneD.bottom_sizer.GetMinSize()[1] - 100)
                 * 0.0104,
             )
-            self.viewer_oneD.UpdateFrame()
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.viewer_oneD.UpdateFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):

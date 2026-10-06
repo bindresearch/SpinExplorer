@@ -150,7 +150,7 @@ class FileDrop(wx.FileDropTarget):
         self.custom_labels = []
         self.parent.active_plot_index = 0
 
-    def OnDropFiles(self, x, y, filenames):
+    def OnDropFiles(self, x, y, filenames, title='', multiplot_stack=False):
 
         if len(filenames)==1 and ".session" in filenames[0]:
             # Loading a new session
@@ -187,7 +187,19 @@ class FileDrop(wx.FileDropTarget):
                 if ".dat" in name or ".ft" in name or bruker == True:
                     if self.stackmode == False:
                         if bruker == False:
-                            dic, data = ng.pipe.read(name)
+                            try:
+                                dic, data = ng.pipe.read(name)
+                            except:
+                                # Give a popout saying the NMRPipe file has not been read properly. Retry processing
+                                dlg = wx.MessageDialog(
+                                    None,
+                                    "NMRPipe file not read properly. Ensure raw data is downloaded to the local device or please retry processing the data then try again.",
+                                    "Error",
+                                    wx.OK | wx.ICON_INFORMATION,
+                                )
+                                dlg.ShowModal()
+                                dlg.Destroy()
+                                return False
                         else:
                             dic, data = ng.bruker.read_pdata(name)
                         if len(data.shape) == 1:
@@ -283,9 +295,13 @@ class FileDrop(wx.FileDropTarget):
                             else:
                                 udic = ng.bruker.guess_udic(dic, data)
                                 uc0 = ng.fileiobase.uc_from_udic(udic)
+
                             self.data.append(data)
                             x0, x1 = uc0.ppm_limits()
-                            uc0.ppms_scale = np.linspace(x0, x1, int(uc0._size))
+                            if(dic['FDF2FTFLAG']==1):
+                                uc0.ppms_scale = np.linspace(x0, x1, int(uc0._size))
+                            else:
+                                uc0.ppms_scale = np.arange(0, int(uc0._size), 1)
                             msg = "Please enter title of this data!"
                             dlg = wx.TextEntryDialog(self.tempframe, msg)
                             self.tempframe.Raise()
@@ -523,6 +539,7 @@ class FileDrop(wx.FileDropTarget):
                                     "contour levels"
                                 ] = self.parent.contour_levels_slider.GetValue()
                                 self.parent.values_dictionary[0]["transposed"] = False
+                                self.parent.values_dictionary[0]["dic"] = self.parent.nmrdata.dic
                                 try:
                                     if self.parent.parent.parent.path != "":
                                         path = self.parent.parent.parent.path
@@ -568,8 +585,26 @@ class FileDrop(wx.FileDropTarget):
                                 udic = ng.bruker.guess_udic(dic, data)
                                 uc0 = ng.fileiobase.uc_from_udic(udic, dim=0)
                                 uc1 = ng.fileiobase.uc_from_udic(udic, dim=1)
-                            ppm0 = uc0.ppm_scale()
-                            ppm1 = uc1.ppm_scale()
+
+                            if(dic['FDDIMORDER'][0]==2.0):
+                                if(dic['FDF1FTFLAG']==1):
+                                    ppm0 = uc0.ppm_scale()
+                                else:
+                                    ppm0 = np.arange(0, len(uc0.ppm_scale()),1)
+                                if(dic['FDF2FTFLAG']==1):
+                                    ppm1 = uc1.ppm_scale()
+                                else:
+                                    ppm1 = np.arange(0, len(uc1.ppm_scale()),1)
+                            else:
+                                if(dic['FDF2FTFLAG']==1):
+                                    ppm0 = uc0.ppm_scale()
+                                else:
+                                    ppm0 = np.arange(0, len(uc0.ppm_scale()),1)
+                                if(dic['FDF1FTFLAG']==1):
+                                    ppm1 = uc1.ppm_scale()
+                                else:
+                                    ppm1 = np.arange(0, len(uc1.ppm_scale()),1)
+                                
                             x, y = np.meshgrid(ppm1, ppm0)
 
                             if len(self.parent.twoD_spectra) == 0:
@@ -598,6 +633,7 @@ class FileDrop(wx.FileDropTarget):
                             self.parent.values_dictionary[index]["multiply factor"] = 1.0
                             self.parent.values_dictionary[index]["contour levels"] = 20
                             self.parent.values_dictionary[index]["path"] = name
+                            self.parent.values_dictionary[index]["dic"] = dic
 
 
                             # Work out the difference in max intensities between the first and the added spectra
@@ -1008,6 +1044,7 @@ class FileDrop(wx.FileDropTarget):
                         else:
                             uc0 = ng.pipe.make_uc(dic, data_original, dim=0)
                             data_original = data_original.T
+                        self.color_list = colours
                         while len(data_original) > len(self.color_list):
                             self.color_list = self.color_list * 2
                         x0, x1 = uc0.ppm_limits()
@@ -1015,12 +1052,16 @@ class FileDrop(wx.FileDropTarget):
                         uc0_ppms = uc0.ppm_scale()
                         data = []
                         data.append(data_original[0])
-                        self.stackfirstpoint()
-                        self.parent.multiplot_mode = True
+
+                        if(multiplot_stack==False):
+                            self.stackfirstpoint(title)
+                            self.parent.multiplot_mode = True
                         for i in range(len(data_original)):
-                            if i == 0:
-                                continue
-                            else:
+                            add_plot=True
+                            if(multiplot_stack==False):
+                                if i == 0:
+                                    add_plot=False
+                            if(add_plot==True):
                                 self.data.append(data_original[i])
                                 # Add default values for the new plot to the values dictionary
                                 self.parent.values_dictionary[
@@ -1028,10 +1069,10 @@ class FileDrop(wx.FileDropTarget):
                                 ] = {}
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
-                                ]["title"] = str(i + 1)
+                                ]["title"] = title+' ' + str(i + 1)
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
-                                ]["linewidth"] = self.linewidth
+                                ]["linewidth"] = self.parent.linewidth
                                 self.parent.values_dictionary[
                                     len(self.parent.extra_plots) + 1
                                 ]["color index"] = (len(self.parent.extra_plots) + 1)
@@ -1078,25 +1119,31 @@ class FileDrop(wx.FileDropTarget):
                                     len(self.parent.extra_plots) + 1
                                 ]["dictionary"] = dic
                                 # Add labels of the extra plots to the select plot box
-                                self.choices.append(str(i + 1))
+                                self.choices.append(title+' ' + str(i + 1))
                                 self.parent.plot_combobox.Clear()
                                 self.parent.plot_combobox.AppendItems(self.choices)
                                 self.parent.plot_combobox.SetSelection(0)
                                 if len(self.parent.extra_plots) + 1 < len(self.color_list):
+                                    self.parent.values_dictionary[
+                                        len(self.parent.extra_plots) + 1
+                                    ]["color index"] = (
+                                        len(self.parent.extra_plots)
+                                        + 1
+                                    )
                                     self.parent.extra_plots.append(
                                         self.axis.plot(
                                             uc0_ppms,
                                             data_original[i],
                                             color=self.color_list[
-                                                len(self.parent.extra_plots) + 1
+                                                len(self.parent.extra_plots)+1
                                             ],
-                                            label=str(i + 1),
+                                            label=title+' ' + str(i + 1),
                                             linewidth=self.linewidth,
                                         )
                                     )
                                 else:
                                     self.parent.values_dictionary[
-                                        len(self.extra_plots) + 1
+                                        len(self.parent.extra_plots) + 1
                                     ]["color index"] = (
                                         len(self.parent.extra_plots)
                                         + 1
@@ -1107,11 +1154,10 @@ class FileDrop(wx.FileDropTarget):
                                             uc0_ppms,
                                             data_original[i],
                                             color=self.color_list[
-                                                len(self.parent.extra_plots)
-                                                + 1
+                                                len(self.parent.extra_plots)+1
                                                 - len(self.color_list)
                                             ],
-                                            label=str(i + 1),
+                                            label=title+' ' + str(i + 1),
                                             linewidth=self.linewidth,
                                         )
                                     )
@@ -1130,9 +1176,9 @@ class FileDrop(wx.FileDropTarget):
 
         return True
 
-    def stackfirstpoint(self):
+    def stackfirstpoint(self, title):
         self.parent.values_dictionary[0] = {}
-        self.parent.values_dictionary[0]["title"] = "1"
+        self.parent.values_dictionary[0]["title"] = title + ' 1'
         self.parent.values_dictionary[0][
             "linewidth"
         ] = self.parent.line1.get_linewidth()
@@ -1170,10 +1216,10 @@ class FileDrop(wx.FileDropTarget):
             self.parent.P1_slider_fine.GetValue()
         )
         self.parent.values_dictionary[0]["dictionary"] = self.parent.nmrdata.dic
-        self.parent.line1.set_label("1")
+        self.parent.line1.set_label(self.parent.values_dictionary[0]["title"])
         self.linewidth = self.parent.line1.get_linewidth()
         self.choices = []
-        self.choices.append("1")
+        self.choices.append(self.parent.values_dictionary[0]["title"])
         self.first_drop = False
 
         try:
@@ -1264,7 +1310,26 @@ class ReadProjection:
             return 3
 
     def get_axislabels(self):
-        self.axislabels = []
-        file_split = self.filename.split(".dat")[0].split(".")
-        for i in range(len(file_split)):
-            self.axislabels.append(file_split[i])
+        """
+        The axis labels of the projection, read from the file so that they
+        always match the data it holds. They are given in the same order as
+        for a spectrum read in normally (the label of the last axis of the
+        data first), which is the order the viewers expect: axislabels[0] is
+        shown on the y axis and axislabels[1] on the x axis.
+        """
+        try:
+            labels = []
+            for i in range(self.dim):
+                label = self.dic["FDF{}LABEL".format(int(self.dic["FDDIMORDER"][i]))]
+                if str(label).strip() == "":
+                    raise ValueError
+                labels.append(str(label))
+            self.axislabels = labels
+            return
+        except (KeyError, ValueError, TypeError):
+            pass
+
+        # The file does not name its dimensions, so use the names in the file
+        # name instead. These are given as x.y, which is the reverse of the
+        # order used above.
+        self.axislabels = self.filename.split(".dat")[0].split(".")[::-1]

@@ -47,6 +47,7 @@ class ReadSession:
                     self.main_frame.viewer = OneDViewer(
                         parent=self.main_frame, nmrdata=self.main_frame.nmrdata
                     )
+                    dic_original = self.main_frame.nmrdata.dic
                     self.main_frame.viewer.stack = stack
                     self.main_frame.main_sizer.Add(self.main_frame.viewer, 1, wx.EXPAND)
                     title = lines[3].split("\n")[0].split(":")[1]
@@ -107,6 +108,7 @@ class ReadSession:
                         "path"
                     ] = file_path_original
                     self.main_frame.viewer.values_dictionary[0]["title"] = title
+                    self.main_frame.viewer.values_dictionary[0]["dic"] = dic_original
                     self.main_frame.viewer.values_dictionary[0]["linewidth"] = linewidth
                     self.main_frame.viewer.values_dictionary[0]["color index"] = colour
                     self.main_frame.viewer.values_dictionary[0][
@@ -379,9 +381,10 @@ class ReadSession:
                     self.main_frame.viewer.P1_slider_fine.SetValue(p1_fine)
 
                     self.main_frame.viewer.files.first_drop = False
+                    self.main_frame.viewer.values_dictionary[0] = {}
+                    self.main_frame.viewer.values_dictionary[0]['dic'] = self.main_frame.nmrdata.dic
                     self.main_frame.viewer.OnSliderScroll2D(event=None)
                     # Read all the values into the values dictionary for the first plot
-                    self.main_frame.viewer.values_dictionary[0] = {}
                     self.main_frame.viewer.values_dictionary[0][
                         "path"
                     ] = file_path_original
@@ -649,11 +652,18 @@ class ReadSession:
         )
         self.main_frame.viewer.values_dictionary[count]["original_data"] = data
         self.main_frame.viewer.values_dictionary[count]["dictionary"] = dic
+        self.main_frame.viewer.values_dictionary[count]["dic"] = dic
         # Make the uc object
         uc0 = ng.pipe.make_uc(dic, data)
 
-        # Get the ppm scale
-        ppm_scale = uc0.ppm_scale()
+        if(dic['FDF2FTFLAG']==1):
+            # Fourier transformed axis
+            ppm_scale = uc0.ppm_scale()
+        else:
+            # Data has not been Fourier transformed
+            ppm_scale = np.arange(0, len(data),1)
+
+
         self.main_frame.viewer.values_dictionary[count]["original_ppms"] = ppm_scale
 
         data = data * self.main_frame.viewer.values_dictionary[count][
@@ -695,11 +705,33 @@ class ReadSession:
         )
         self.main_frame.viewer.values_dictionary[count]["original_data"] = data
         self.main_frame.viewer.values_dictionary[count]["dictionary"] = dic
+        self.main_frame.viewer.values_dictionary[count]["dic"] = dic
         # Make the uc object
         uc0 = ng.pipe.make_uc(dic, data, dim=0)
         uc1 = ng.pipe.make_uc(dic, data, dim=1)
         ppm0 = uc0.ppm_scale()
+        ppm_axis_0 = True
         ppm1 = uc1.ppm_scale()
+        ppm_axis_1 = True
+        if(dic['FDDIMORDER'][0]==2.0):
+            self.ft1_flg = 'FDF1FTFLAG'
+            self.ft2_flg = 'FDF2FTFLAG'
+        else:
+            self.ft1_flg = 'FDF2FTFLAG'
+            self.ft2_flg = 'FDF1FTFLAG'
+        if(dic[self.ft1_flg]==1):
+            ppm0 = uc0.ppm_scale()
+            ppm_axis_0 = True
+        else:
+            ppm0 = np.arange(0, len(uc0.ppm_scale()),1)
+            self.ppm_axis_0 = False
+        if(dic[self.ft2_flg]==1):
+            ppm1 = uc1.ppm_scale()
+            ppm_axis_1 = True
+        else:
+            ppm1 = np.arange(0, len(uc1.ppm_scale()),1)
+            ppm_axis_1 = False
+
         x, y = np.meshgrid(ppm1, ppm0)
 
         self.main_frame.viewer.values_dictionary[count]["original_x_ppms"] = ppm0
@@ -707,8 +739,8 @@ class ReadSession:
         self.main_frame.viewer.values_dictionary[count]["new_x_ppms"] = ppm0
         self.main_frame.viewer.values_dictionary[count]["new_y_ppms"] = ppm1
         self.main_frame.viewer.values_dictionary[count]["z_data"] = data
-        self.main_frame.viewer.values_dictionary[count]["contour linewidth"] = 1.0
-        self.main_frame.viewer.values_dictionary[count]["linewidth 1D"] = 1.0
+        # self.main_frame.viewer.values_dictionary[count]["contour linewidth"] = 1.0
+        # self.main_frame.viewer.values_dictionary[count]["linewidth 1D"] = 1.0
         self.main_frame.viewer.values_dictionary[count]["uc0"] = uc0
         self.main_frame.viewer.values_dictionary[count]["uc1"] = uc1
 

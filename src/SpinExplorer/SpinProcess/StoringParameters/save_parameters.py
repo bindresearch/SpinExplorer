@@ -83,7 +83,7 @@ class Save_json:
             dlg = wx.MessageDialog(
                 self.notebook,
                 "A previous set of saved parameters has been found (parameters.json). Would you like to overwrite this?",
-                "Warning",
+                "Overwrite saved parameters",
                 wx.YES_NO | wx.ICON_QUESTION,
             )
             result = dlg.ShowModal()
@@ -193,6 +193,9 @@ class Populate_dictionary_global:
         This function will add all the current processing parameters for the
         dimension to the dictionary.
         """
+        dimension_dictionary = self.add_truncation_parameters(
+            dimension_dictionary, dimension, dimension_tab
+        )
         if dimension == 0:
             dimension_dictionary = self.add_solvent_suppression_parameters(
                 dimension_dictionary, dimension, dimension_tab
@@ -254,6 +257,24 @@ class Populate_dictionary_global:
 
         return dimension_dictionary
 
+    def add_truncation_parameters(
+        self, dimension_dictionary: Dict[str, Any], dimension: int, dimension_tab
+    ) -> Dict[str, Any]:
+        """
+        Adding the current truncation parameters in SpinProcess
+        to the dictionary for dimension.
+        """
+
+        dimension_dictionary["Truncation"] = {}
+        dimension_dictionary["Truncation"][
+            "Truncation flag"
+        ] = dimension_tab.truncation.truncation_checkbox_value
+        dimension_dictionary["Truncation"][
+            "Number of points"
+        ] = dimension_tab.truncation.find_truncation_points()
+
+        return dimension_dictionary
+
     def add_linear_prediction_parameters(
         self, dimension_dictionary: Dict, dimension: int, dimension_tab
     ) -> Dict[str, Any]:
@@ -309,7 +330,18 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "Predicted coefficients"
                 ] = [value2, options[value2]]
-            elif value == 2:
+            if value in [2, 3]:
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Phasing before reconstruction"
+                ] = dimension_tab.linear_prediction.nus_phasing_flag_indirect
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Phasing before reconstruction P0"
+                ] = dimension_tab.linear_prediction.nus_phasing_p0_indirect
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "Phasing before reconstruction P1"
+                ] = dimension_tab.linear_prediction.nus_phasing_p1_indirect
+
+            if value == 2:
                 nusfile = dimension_tab.linear_prediction.nuslist_name_indirect
                 nus_extension = (
                     dimension_tab.linear_prediction.smile_data_extension_number_indirect
@@ -334,6 +366,10 @@ class Populate_dictionary_global:
                     dimension_tab.linear_prediction.ist_data_extension_number_indirect
                 )
                 nus_iterations = dimension_tab.linear_prediction.ist_nus_iterations_indirect
+                ist_threshold = dimension_tab.linear_prediction.ist_threshold_indirect
+                convergence_tolerance = (
+                    dimension_tab.linear_prediction.ist_convergence_tolerance_indirect
+                )
                 lp_only = dimension_tab.linear_prediction.ist_linear_prediction_only_flag
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS file"
@@ -344,6 +380,12 @@ class Populate_dictionary_global:
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "NUS iterations"
                 ] = nus_iterations
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                                    "IST threshold"
+                                ] = ist_threshold
+                dimension_dictionary["Linear Prediction"][choices[value]][
+                    "IST convergence tolerance"
+                ] = convergence_tolerance
                 dimension_dictionary["Linear Prediction"][choices[value]][
                     "Linear prediction only"
                 ] = lp_only

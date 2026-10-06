@@ -202,9 +202,29 @@ class parameter_write_cl:
 
     def add_nus_information(self, dictionary: dict) -> dict:
         """
-        Adding the current NUS information to the dictionary
+        Adding the current NUS information to the dictionary.
+
+        Where the data was sampled non-uniformly, the schedule is written down so
+        that the reconstruction can be done afterwards without having to find it
+        again. Nothing here asks for the reconstruction to be done: the spectrum
+        is converted with zeros in the gaps so that it can be phased first.
         """
         dictionary["conversion"]["NUS information"] = "N/A"
+
+        if getattr(self.conv, "NUS_tick", False) == True:
+            try:
+                schedule = self.conv.find_nus_schedule()
+                dictionary["conversion"]["NUS information"] = {
+                    "Checkbox": True,
+                    "NUS sample count": str(len(schedule)),
+                    "NUS offset": "0",
+                    "NUS file": str(self.conv.nusfile),
+                    "Reverse NUS schedule": False,
+                }
+            except Exception:
+                # The schedule could not be read again, so nothing is written
+                # rather than something which is wrong
+                pass
 
         return dictionary
     

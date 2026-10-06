@@ -32,6 +32,25 @@ warnings.simplefilter("ignore", UserWarning)
 from typing import List
 
 
+def find_nus_recorded(value) -> bool:
+    """
+    Whether a number of non-uniformly sampled points was actually recorded in
+    the parameter file.
+
+    The NUSTD entry holds how many increments were collected when non-uniform
+    sampling was used. It is missing from files of uniformly sampled data, and
+    is written as zero by some versions, and in both cases it says nothing about
+    the size of the data, so the TD entry is the one to go by.
+    """
+    if isinstance(value, bool) == True:
+        return False
+
+    if isinstance(value, int) == False and isinstance(value, float) == False:
+        return False
+
+    return value > 0
+
+
 class ParameterExtractorBruker:
     def __init__(self, nmrdata) -> None:
         """
@@ -126,9 +145,14 @@ class ParameterExtractorBruker:
                     if "##$TD=" in file_lines[i]:
                         line = file_lines[i].split()
                         self.sizes_dim2 = int(line[1])
+            # The TD entry says how big the dimension is, unless non-uniform
+            # sampling collected fewer points than that, which NUSTD then says
             if (
                 self.sizes_dim2 != []
-                and self.sizes_dim2 < self.sizes_dim2_nus
+                and (
+                    find_nus_recorded(self.sizes_dim2_nus) == False
+                    or self.sizes_dim2 < self.sizes_dim2_nus
+                )
                 and self.sizes_dim2 != 1
             ):
                 if self.sizes_dim2 % 2 != 0:
@@ -152,9 +176,14 @@ class ParameterExtractorBruker:
                     if "##$TD=" in file_lines[i]:
                         line = file_lines[i].split()
                         self.sizes_dim3 = int(line[1])
+            # The TD entry says how big the dimension is, unless non-uniform
+            # sampling collected fewer points than that, which NUSTD then says
             if (
                 self.sizes_dim3 != []
-                and self.sizes_dim3 < self.sizes_dim3_nus
+                and (
+                    find_nus_recorded(self.sizes_dim3_nus) == False
+                    or self.sizes_dim3 < self.sizes_dim3_nus
+                )
                 and self.sizes_dim3 != 1
             ):
                 if self.sizes_dim3 % 2 != 0:
@@ -205,9 +234,14 @@ class ParameterExtractorBruker:
                         nuc = line.split("<")[1].split(">")[0]
 
             try:
+                # As above, NUSTD is only the size when non-uniform sampling
+                # collected fewer points than the TD entry says
                 if (
                     td == True
-                    and self.sizes_dim2 < self.sizes_dim2_nus
+                    and (
+                        find_nus_recorded(self.sizes_dim2_nus) == False
+                        or self.sizes_dim2 < self.sizes_dim2_nus
+                    )
                     and self.sizes_dim2 != 1
                 ):
                     if self.sizes_dim2 % 2 != 0:
@@ -238,9 +272,14 @@ class ParameterExtractorBruker:
                         nuc = line.split("<")[1].split(">")[0]
 
             try:
+                # As above, NUSTD is only the size when non-uniform sampling
+                # collected fewer points than the TD entry says
                 if (
                     td == True
-                    and self.sizes_dim3 < self.sizes_dim3_nus
+                    and (
+                        find_nus_recorded(self.sizes_dim3_nus) == False
+                        or self.sizes_dim3 < self.sizes_dim3_nus
+                    )
                     and self.sizes_dim3 != 1
                 ):
                     if nuc not in self.indirect_sizes_dict.keys():
@@ -318,82 +357,94 @@ class ParameterExtractorBruker:
         """
         Searching through the Bruker acqus file for the Larmor frequency
         of each nucleus recorded.
+
+        Each indirect dimension names its nucleus in its own parameter file, and
+        the frequency of that nucleus is held in the acqus file against whichever
+        channel it was measured on, so the channel is looked up by the name. One
+        frequency is added for each dimension, as the dimensions are matched to
+        their nuclei by position afterwards, and a dimension which is not a
+        nucleus at all is given zero.
         """
         self.nucleus_frequencies = []
-        nuclei = []
+        self.nuclei_named = []
+
         for i in range(len(self.size_indirect) + 1):
             if i == 0:
-                for j in range(len(self.acqus_file_lines)):
-                    if "##$SFO1=" in self.acqus_file_lines[j]:
-                        line = self.acqus_file_lines[j].split()
-                        self.nucleus_frequencies.append(float(line[1]))
-                        break
-            if i >= 1:
-                try:
-                    file = open("acqu"+str(i+1) + "s", "r")
+                self.nucleus_frequencies.append(
+                    self.find_frequency_of_channel("1", self.acqus_file_lines)
+                )
+                continue
+
+            try:
+                with open("acqu" + str(i + 1) + "s", "r") as file:
                     file_lines = file.readlines()
-                    file.close()
-                    nucleus=''
-                    param = ''
-                    for j in range(len(file_lines)):
-                        # There is a bug where sometimes O1 is set to 0 in acqu2s even though the
-                        # this was not the case. Check if O1=0, if it is, will need to get reference
-                        # from the acqus file
-                        if("##$NUC1=" in file_lines[j]):
-                            line = file_lines[j].split()
-                            nucleus = line[1]
-                            nuclei.append(nucleus)
+            except Exception:
+                self.nucleus_frequencies.append(0)
+                continue
 
-                        # if("##$O1=" in file_lines[j]):
-                        #     line = file_lines[j].split()
-                        #     o1 = float(line[1])
-                        #     if(o1==0.0):
-                            # search acqus file for nucleus
-                        if(nucleus!=''):
-                            for j in range(len(self.acqus_file_lines)):
-                                if('##$NUC' in self.acqus_file_lines[j]):
-                                    if(nucleus in self.acqus_file_lines[j]):
-                                        # count of this nucleus already in 
-                                        channel = self.acqus_file_lines[j].split('##$NUC')[1].split('=')[0]
-                                        param = '##$SFO' + channel + '='
-                                
-                                if(param!=''):
-                                    if param in self.acqus_file_lines[j]:
-                                        line = self.acqus_file_lines[j].split()
-                                        self.nucleus_frequencies.append(float(line[1]))
-                        
+            nucleus = self.find_named_nucleus(file_lines)
+            self.nuclei_named.append(nucleus)
 
-                        if "##$SFO1=" in file_lines[j] and param=='':
-                            line = file_lines[j].split()
-                            # Checking that sfo1_acqus is not equal to bf1
-                            self.nucleus_frequencies.append(float(line[1]))
-                            break
-                except:
-                    self.nucleus_frequencies.append(0)
-            # if i == 2:
-            #     try:
-            #         file = open("acqu3s", "r")
-            #         file_lines = file.readlines()
-            #         file.close()
-            #         for j in range(len(file_lines)):
-            #             if "##$SFO1=" in file_lines[j]:
-            #                 line = file_lines[j].split()
-            #                 self.nucleus_frequencies.append(float(line[1]))
-            #                 break
-            #     except:
-            #         self.nucleus_frequencies.append(0)
-            # if i == 3:
-            #     try:
-            #         file = open("acqu4s", "r")
-            #         file_lines = file.readlines()
-            #         file.close()
-            #         for j in range(len(file_lines)):
-            #             if "##$SFO1=" in file_lines[j]:
-            #                 line = file_lines[j].split()
-            #                 self.nucleus_frequencies.append(float(line[1]))
-            #                 break
-            #     except:
-            #         self.nucleus_frequencies.append(0)
+            if nucleus == "<off>":
+                # Not a nucleus, such as a series of delays, so it has no
+                # frequency of its own
+                self.nucleus_frequencies.append(0)
+                continue
+
+            frequency = None
+
+            if nucleus != "":
+                channel = self.find_channel_of_nucleus(nucleus)
+                if channel != "":
+                    frequency = self.find_frequency_of_channel(
+                        channel, self.acqus_file_lines
+                    )
+
+            if frequency == None:
+                # The nucleus is not named on any channel, so the frequency in
+                # the file of the dimension itself is used
+                frequency = self.find_frequency_of_channel("1", file_lines)
+
+            if frequency == None:
+                frequency = 0
+
+            self.nucleus_frequencies.append(frequency)
+
+    def find_named_nucleus(self, file_lines) -> str:
+        """
+        The nucleus a dimension says it holds, as it is written in the file.
+        """
+        for line in file_lines:
+            if "##$NUC1=" in line:
+                return line.split()[1]
+
+        return ""
+
+    def find_channel_of_nucleus(self, nucleus) -> str:
+        """
+        Which channel of the acqus file a nucleus was measured on, so that its
+        frequency can be looked up.
+        """
+        for line in self.acqus_file_lines:
+            if "##$NUC" in line and nucleus in line:
+                return line.split("##$NUC")[1].split("=")[0]
+
+        return ""
+
+    def find_frequency_of_channel(self, channel, file_lines):
+        """
+        The frequency held against a channel, or None when it is not there.
+        """
+        wanted = "##$SFO" + str(channel) + "="
+
+        for line in file_lines:
+            if wanted in line:
+                try:
+                    return float(line.split()[1])
+                except (IndexError, ValueError):
+                    return None
+
+        return None
 
     def find_labels_bruker(self) -> None:
         """

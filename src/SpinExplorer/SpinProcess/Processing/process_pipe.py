@@ -77,7 +77,7 @@ class ProcessNMRPipe:
 
         check = self.check_parameters()
         if(check==False):
-            return
+            return False
 
 
         # Create the nmrproc.com file
@@ -138,7 +138,10 @@ class ProcessNMRPipe:
         )
 
         # Add execute permissions to the nmrproc.com file
-        os.system("chmod +x nmrproc.com")
+        chmod_process = subprocess.Popen(
+                        "chmod +x nmrproc.com",
+                        shell=True,
+                        stderr=subprocess.STDOUT)
 
         checking = self.checking_processed_data(nmrfile)
         if checking == False:

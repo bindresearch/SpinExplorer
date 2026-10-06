@@ -61,13 +61,20 @@ class RelaxFit(wx.Frame):
         self.initial_values()
         self.make_relax_sizer()
         self.plot_relax_data()
+
         self.Show()
+        self.Centre()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
 
         # Bind method to resize the window when the frame is resized
         self.Bind(wx.EVT_SIZE, self.OnSizeFrame)
+
 
     def OnMoveFrame(self, event):
         # Get the new default display if the frame is moved
@@ -89,8 +96,14 @@ class RelaxFit(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.relax_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            self.UpdateRelaxFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateRelaxFrame()
+
         event.Skip()
+
 
     def OnSizeFrame(self, event):
         # Get the new frame size
@@ -153,7 +166,7 @@ class RelaxFit(wx.Frame):
         self.delays_label = wx.StaticBox(self, -1, "Delay Times")
         self.delays_sizer_total = wx.StaticBoxSizer(self.delays_label, wx.VERTICAL)
         self.delays_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.delay_times_button = wx.Button(self, -1, "Input Delay Times")
+        self.delay_times_button = wx.Button(self.delays_label, -1, "Input Delay Times")
         self.delay_times_button.Bind(wx.EVT_BUTTON, self.OnInputDelayTimes)
         self.delays_sizer.AddSpacer(5)
         self.delays_sizer.Add(self.delay_times_button)
@@ -169,7 +182,7 @@ class RelaxFit(wx.Frame):
         self.noise_label = wx.StaticBox(self, -1, "Noise Region")
         self.noise_sizer_total = wx.StaticBoxSizer(self.noise_label, wx.VERTICAL)
         self.noise_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.select_noise_button = wx.Button(self, -1, "Select Noise Region")
+        self.select_noise_button = wx.Button(self.noise_label, -1, "Select Noise Region")
         self.select_noise_button.Bind(wx.EVT_BUTTON, self.OnSelectNoise)
         self.noise_sizer.AddSpacer(5)
         self.noise_sizer.Add(self.select_noise_button)
@@ -177,13 +190,13 @@ class RelaxFit(wx.Frame):
 
         # Then have a TextCtrl for the minimum SNR for the relaxation coefficient to be estimated (default to 10)
         self.noise_factor = 10
-        self.noise_factor_label = wx.StaticText(self, -1, "Minimum SNR:")
+        self.noise_factor_label = wx.StaticText(self.noise_label, -1, "Minimum SNR:")
         self.noise_factor_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.noise_sizer.AddSpacer(10)
         self.noise_sizer.Add(self.noise_factor_label)
         self.noise_sizer.AddSpacer(5)
         self.noise_factor_box = wx.TextCtrl(
-            self, -1, str(self.noise_factor), size=(50, -1)
+            self.noise_label, -1, str(self.noise_factor), size=(50, -1)
         )
         self.noise_sizer.Add(self.noise_factor_box)
         self.noise_sizer.AddSpacer(5)
@@ -200,7 +213,7 @@ class RelaxFit(wx.Frame):
         self.R2_fit = True
         self.choices = ["R\u2081", "R\u2082"]
         self.R1R2_radiobox = wx.RadioBox(
-            self, -1, choices=self.choices, style=wx.RA_HORIZONTAL
+            self.fitting_type_label, -1, choices=self.choices, style=wx.RA_HORIZONTAL
         )
         self.R1R2_radiobox.SetSelection(1)
         self.R1R2_radiobox.Bind(wx.EVT_RADIOBOX, self.OnFitSelection)
@@ -216,7 +229,7 @@ class RelaxFit(wx.Frame):
         self.fitting_sizer.AddSpacer(5)
 
         # Can then have a button which will fit the relaxation equation at all ppms across the whole spectrum that are higher than the noise level
-        self.whole_spectrum_fitting_button = wx.Button(self, -1, "Fit Whole Spectrum")
+        self.whole_spectrum_fitting_button = wx.Button(self.fitting_label, -1, "Fit Whole Spectrum")
         self.whole_spectrum_fitting_button.Bind(
             wx.EVT_BUTTON, self.OnWholeSpectrumFitting
         )
@@ -229,37 +242,37 @@ class RelaxFit(wx.Frame):
         # Can plot this distribution of relaxation coefficients and it should resemble a Gaussian distribution
 
         # Have a button to add a new region of interest
-        self.add_region_button = wx.Button(self, -1, "Add ROI")
+        self.add_region_button = wx.Button(self.fitting_label, -1, "Add ROI")
         self.add_region_button.Bind(wx.EVT_BUTTON, self.OnAddROI)
         self.fitting_sizer.Add(self.add_region_button)
         self.fitting_sizer.AddSpacer(5)
 
-        self.input_region_button = wx.Button(self, -1, "Input ROI")
+        self.input_region_button = wx.Button(self.fitting_label, -1, "Input ROI")
         self.input_region_button.Bind(wx.EVT_BUTTON, self.OnInputROI)
         self.fitting_sizer.Add(self.input_region_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Have a button to delete a region of interest
-        self.delete_region_button = wx.Button(self, -1, "Delete ROI")
+        self.delete_region_button = wx.Button(self.fitting_label, -1, "Delete ROI")
         self.delete_region_button.Bind(wx.EVT_BUTTON, self.OnDeleteROI)
         self.fitting_sizer.Add(self.delete_region_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Can then have a button which will fit the Relaxation equation to the mean values of the points above the noise in the region of interest
-        self.region_fitting_button = wx.Button(self, -1, "Fit")
+        self.region_fitting_button = wx.Button(self.fitting_label, -1, "Fit")
         self.region_fitting_button.Bind(wx.EVT_BUTTON, self.OnRegionFitting)
         self.fitting_sizer.Add(self.region_fitting_button)
         self.fitting_sizer.AddSpacer(5)
 
         # Have a button which will perform a biexponential fit on the data in the region of interest
-        self.biexponential_fitting_button = wx.Button(self, -1, "Biexponential Fit")
+        self.biexponential_fitting_button = wx.Button(self.fitting_label, -1, "Biexponential Fit")
         self.biexponential_fitting_button.Bind(
             wx.EVT_BUTTON, self.OnBiexponentialFitting
         )
         self.fitting_sizer.Add(self.biexponential_fitting_button)
         self.fitting_sizer.AddSpacer(5)
 
-        self.save_fitting_button = wx.Button(self, -1, "Save Fit")
+        self.save_fitting_button = wx.Button(self.fitting_label, -1, "Save Fit")
         self.save_fitting_button.Bind(wx.EVT_BUTTON, self.OnSaveFitting)
         self.fitting_sizer.Add(self.save_fitting_button)
         self.fitting_sizer.AddSpacer(5)
@@ -280,7 +293,7 @@ class RelaxFit(wx.Frame):
             self.other_functions_label, wx.VERTICAL
         )
         self.other_functions_sizer.AddSpacer(4)
-        self.delete_slice_button = wx.Button(self, -1, "Delete Slice")
+        self.delete_slice_button = wx.Button(self.other_functions_label, -1, "Delete Slice")
         self.delete_slice_button.Bind(wx.EVT_BUTTON, self.OnDeleteSlice)
         self.other_functions_sizer.Add(self.delete_slice_button)
         self.other_functions_sizer.AddSpacer(4)
@@ -290,7 +303,7 @@ class RelaxFit(wx.Frame):
         self.intensity_sizer = wx.StaticBoxSizer(self.intensity_label, wx.VERTICAL)
         width = 100
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(width, height)
+            self.intensity_label, id=-1, value=0, minval=-1, maxval=10, res=0.01, size=(width, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScrollRelax)
         self.intensity_sizer.AddSpacer(5)
@@ -1927,17 +1940,28 @@ class RelaxFit(wx.Frame):
         Ask the user where they would like to save the folder which will contain the outputs
         """
 
-        dlg = wx.FileDialog (self, "Input directory name to create and save output files to",
-            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+        dlg = wx.DirDialog (self, "Choose a location to save the output files to:",
+            defaultPath=os.getcwd()
         )
-        dlg.SetDirectory(os.getcwd())
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
-            os.makedirs(path, exist_ok=True)
-            self.save_metadata(path)
-            self.save_data(path)
+            # Choose a name for the output directory
+            dlg2 = wx.TextEntryDialog(
+                self,
+                "Enter an output directory name:",
+                "Output directory",
+                ""
+            )
+            if dlg2.ShowModal() == wx.ID_OK:
+                name = dlg2.GetValue()
+                final_path = os.path.join(path, name)
+                os.makedirs(final_path, exist_ok=True)
+                self.save_metadata(final_path)
+                self.save_data(final_path)
             dlg.Destroy()
+            dlg2.Destroy()
         else:
+            dlg.Destroy()
             return
 
     def save_metadata(self, path):
@@ -1970,9 +1994,9 @@ class RelaxFit(wx.Frame):
 
 
             if (self.fitted_gaussian_parameters[i][2]) > 1.25 * np.std(
-                self.fitted_relax_ROI
+                self.fitted_relax_ROI_total[i]
             ):
-                r_error = np.abs(np.std(self.fitted_relax_ROI))
+                r_error = np.abs(np.std(self.fitted_relax_ROI_total[i]))
 
             else:
                 r_error = np.abs(self.fitted_gaussian_parameters[i][2])

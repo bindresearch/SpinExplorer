@@ -2,7 +2,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 import numpy as np
-import nmrglue as ng # type: ignore
+import nmrglue as ng
+
+from SpinExplorer.SpinProcess.Processing import transposes
+from SpinExplorer.SpinProcess.Processing import projections # type: ignore
 
 
 class SolventSuppressionFilter(Enum):
@@ -1146,6 +1149,15 @@ class DimensionConfig:
                 dic, data = ng.pipe_proc.zf(dic, data, pad=self.zf_additional_value, auto = self.zf_filling_round)
             elif self.zf_type == ZFTypes.FINAL_DATA_SIZE:
                 dic, data = ng.pipe_proc.zf(dic, data, size=self.zf_additional_value, auto = self.zf_filling_round)
+
+            # nmrglue does not record the new size of the dimension in the
+            # header, and the size of the first axis of a 3D is read back from
+            # there, so it is written here as SpinProcess does
+            fn = "FDF" + str(int(dic["FDDIMORDER"][0]))
+            size = data.shape[-1]
+            dic[fn + "SIZE"] = size
+            dic[fn + "TDSIZE"] = size
+            dic[fn + "APODSIZE"] = size
         
 
         if self.ft_flag:
@@ -1584,6 +1596,26 @@ class ExperimentConfigStore:
         # Load data
         dic, data = ng.pipe.read(self.fid_name)
 
+        print("Read {} holding {}".format(self.fid_name, data.shape))
+
+        # The processing is written for a given number of dimensions, and doing
+        # it to data of another shape would quietly process the wrong axes
+        if len(data.shape) != len(self.dim_configs):
+            raise ValueError(
+                "the processing for this experiment is written for {} "
+                "dimensions ({}) but the converted data in {} has {}, with "
+                "shape {}. Either the experiment holds a different number of "
+                "dimensions than the processing expects, or the sizes of the "
+                "dimensions were not read correctly from the parameter "
+                "files.".format(
+                    len(self.dim_configs),
+                    ", ".join(self.dim_labels),
+                    self.fid_name,
+                    len(data.shape),
+                    data.shape,
+                )
+            )
+
         # Set the comment to nmrglue so that the fact nmrglue processing was used is noted in the processed spectrum header
         dic['FDCOMMENT'] = 'nmrglue'
         
@@ -1595,21 +1627,54 @@ class ExperimentConfigStore:
             pass
 
         
-        # Process each dimension
+        # A dimension is processed while it is the last axis of the data, so the
+        # data is transposed between dimensions to bring each one into that
+        # place. nmrglue only transposes 2D data, so 3D data is transposed the
+        # same way as it is in SpinProcess.
+        dimensions = len(self.dim_configs)
+
         for i, (label, config) in enumerate(zip(self.dim_labels, self.dim_configs)):
             print(f"Processing dimension {i} ({label})...")
-            
+
             # Apply processing for this dimension
             dic, data = config.apply_processing(dic, data, i, filter_removal=filter_removal)
 
             # Transpose if not the last dimension
-            if i < len(self.dim_configs) - 1:
-                dic, data = ng.pipe_proc.tp(dic, data)
+            if i < dimensions - 1:
+                if dimensions == 3:
+                    if i == 0:
+                        # The second dimension takes the place of the direct one
+                        dic, data = transposes.transpose_3d(dic, data, auto=True)
+                    else:
+                        # The third dimension comes from the first axis
+                        dic, data = transposes.zero_transpose_3d(dic, data)
+                else:
+                    dic, data = ng.pipe_proc.tp(dic, data)
+
+        if dimensions == 3:
+            # Put the dimensions back in the order they are held in, so that the
+            # spectrum which is written out is the way round it started
+            dic, data = transposes.zero_transpose_3d(dic, data)
         
         # Save if output file specified
         if self.ft_name:
             ng.pipe.write(self.ft_name, dic, data, overwrite=True)
             print(f"Saved processed data to {self.ft_name}")
-        
+
+        if dimensions == 3:
+            # The bore view of a 3D reads the plane it shows from a projection
+            # file, so one is written for each of the three planes. The spectrum
+            # itself has been saved by now, so a projection which cannot be
+            # written is said out loud rather than losing the processing.
+            try:
+                written = projections.write_3d_projections(dic, data)
+                print("Wrote the projections: {}".format(", ".join(written)))
+            except Exception as problem:
+                print(
+                    "The projections could not be written ({}). The spectrum "
+                    "itself is processed, but the bore view will not have a "
+                    "plane to show until they are made.".format(problem)
+                )
+
         return dic, data
     

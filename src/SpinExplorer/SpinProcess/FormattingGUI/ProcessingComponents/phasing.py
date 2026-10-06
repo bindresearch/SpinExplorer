@@ -78,7 +78,7 @@ class PhasingDirect:
             self.phase_correction_box, wx.HORIZONTAL
         )
         self.phase_correction_checkbox = wx.CheckBox(
-            parent, -1, "Apply phase correction"
+            self.phase_correction_box, -1, "Apply phase correction"
         )
         self.phase_correction_checkbox.SetValue(self.phase_correction_checkbox_value)
         self.phase_correction_checkbox.Bind(
@@ -90,13 +90,13 @@ class PhasingDirect:
         self.phase_correction_sizer.AddSpacer(10)
         # Have a textcontrol for p0 and p1 values
         self.phase_correction_p0_label = wx.StaticText(
-            parent, -1, "Zero order correction (p0):"
+            self.phase_correction_box, -1, "Zero order correction (p0):"
         )
         self.phase_correction_sizer.Add(
             self.phase_correction_p0_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.phase_correction_p0_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.p0_total), size=(50, 20)
+            self.phase_correction_box, -1, str(self.p0_total), size=(50, 20)
         )
         self.phase_correction_p0_textcontrol.Bind(
             wx.EVT_TEXT, self.on_phase_correction_textcontrol
@@ -106,13 +106,13 @@ class PhasingDirect:
         )
         self.phase_correction_sizer.AddSpacer(10)
         self.phase_correction_p1_label = wx.StaticText(
-            parent, -1, "First order correction (p1):"
+            self.phase_correction_box, -1, "First order correction (p1):"
         )
         self.phase_correction_sizer.Add(
             self.phase_correction_p1_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.phase_correction_p1_textcontrol = wx.TextCtrl(
-            parent, -1, str(self.p1_total), size=(50, 20)
+            self.phase_correction_box, -1, str(self.p1_total), size=(50, 20)
         )
         self.phase_correction_p1_textcontrol.Bind(
             wx.EVT_TEXT, self.on_phase_correction_textcontrol
@@ -123,11 +123,11 @@ class PhasingDirect:
         self.phase_correction_sizer.AddSpacer(10)
 
         # A button to toggle magnitude mode
-        self.magnitude_mode_label = wx.StaticText(parent, -1, "Magnitude Mode:")
+        self.magnitude_mode_label = wx.StaticText(self.phase_correction_box, -1, "Magnitude Mode:")
         self.phase_correction_sizer.Add(
             self.magnitude_mode_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
-        self.magnitude_mode_checkbox = wx.CheckBox(parent, -1)
+        self.magnitude_mode_checkbox = wx.CheckBox(self.phase_correction_box, -1)
         self.magnitude_mode_checkbox.SetValue(self.magnitude_mode_toggle)
         self.phase_correction_sizer.Add(
             self.magnitude_mode_checkbox, 0, wx.ALIGN_CENTER_VERTICAL
@@ -136,7 +136,7 @@ class PhasingDirect:
 
         # Have a button for automatic phase correction
         self.phase_correction_auto_button = wx.Button(
-            parent, -1, "Interactive Phase Correction"
+            self.phase_correction_box, -1, "Interactive Phase Correction"
         )
         self.phase_correction_auto_button.Bind(
             wx.EVT_BUTTON, self.on_phase_correction_interactive
@@ -147,7 +147,7 @@ class PhasingDirect:
         self.phase_correction_sizer.AddSpacer(10)
 
         # Have a button showing information on phase correction
-        self.phase_correction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.phase_correction_info = wx.Button(self.phase_correction_box, -1, "\u24d8", size=(25, 32))
         self.phase_correction_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_phase_correction_info
         )
@@ -250,11 +250,8 @@ class PhasingDirect:
             )
         dic, data = ng.pipe_proc.di(dic, data)
 
-        if len(self.parent.parent.tabs) == 2:
-            dic, data = ng.pipe_proc.tp(dic, data)
-            dic, data = ng.pipe_proc.ft(dic, data, auto=True)
-            dic, data = ng.pipe_proc.tp(dic, data)
-
+        # The indirect dimensions are left as recorded so that the phasing is
+        # performed on the FIDs themselves, both real and imaginary
 
         self.nmr_d, self.nmr_spectrum = dic, data
 
@@ -324,7 +321,7 @@ class PhasingIndirect:
             self.phase_correction_box_indirect, wx.HORIZONTAL
         )
         self.phase_correction_checkbox_indirect = wx.CheckBox(
-            parent, -1, "Apply phase correction"
+            self.phase_correction_box_indirect, -1, "Apply phase correction"
         )
         self.phase_correction_checkbox_indirect.Bind(
             wx.EVT_CHECKBOX, self.on_phase_correction_checkbox_indirect
@@ -338,13 +335,13 @@ class PhasingIndirect:
         self.phase_correction_sizer_indirect.AddSpacer(10)
         # Have a textcontrol for p0 and p1 values
         self.phase_correction_p0_label = wx.StaticText(
-            parent, -1, "Zero order correction (p0):"
+            self.phase_correction_box_indirect, -1, "Zero order correction (p0):"
         )
         self.phase_correction_sizer_indirect.Add(
             self.phase_correction_p0_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.phase_correction_p0_textcontrol_indirect = wx.TextCtrl(
-            parent, -1, str(self.p0_total_indirect), size=(50, 20)
+            self.phase_correction_box_indirect, -1, str(self.p0_total_indirect), size=(50, 20)
         )
         self.phase_correction_p0_textcontrol_indirect.Bind(
             wx.EVT_TEXT, self.on_phase_correction_p0_indirect
@@ -354,13 +351,13 @@ class PhasingIndirect:
         )
         self.phase_correction_sizer_indirect.AddSpacer(10)
         self.phase_correction_p1_label = wx.StaticText(
-            parent, -1, "First order correction (p1):"
+            self.phase_correction_box_indirect, -1, "First order correction (p1):"
         )
         self.phase_correction_sizer_indirect.Add(
             self.phase_correction_p1_label, 0, wx.ALIGN_CENTER_VERTICAL
         )
         self.phase_correction_p1_textcontrol_indirect = wx.TextCtrl(
-            parent, -1, str(self.p1_total_indirect), size=(50, 20)
+            self.phase_correction_box_indirect, -1, str(self.p1_total_indirect), size=(50, 20)
         )
         self.phase_correction_p1_textcontrol_indirect.Bind(
             wx.EVT_TEXT, self.on_phase_correction_p1_indirect
@@ -371,7 +368,7 @@ class PhasingIndirect:
         self.phase_correction_sizer_indirect.AddSpacer(10)
 
         # Have a checkbox for f1180
-        self.phase_correction_f1180_button_indirect = wx.CheckBox(parent, -1, "F1180")
+        self.phase_correction_f1180_button_indirect = wx.CheckBox(self.phase_correction_box_indirect, -1, "F1180")
         self.phase_correction_f1180_button_indirect.Bind(
             wx.EVT_CHECKBOX, self.on_phase_correction_f1180
         )
@@ -382,7 +379,7 @@ class PhasingIndirect:
         self.phase_correction_sizer_indirect.AddSpacer(10)
 
         # Have a button showing information on phase correction
-        self.phase_correction_info = wx.Button(parent, -1, "\u24d8", size=(25, 32))
+        self.phase_correction_info = wx.Button(self.phase_correction_box_indirect, -1, "\u24d8", size=(25, 32))
         self.phase_correction_info.Bind(
             wx.EVT_BUTTON, self.info_buttons.on_phase_correction_info_indirect
         )
@@ -423,14 +420,11 @@ class PhasingIndirect:
         try:
             if np.abs(float(self.p1_total_indirect)) > 45:
                 self.apodization_class.apodization_first_point_scaling = 1.0
-                self.apodization_class.apodization_first_point_textcontrol.SetValue(
-                    str(self.apodization_first_point_scaling_indirect)
-                )
             else:
                 self.apodization_class.apodization_first_point_scaling = 0.5
-                self.apodization_class.apodization_first_point_textcontrol_indirect.SetValue(
-                    str(self.apodization_class.apodization_first_point_scaling)
-                )
+            self.apodization_class.apodization_first_point_textcontrol.SetValue(
+                str(self.apodization_class.apodization_first_point_scaling)
+            )
         except:
             pass
 

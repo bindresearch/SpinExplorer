@@ -25,14 +25,12 @@ SOFTWARE."""
 
 
 print("-------------------------------------------------------------")
-print("                         SpinProcess                         ")
+print("                        SpinProcess                          ")
 print("-------------------------------------------------------------")
-print("               (version 1.4) 13th March 2026                 ")
+print("             (version 1.5) 29th September 2026               ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
-print("-------------------------------------------------------------")
-print("                     Processing NMR Data                     ")
 print("-------------------------------------------------------------")
 print(" Video tutorials at:")
 print(" https://www.youtube.com/@BindResearch")
@@ -77,6 +75,37 @@ else:
 # James Eaton, 10/06/2025, University of Oxford
 # James Eaton, 25/09/2025, Bind Research
 # This program is designed to allow the user to process NMR FID data that has been converted to nmrPipe format.
+
+
+def find_window_size(width, height, area):
+    """
+    A window size which fits on the screen.
+
+    The processing tabs ask for the size their contents need, and some
+    combinations of options ask for more height than the screen has. A window
+    taller than the screen cannot be moved back into view, so the size is never
+    allowed past what the screen holds.
+    """
+    return (
+        int(max(1, min(int(width), area.GetWidth()))),
+        int(max(1, min(int(height), area.GetHeight()))),
+    )
+
+
+def find_window_position(x, y, width, height, area):
+    """
+    A position which keeps the whole window inside the usable part of the
+    screen, so that its top is always reachable. The usable part leaves out
+    anything the system keeps for itself, such as the menu bar at the top of a
+    Mac, which a window must stay below to be grabbed.
+    """
+    left = area.GetX() + max(0, area.GetWidth() - int(width))
+    top = area.GetY() + max(0, area.GetHeight() - int(height))
+
+    return (
+        int(min(max(int(x), area.GetX()), left)),
+        int(min(max(int(y), area.GetY()), top)),
+    )
 
 
 # task bar dock icon adapted from https://wiki.wxpython.org/Custom%20Mac%20OsX%20Dock%20Bar%20Icon
@@ -159,6 +188,10 @@ class SpinProcess(wx.Frame):
         self.Show()
         self.Centre()
 
+        # The size the tabs need can be larger than the screen, which would
+        # leave the top of the window out of reach
+        self.change_frame_size(*self.GetSize())
+
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, event):
@@ -166,11 +199,47 @@ class SpinProcess(wx.Frame):
         # if(self.reprocess == False):
         #     sys.exit()
 
+    def find_screen_area(self):
+        """
+        The part of the screen this window can use, which leaves out anything
+        the system keeps for itself such as the menu bar or the task bar.
+        """
+        try:
+            index = wx.Display.GetFromWindow(self)
+            if index == wx.NOT_FOUND:
+                index = 0
+
+            return wx.Display(index).GetClientArea()
+        except Exception:
+            width, height = wx.GetDisplaySize()
+            return wx.Rect(0, 0, width, height)
+
     def change_frame_size(self, width, height):
-        self.SetSize(width, height)
+        area = self.find_screen_area()
+
+        self.SetSize(*find_window_size(width, height, area))
 
         # Centre the window on the screen
         self.Centre()
+
+        # Centring a window which is as big as the screen can leave its top out
+        # of reach, so it is brought back inside
+        self.keep_on_screen(area)
+
+    def keep_on_screen(self, area=None):
+        """
+        Move the window back inside the screen if any of it is outside, so that
+        its top can always be reached.
+        """
+        if area == None:
+            area = self.find_screen_area()
+
+        width, height = self.GetSize()
+        x, y = self.GetPosition()
+
+        self.SetPosition(
+            wx.Point(*find_window_position(x, y, width, height, area))
+        )
     
     def GetTitle(self):
         """

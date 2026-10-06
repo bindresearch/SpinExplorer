@@ -169,24 +169,24 @@ class ThreeDViewer(wx.Panel):
         self.phasing_label = wx.StaticBox(self, -1, "Phasing:")
         self.phasing_sizer = wx.StaticBoxSizer(self.phasing_label, wx.VERTICAL)
 
-        self.P0_label = wx.StaticText(self, label="P0 (Coarse):")
-        self.P1_label = wx.StaticText(self, label="P1 (Coarse):")
+        self.P0_label = wx.StaticText(self.phasing_label, label="P0 (Coarse):")
+        self.P1_label = wx.StaticText(self.phasing_label, label="P1 (Coarse):")
         self.P0_slider = FloatSlider(
-            self, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
         )
         self.P1_slider = FloatSlider(
-            self, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-180, maxval=180, res=0.1, size=(257, height)
         )
         self.P0_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
         self.P1_slider.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
 
-        self.P0_label_fine = wx.StaticText(self, label="P0 (Fine):     ")
-        self.P1_label_fine = wx.StaticText(self, label="P1 (Fine):     ")
+        self.P0_label_fine = wx.StaticText(self.phasing_label, label="P0 (Fine):     ")
+        self.P1_label_fine = wx.StaticText(self.phasing_label, label="P1 (Fine):     ")
         self.P0_slider_fine = FloatSlider(
-            self, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
         )
         self.P1_slider_fine = FloatSlider(
-            self, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
+            self.phasing_label, id=-1, value=0, minval=-10, maxval=10, res=0.01, size=(257, height)
         )
         self.P0_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
         self.P1_slider_fine.Bind(wx.EVT_SLIDER, self.OnSliderScroll3D)
@@ -210,10 +210,10 @@ class ThreeDViewer(wx.Panel):
         self.sizer_fine.Add(self.P1_slider_fine)
 
         self.phasing_combined = wx.BoxSizer(wx.HORIZONTAL)
-        self.P0_total = wx.StaticText(self, label="P0 (Total):")
-        self.P1_total = wx.StaticText(self, label="P1 (Total):")
-        self.P0_total_value = wx.StaticText(self, label="0")
-        self.P1_total_value = wx.StaticText(self, label="0")
+        self.P0_total = wx.StaticText(self.phasing_label, label="P0 (Total):")
+        self.P1_total = wx.StaticText(self.phasing_label, label="P1 (Total):")
+        self.P0_total_value = wx.StaticText(self.phasing_label, label="0")
+        self.P1_total_value = wx.StaticText(self.phasing_label, label="0")
         self.phasing_combined.Add(self.P0_total)
         self.phasing_combined.AddSpacer(135)
         self.phasing_combined.Add(self.P0_total_value)
@@ -238,12 +238,12 @@ class ThreeDViewer(wx.Panel):
         self.move_sizer = wx.StaticBoxSizer(self.move_label, wx.VERTICAL)
         self.move_x = wx.BoxSizer(wx.HORIZONTAL)
         self.move_y = wx.BoxSizer(wx.HORIZONTAL)
-        self.move_x.Add(wx.StaticText(self, label="X:"))
-        self.move_y.Add(wx.StaticText(self, label="Y:"))
+        self.move_x.Add(wx.StaticText(self.move_label, label="X:"))
+        self.move_y.Add(wx.StaticText(self.move_label, label="Y:"))
         self.move_x.AddSpacer(5)
         self.move_y.AddSpacer(5)
         self.move_x_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeX,
@@ -252,7 +252,7 @@ class ThreeDViewer(wx.Panel):
             size=(300, height),
         )
         self.move_y_slider = FloatSlider(
-            self,
+            self.move_label,
             id=-1,
             value=0,
             minval=-self.reference_rangeY,
@@ -263,13 +263,13 @@ class ThreeDViewer(wx.Panel):
         self.move_x_slider.Bind(wx.EVT_SLIDER, self.OnMoveX_3D)
         self.move_y_slider.Bind(wx.EVT_SLIDER, self.OnMoveY_3D)
         self.reference_range_chooserX = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
         self.reference_range_chooserX.Bind(wx.EVT_COMBOBOX, self.OnReferenceComboX_3D)
         self.reference_range_chooserY = wx.ComboBox(
-            self,
+            self.move_label,
             value=self.reference_range_values[0],
             choices=self.reference_range_values,
         )
@@ -286,14 +286,14 @@ class ThreeDViewer(wx.Panel):
         self.move_sizer.AddSpacer(5)
         self.move_val_box = wx.BoxSizer(wx.HORIZONTAL)
         self.move_val_box.AddSpacer(20)
-        self.move_val_box.Add(wx.StaticText(self, label="Move X (ppm):"))
+        self.move_val_box.Add(wx.StaticText(self.move_label, label="Move X (ppm):"))
         self.move_val_box.AddSpacer(5)
-        self.move_val_x = wx.StaticText(self, label="0.00")
+        self.move_val_x = wx.StaticText(self.move_label, label="0.00")
         self.move_val_box.Add(self.move_val_x)
         self.move_val_box.AddSpacer(35)
-        self.move_val_box.Add(wx.StaticText(self, label="Move Y (ppm):"))
+        self.move_val_box.Add(wx.StaticText(self.move_label, label="Move Y (ppm):"))
         self.move_val_box.AddSpacer(5)
-        self.move_val_y = wx.StaticText(self, label="0.00")
+        self.move_val_y = wx.StaticText(self.move_label, label="0.00")
         self.move_val_box.Add(self.move_val_y)
         self.move_sizer.Add(self.move_val_box)
 
@@ -304,7 +304,7 @@ class ThreeDViewer(wx.Panel):
         self.linewidth_label = wx.StaticBox(self, -1, "Contour Line Width:")
         self.linewidth_sizer = wx.StaticBoxSizer(self.linewidth_label, wx.VERTICAL)
         self.linewidth_slider = FloatSlider(
-            self, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(265, height)
+            self.linewidth_label, id=-1, value=0.5, minval=0.1, maxval=2, res=0.1, size=(265, height)
         )
         self.linewidth_slider.Bind(wx.EVT_SLIDER, self.OnLinewidthScroll3D)
         self.linewidth_sizer.AddSpacer(5)
@@ -319,8 +319,11 @@ class ThreeDViewer(wx.Panel):
         z_values = ng.pipe.make_uc(
             self.nmrdata.dic, self.nmrdata.data, dim=0
         ).ppm_scale()
+
+        self.z_sizer = wx.StaticBoxSizer(self.z_label, wx.VERTICAL)
+
         self.z_slider = FloatSlider(
-            self,
+            self.z_label,
             id=-1,
             value=0,
             minval=0,
@@ -329,13 +332,12 @@ class ThreeDViewer(wx.Panel):
             size=(265, height),
         )
         self.z_slider.Bind(wx.EVT_SLIDER, self.OnZScroll3D)
-        self.z_sizer = wx.StaticBoxSizer(self.z_label, wx.VERTICAL)
         self.z_sizer.AddSpacer(15)
         self.z_sizer.Add(self.z_slider)
         self.z_sizer.AddSpacer(15)
         self.z_val_box = wx.BoxSizer(wx.HORIZONTAL)
         self.z_val_box.AddSpacer(132)
-        self.z_val = wx.StaticText(self, label="0")
+        self.z_val = wx.StaticText(self.z_label, label="0")
         self.z_val_box.Add(self.z_val)
         self.z_sizer.Add(self.z_val_box)
         self.z_sizer.AddSpacer(4)
@@ -354,9 +356,9 @@ class ThreeDViewer(wx.Panel):
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.csizer = wx.BoxSizer(wx.HORIZONTAL)
         self.x_val = 10.00
-        self.contour2_label = wx.StaticText(self, label="x:")
+        self.contour2_label = wx.StaticText(self.contour_label, label="x:")
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, size=(250, height)
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, size=(250, height)
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnMinContour3D)
         self.csizer.Add(self.contour2_label)
@@ -368,7 +370,7 @@ class ThreeDViewer(wx.Panel):
         self.contour_val_box = wx.BoxSizer(wx.HORIZONTAL)
         self.contour_val_box.AddSpacer(75)
         self.contour_val = wx.TextCtrl(
-            self, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
+            self.contour_label, value="10", size=(50, 20), style=wx.TE_PROCESS_ENTER
         )
         self.contour_val.Bind(wx.EVT_TEXT_ENTER, self.OnTextContour3D)
         self.contour_val_box.Add(self.contour_val)
@@ -385,7 +387,7 @@ class ThreeDViewer(wx.Panel):
         self.intensity_label = wx.StaticBox(self, -1, "Intensity Scaling 1D (%):")
         self.intensity_sizer = wx.StaticBoxSizer(self.intensity_label, wx.VERTICAL)
         self.intensity_slider = FloatSlider(
-            self, id=-1, value=2, minval=0, maxval=6, res=0.01, size=(265, height)
+            self.intensity_label, id=-1, value=2, minval=0, maxval=6, res=0.01, size=(265, height)
         )
         self.intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensityScroll3D)
         self.intensity_sizer.AddSpacer(5)
@@ -418,7 +420,7 @@ class ThreeDViewer(wx.Panel):
         options.append("(" + labels[2] + "," + labels[0] + ")," + labels[1])
         options.append("(" + labels[0] + "," + labels[2] + ")," + labels[1])
 
-        self.orientation_chooser = wx.ComboBox(self, value=options[0], choices=options)
+        self.orientation_chooser = wx.ComboBox(self.orientation_label, value=options[0], choices=options)
         self.orientation_chooser.Bind(wx.EVT_COMBOBOX, self.OnOrientationCombo)
         self.orientation_chooser.SetSelection(0)
         self.orientation_sizer.Add(self.orientation_chooser)
@@ -499,49 +501,75 @@ class ThreeDViewer(wx.Panel):
 
 
 
+    def axis_name(self, label) -> str:
+        """
+        The name of a dimension without the units which are added to the axis
+        labels, for finding the projection files which are named after the
+        dimensions they hold.
+        """
+        return str(label).split(" (")[0].strip()
+
+    def find_projection_file(self, selection=None):
+        """
+        The projection file holding the plane of a data orientation, which is
+        what the bore is looked down from. The files are named after the two
+        dimensions of the plane, and either way round, so both spellings are
+        tried. None is given back when neither of them is there.
+        """
+        if selection == None:
+            selection = self.orientation_chooser.GetSelection()
+
+        labels = [self.axis_name(label) for label in self.nmrdata.axislabels]
+
+        # The two dimensions of the plane which each orientation shows, as
+        # indexes into the labels
+        pairs = {0: (1, 2), 1: (2, 1), 2: (1, 0), 3: (0, 1), 4: (0, 2), 5: (2, 0)}
+        first, second = pairs.get(selection, (1, 2))
+
+        for projection in [
+            labels[first] + "." + labels[second] + ".dat",
+            labels[second] + "." + labels[first] + ".dat",
+        ]:
+            if os.path.exists(projection) == True:
+                return projection
+
+        return None
+
+    def find_bore_windows(self) -> list:
+        """
+        The bore windows which are open on this 3D, so that they can be kept
+        showing the same plane as the 3D itself.
+        """
+        windows = []
+
+        for child in self.GetChildren():
+            if isinstance(child, SpinBore) and child.IsBeingDeleted() == False:
+                windows.append(child)
+
+        return windows
+
+    def update_bore_windows(self):
+        """
+        The bore windows look down the bore of the plane which is shown, so
+        they follow the 3D when its orientation is changed. A window which
+        asked for the change itself is already up to date.
+        """
+        for window in self.find_bore_windows():
+            if getattr(window, "changing_projection", False) == True:
+                continue
+
+            try:
+                window.follow_orientation()
+            except (AttributeError, RuntimeError):
+                continue
+
     def OnShowBoreButton(self, event):
         # Open a SpinBore frame
 
         # Find out which projection is currently selected
-        if self.orientation_chooser.GetSelection() == 0:
-            # projection is x_name.y_name.dat
-            projection = (
-                self.nmrdata.axislabels[1] + "." + self.nmrdata.axislabels[2] + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 1:
-            # projection is y_name.x_name.dat
-            projection = (
-                self.nmrdata.axislabels[2] + "." + self.nmrdata.axislabels[1] + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 2:
-            # projection is x_name.z_name.dat
-            projection = (
-                self.nmrdata.axislabels[1] + "." + self.nmrdata.axislabels[0] + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 3:
-            # projection is z_name.x_name.dat
-            projection = (
-                self.nmrdata.axislabels[0] + "." + self.nmrdata.axislabels[1] + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 4:
-            # projection is z_name.y_name.dat
-            projection = (
-                self.nmrdata.axislabels[0] + "." + self.nmrdata.axislabels[2] + ".dat"
-            )
-        elif self.orientation_chooser.GetSelection() == 5:
-            # projection is y_name.z_name.dat
-            projection = (
-                self.nmrdata.axislabels[2] + "." + self.nmrdata.axislabels[0] + ".dat"
-            )
+        projection = self.find_projection_file()
 
-        # Check to see if the projection file exists
-        if os.path.exists(projection) == False:
-            # Swap the axis labels
-            name = projection.split(".dat")[0].split(".")
-            projection = name[1] + "." + name[0] + ".dat"
-
-        # Check to see if the projection file exists
-        if os.path.exists(projection) == False:
+        if projection == None:
             # Give a warning that the projection file does not exist
             dlg = wx.MessageDialog(
                 self,
@@ -560,30 +588,54 @@ class ThreeDViewer(wx.Panel):
 
     def OnOrientationCombo(self, event):
         self.nmrdata.data = self.data_original
+        self.ax.clear()
+        self.axes1D.clear()
+        self.axes1D_2.clear()
+
         if self.orientation_chooser.GetSelection() == 0:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[0]) + "):")
-            self.ax.clear()
-            self.axes1D.clear()
-            self.axes1D_2.clear()
             self.fig.clear()
             self.draw_figure_3D()
             self.ax.set_xlabel(self.nmrdata.axislabels[1])
             self.ax.set_ylabel(self.nmrdata.axislabels[2])
         elif self.orientation_chooser.GetSelection() == 1:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[0]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
 
             # Transpose the data to the right format
@@ -608,19 +660,42 @@ class ThreeDViewer(wx.Panel):
 
         elif self.orientation_chooser.GetSelection() == 2:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[2]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (2, 1, 0))
@@ -641,19 +716,42 @@ class ThreeDViewer(wx.Panel):
 
         elif self.orientation_chooser.GetSelection() == 3:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[2]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
+
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (2, 0, 1))
@@ -674,19 +772,42 @@ class ThreeDViewer(wx.Panel):
 
         elif self.orientation_chooser.GetSelection() == 4:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[1]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (1, 2, 0))
@@ -706,19 +827,42 @@ class ThreeDViewer(wx.Panel):
             self.UpdateFrame()
         elif self.orientation_chooser.GetSelection() == 5:
             self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[1]) + "):")
-            self.ax.clear()
+
             # Get ppm values for x and y axis
             self.uc0 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=0)
             self.uc1 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=2)
             self.uc2 = ng.pipe.make_uc(self.nmrdata.dic, self.nmrdata.data, dim=1)
             if(self.fid_viewer==False):
-                self.ppms_0 = self.uc0.ppm_scale()
-                self.ppms_1 = self.uc1.ppm_scale()
-                self.ppms_2 = self.uc2.ppm_scale()
+                uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+                uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+                uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+    
+                if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                    self.ppms_0 = self.uc0.ppm_scale()
+                    self.ppm_axis_0 = True
+                else:
+                    self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                    self.ppm_axis_0 = False
+    
+                if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                    self.ppms_1 = self.uc1.ppm_scale()
+                    self.ppm_axis_1 = True
+                else:
+                    self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                    self.ppm_axis_1 = False
+                if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                    self.ppms_2 = self.uc2.ppm_scale()
+                    self.ppm_axis_2 = True
+                else:
+                    self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                    self.ppm_axis_2 = False
             else:
                 self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
                 self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
                 self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
 
             # Transpose the data to the right format
             self.nmrdata.data = np.transpose(self.data_original, (1, 0, 2))
@@ -736,6 +880,60 @@ class ThreeDViewer(wx.Panel):
             self.ax.set_xlabel(self.nmrdata.axislabels[0])
             self.ax.set_ylabel(self.nmrdata.axislabels[2])
             self.UpdateFrame()
+
+        # A bore window looks down the bore of the plane which is shown here, so
+        # it is shown the new plane as well
+        self.update_bore_windows()
+
+    def x_index(self, value) -> int:
+        """
+        Convert a value on the x axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_0 == True:
+            return self.uc0(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_0) - 1))
+
+    def y_index(self, value) -> int:
+        """
+        Convert a value on the y axis into an index of the data. The axis is
+        only in ppm if that dimension has been Fourier transformed, otherwise
+        the axis is in points.
+        """
+        if self.ppm_axis_1 == True:
+            return self.uc1(str(value) + "ppm")
+
+        return int(np.clip(round(float(value)), 0, len(self.ppms_1) - 1))
+
+    def x_limits(self, ppms=None):
+        """
+        The limits for the x axis. A ppm axis is plotted with the chemical
+        shift decreasing from left to right, an axis in points is plotted
+        normally with the points increasing from left to right.
+        """
+        if ppms is None:
+            ppms = self.ppms_0
+
+        if self.ppm_axis_0 == True:
+            return max(ppms), min(ppms)
+
+        return min(ppms), max(ppms)
+
+    def y_limits(self, ppms=None):
+        """
+        The limits for the y axis. A ppm axis is plotted with the chemical
+        shift increasing from top to bottom, an axis in points is plotted
+        normally with the points increasing from bottom to top.
+        """
+        if ppms is None:
+            ppms = self.ppms_1
+
+        if self.ppm_axis_1 == True:
+            return max(ppms), min(ppms)
+
+        return min(ppms), max(ppms)
 
     def replot_3D(self):
         self.new_x_ppms = self.ppms_0
@@ -758,12 +956,8 @@ class ThreeDViewer(wx.Panel):
             linewidths=self.contour_linewidth,
         )
 
-        if(self.fid_viewer==False):
-            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
-        else:
-            self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
-            self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
+        self.ax.set_xlim(*self.x_limits())
+        self.ax.set_ylim(*self.y_limits())
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
             self.nmrdata.data[self.max_intensity_index][:, 1],
@@ -1192,13 +1386,54 @@ class ThreeDViewer(wx.Panel):
             self.uc2 = ng.fileiobase.uc_from_udic(udic, dim=0)
 
         if(self.fid_viewer==False):
-            self.ppms_0 = self.uc0.ppm_scale()
-            self.ppms_1 = self.uc1.ppm_scale()
-            self.ppms_2 = self.uc2.ppm_scale()
+            uc0_dim = int(self.nmrdata.dic['FDDIMORDER'][1])
+            uc1_dim = int(self.nmrdata.dic['FDDIMORDER'][0])
+            uc2_dim = int(self.nmrdata.dic['FDDIMORDER'][2])
+
+            if(self.nmrdata.dic['FDF'+str(uc0_dim)+'FTFLAG']==1):
+                self.ppms_0 = self.uc0.ppm_scale()
+                self.ppm_axis_0 = True
+                if('(ppm)' not in self.nmrdata.axislabels[1]):
+                    self.nmrdata.axislabels[1]+= ' (ppm)'
+            else:
+                self.ppms_0 = np.arange(0,len(self.uc0.ppm_scale()),1)
+                self.ppm_axis_0 = False
+                if('(points)' not in self.nmrdata.axislabels[1]):
+                    self.nmrdata.axislabels[1]+= ' (points)'
+
+            if(self.nmrdata.dic['FDF'+str(uc1_dim)+'FTFLAG']==1):
+                self.ppms_1 = self.uc1.ppm_scale()
+                self.ppm_axis_1 = True
+                if('(ppm)' not in self.nmrdata.axislabels[2]):
+                    self.nmrdata.axislabels[2]+= ' (ppm)'
+            else:
+                self.ppms_1 = np.arange(0,len(self.uc1.ppm_scale()),1)
+                self.ppm_axis_1 = False
+                if('(points)' not in self.nmrdata.axislabels[2]):
+                    self.nmrdata.axislabels[2]+= ' (points)'
+            if(self.nmrdata.dic['FDF'+str(uc2_dim)+'FTFLAG']==1):
+                self.ppms_2 = self.uc2.ppm_scale()
+                self.ppm_axis_2 = True
+                if('(ppm)' not in self.nmrdata.axislabels[0]):
+                    self.nmrdata.axislabels[0]+= ' (ppm)'
+            else:
+                self.ppms_2 = np.arange(0,len(self.uc2.ppm_scale()),1)
+                self.ppm_axis_2 = False
+                if('(points)' not in self.nmrdata.axislabels[0]):
+                        self.nmrdata.axislabels[0]+= ' (points)'
         else:
             self.ppms_0 = np.arange(0, len(self.uc0.ppm_scale()),1)
+            self.ppm_axis_0 = False
             self.ppms_1 = np.arange(0, len(self.uc1.ppm_scale()),1)
+            self.ppm_axis_1 = False
             self.ppms_2 = np.arange(0, len(self.uc2.ppm_scale()),1)
+            self.ppm_axis_2 = False
+            for l, label in enumerate(self.nmrdata.axislabels):
+                if('(points)' not in label):
+                    self.nmrdata.axislabels[l]+= ' (points)'
+
+        self.z_label.SetLabel("Z Value (" + str(self.nmrdata.axislabels[0]) + "):"
+                )
 
         self.new_x_ppms = self.ppms_0
         self.new_y_ppms = self.ppms_1
@@ -1222,12 +1457,8 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_xlabel(self.nmrdata.axislabels[1])
         self.ax.set_ylabel(self.nmrdata.axislabels[2])
 
-        if(self.fid_viewer==False):
-            self.ax.set_xlim(max(self.ppms_0), min(self.ppms_0))
-            self.ax.set_ylim(max(self.ppms_1), min(self.ppms_1))
-        else:
-            self.ax.set_xlim(min(self.ppms_0), max(self.ppms_0))
-            self.ax.set_ylim(min(self.ppms_1), max(self.ppms_1))
+        self.ax.set_xlim(*self.x_limits())
+        self.ax.set_ylim(*self.y_limits())
 
         (self.line1,) = self.axes1D.plot(
             self.ppms_0,
@@ -1399,7 +1630,7 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_ylim(ylim)
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[z_index][:, self.y_index(self.y1)]
             )
             self.line1.set_xdata(self.new_x_ppms)
             self.line2 = self.ax.axhline(self.y1 + self.y_movement, color="k")
@@ -1409,7 +1640,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[z_index][self.x_index(self.x1), :]
             )
             self.line3.set_ydata(self.new_y_ppms)
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
@@ -1417,7 +1648,7 @@ class ThreeDViewer(wx.Panel):
                 -np.max(self.nmrdata.data[z_index] / 10),
                 np.max(self.nmrdata.data[z_index]),
             )
-        self.UpdateFrame()
+        self.OnIntensityScroll3D(wx.EVT_SCROLL)
 
     def OnMoveY_3D(self, event):
         # update y-axis
@@ -1452,7 +1683,7 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_ylim(ylim)
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[z_index][:, self.y_index(self.y1)]
             )
             self.line1.set_xdata(self.new_x_ppms)
             self.line2 = self.ax.axhline(self.y1, color="k")
@@ -1462,7 +1693,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[z_index][self.x_index(self.x1), :]
             )
             self.line3.set_ydata(self.new_y_ppms)
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
@@ -1470,7 +1701,7 @@ class ThreeDViewer(wx.Panel):
                 -np.max(self.nmrdata.data[z_index] / 10),
                 np.max(self.nmrdata.data[z_index]),
             )
-        self.UpdateFrame()
+        self.OnIntensityScroll3D(wx.EVT_SCROLL)
 
     def OnReferenceComboX_3D(self, event):
         # Change the range for the move-x slider
@@ -1510,7 +1741,7 @@ class ThreeDViewer(wx.Panel):
             self.OnMinContour3D(event)
         
         if self.mouse_wheel_mode == ScrollMode.PLANE:
-            delta = 0.1 if event.GetWheelRotation() > 0 else -0.1 
+            delta = 1 if event.GetWheelRotation() > 0 else -1 
             current = float(self.z_slider.GetValue())
             self.z_slider.SetValue(current+delta)
             self.OnZScroll3D(event)
@@ -1549,14 +1780,9 @@ class ThreeDViewer(wx.Panel):
                     self.line4.set_visible(False)
                     self.UpdateFrame()
                 else:
-                    if(self.fid_viewer==False):
-                        data = self.nmrdata.data[z_index][
-                            :, self.uc1(str(self.ppms_1[1]) + "ppm")
-                        ]
-                    else:
-                        data = self.nmrdata.data[z_index][
-                            :, int(self.ppms_1[1])
-                        ]
+                    data = self.nmrdata.data[z_index][
+                        :, self.y_index(self.ppms_1[1])
+                    ]
                     (self.line1,) = self.axes1D.plot(
                         self.ppms_0,
                         data,
@@ -1583,14 +1809,9 @@ class ThreeDViewer(wx.Panel):
                 else:
                     self.line3.set_visible = True
                     self.line4.set_visible = True
-                    if(self.fid_viewer==False):
-                        data = self.nmrdata.data[z_index][
-                            self.uc0(str(self.ppms_0[1]) + "ppm"), :
-                        ]
-                    else:
-                        data = self.nmrdata.data[z_index][
-                            int(self.ppms_0[1]), :
-                        ]
+                    data = self.nmrdata.data[z_index][
+                        self.x_index(self.ppms_0[1]), :
+                    ]
                     (self.line3,) = self.axes1D_2.plot(
                         data,
                         self.ppms_1,
@@ -1605,14 +1826,9 @@ class ThreeDViewer(wx.Panel):
         self.x1, self.y1 = self.ax.transData.inverted().transform((event.x, event.y))
         if self.x1 != None and self.y1 != None:
             if self.line1.get_visible() == True:
-                if(self.fid_viewer==False):
-                    data = self.nmrdata.data[z_index][
-                        :, self.uc1(str(self.y1 - self.y_movement) + "ppm")
-                    ]
-                else:
-                    data = self.nmrdata.data[z_index][
-                        :, int(self.y1 - self.y_movement)
-                    ]
+                data = self.nmrdata.data[z_index][
+                    :, self.y_index(self.y1 - self.y_movement)
+                ]
                 self.line1.set_ydata(
                     data
                 )
@@ -1620,14 +1836,9 @@ class ThreeDViewer(wx.Panel):
                 self.line1.set_xdata(self.new_x_ppms)
                 self.OnSliderScroll3D(None)
             if self.line3.get_visible() == True:
-                if(self.fid_viewer==False):
-                    data = self.nmrdata.data[z_index][
-                        self.uc0(str(self.x1 - self.x_movement) + "ppm"), :
-                    ]
-                else:
-                    data = self.nmrdata.data[z_index][
-                        int(self.x1 - self.x_movement), :
-                    ]
+                data = self.nmrdata.data[z_index][
+                    self.x_index(self.x1 - self.x_movement), :
+                ]
                 self.line3.set_xdata(
                     data
                 )
@@ -1646,32 +1857,28 @@ class ThreeDViewer(wx.Panel):
     def phase3D(self):
         z_index = int(self.z_slider.GetValue())
         if self.line1.get_visible() == True:
-            if(self.fid_viewer==False):
-                data = self.nmrdata.data[z_index][:, self.uc1(str(self.y1) + "ppm")]
-            else:
-                data = self.nmrdata.data[z_index][:, int(self.y1)]
+            data = self.nmrdata.data[z_index][:, self.y_index(self.y1)]
             complex_data = ng.process.proc_base.ht(data, self.nmrdata.data.shape[1])
             self.phased_data = ng.process.proc_base.ps(
                 complex_data, p0=self.total_P0, p1=self.total_P1
             )
             self.line1.set_ydata(self.phased_data)
         if self.line3.get_visible() == True:
-            if(self.fid_viewer==False):
-                data = self.nmrdata.data[z_index][self.uc0(str(self.x1) + "ppm"), :]
-            else:
-                data = self.nmrdata.data[z_index][int(self.x1), :]
+            data = self.nmrdata.data[z_index][self.x_index(self.x1), :]
             complex_data = ng.process.proc_base.ht(data, self.nmrdata.data.shape[2])
             self.phased_data2 = ng.process.proc_base.ps(
                 complex_data, p0=self.total_P0, p1=self.total_P1
             )
             self.line3.set_xdata(self.phased_data2)
+
+        self.OnIntensityScroll3D(wx.EVT_SCROLL)
         self.UpdateFrame()
 
     def OnMinContour3D(self, event):
         # Get the new contour limits and redraw the plot
         z_index = int(self.z_slider.GetValue())
         contour_val = 10 ** float(self.contour_slider.GetValue())
-        self.contour_val.SetLabel(str(int(contour_val)))
+        self.contour_val.SetValue(str(int(contour_val)))
         self.contour_start = (
             np.max(np.abs(self.nmrdata.data[int(z_index)])) / contour_val
         )
@@ -1705,7 +1912,7 @@ class ThreeDViewer(wx.Panel):
         )
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[int(z_index)][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[int(z_index)][:, self.y_index(self.y1)]
             )
             self.line2 = self.ax.axhline(self.y1 + self.y_movement, color="k")
             self.axes1D.set_ylim(
@@ -1714,7 +1921,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[int(z_index)][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[int(z_index)][self.x_index(self.x1), :]
             )
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
             self.axes1D_2.set_xlim(
@@ -1725,7 +1932,7 @@ class ThreeDViewer(wx.Panel):
         self.ax.set_ylim(ylim)
         self.ax.set_xlabel(xlabel)
         self.ax.set_ylabel(ylabel)
-        self.UpdateFrame()
+        self.phase3D()
 
     def OnZScroll3D(self, event):
         # Get the new z value and redraw the plot
@@ -1735,7 +1942,6 @@ class ThreeDViewer(wx.Panel):
             + str(z_index)
             + " , "
             + "{:.2f}".format(self.ppms_2[z_index - 1])
-            + "ppm"
         )
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
         xlim_1, ylim_1 = self.axes1D.get_xlim(), self.axes1D.get_ylim()
@@ -1763,7 +1969,7 @@ class ThreeDViewer(wx.Panel):
         )
         if self.line1.get_visible() == True:
             self.line1.set_ydata(
-                self.nmrdata.data[int(z_index)][:, self.uc1(str(self.y1) + "ppm")]
+                self.nmrdata.data[int(z_index)][:, self.y_index(self.y1)]
             )
             self.line1.set_xdata(self.new_x_ppms)
             self.line2 = self.ax.axhline(self.y1 + self.y_movement, color="k")
@@ -1773,7 +1979,7 @@ class ThreeDViewer(wx.Panel):
             )
         if self.line3.get_visible() == True:
             self.line3.set_xdata(
-                self.nmrdata.data[int(z_index)][self.uc0(str(self.x1) + "ppm"), :]
+                self.nmrdata.data[int(z_index)][self.x_index(self.x1), :]
             )
             self.line3.set_ydata(self.new_y_ppms)
             self.line4 = self.ax.axvline(self.x1 + self.x_movement, color="k")
@@ -1828,6 +2034,11 @@ class ProjectionFrame(wx.Frame):
         self.SetSizerAndFit(self.main_sizer)
         self.Show()
         self.Centre()
+
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
@@ -1905,7 +2116,12 @@ class ProjectionFrame(wx.Frame):
                 )
                 * 0.0104,
             )
-            self.UpdateProjectionFrame()
+
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateProjectionFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2007,6 +2223,10 @@ class WaterfallFrame(wx.Frame):
 
         self.plot_waterfall()
         self.Show()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
@@ -2034,7 +2254,11 @@ class WaterfallFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            self.UpdateWaterfallFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateWaterfallFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2059,7 +2283,7 @@ class WaterfallFrame(wx.Frame):
         self.y_range_label = wx.StaticBox(self, -1, "Y-axis zoom")
         self.y_range_sizer = wx.StaticBoxSizer(self.y_range_label, wx.VERTICAL)
         self.y_range_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.y_range_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.y_range_slider.Bind(wx.EVT_SLIDER, self.OnYRangeSlider)
         self.y_range_sizer.Add(self.y_range_slider)
@@ -2083,7 +2307,7 @@ class WaterfallFrame(wx.Frame):
             for i in range(len(self.main_frame.nmrdata.data)):
                 vals.append(
                     self.main_frame.nmrdata.data[i][
-                        :, self.main_frame.uc1(str(self.main_frame.y1) + "ppm")
+                        :, self.main_frame.y_index(self.main_frame.y1)
                     ]
                 )
             for i in range(len(vals)):
@@ -2098,7 +2322,7 @@ class WaterfallFrame(wx.Frame):
             for i in range(len(self.main_frame.nmrdata.data)):
                 vals.append(
                     self.main_frame.nmrdata.data[i][
-                        self.main_frame.uc0(str(self.main_frame.x1) + "ppm"), :
+                        self.main_frame.x_index(self.main_frame.x1), :
                     ]
                 )
             for i in range(len(vals)):
@@ -2148,6 +2372,11 @@ class Plot3DFrame(wx.Frame):
         self.plot3d()
         self.Show()
 
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
 
@@ -2174,7 +2403,11 @@ class Plot3DFrame(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            self.Update3DFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.Update3DFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2200,7 +2433,7 @@ class Plot3DFrame(wx.Frame):
         self.contour_label = wx.StaticBox(self, -1, "Contour levels")
         self.contour_sizer = wx.StaticBoxSizer(self.contour_label, wx.VERTICAL)
         self.contour_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.contour_slider.Bind(wx.EVT_SLIDER, self.OnContourSlider)
         self.contour_sizer.Add(self.contour_slider)
@@ -2383,6 +2616,23 @@ class Plot3DFrame(wx.Frame):
     #             self.OnChangePlane(event)
 
 
+class BorePosition:
+    """
+    A stand-in for a mouse click at a place on the plane of the bore plot, so
+    that the bore dimension can be shown at a position the user has not
+    clicked themselves.
+    """
+
+    def __init__(self, axes, x, y):
+        self.inaxes = axes
+        self.xdata = x
+        self.ydata = y
+        self.x = x
+        self.y = y
+        self.button = 1
+        self.key = None
+
+
 class SpinBore(wx.Frame):
     def __init__(self, title, projection, parent=None):
         self.main_frame = parent
@@ -2409,6 +2659,21 @@ class SpinBore(wx.Frame):
         self.toolbar_bore = NavigationToolbar(self.canvas_bore)
         self.main_bore_sizer.Add(self.toolbar_bore, 0, wx.EXPAND)
 
+        # The scroll wheel zooms, as it does in the 2D and 3D windows
+        self.mouse_wheel_mode = ScrollMode.ZOOM
+        self.mouse_wheel_connect = self.canvas_bore.Bind(
+            wx.EVT_MOUSEWHEEL, self.on_mouse_wheel_bore
+        )
+
+        # The projection file which is being shown, and the data orientation of
+        # the 3D it belongs to, so that the plane can be changed from here
+        self.projection_file = projection
+        self.orientation_selection = self.main_frame.orientation_chooser.GetSelection()
+
+        # True only while this window is changing the orientation of the 3D
+        # itself, so that it does not then be told to follow its own change
+        self.changing_projection = False
+
         # Read the projection file
         self.nmrdata = ReadProjection(projection)
         # Checking if the projection data needs transposing to match the main frame
@@ -2432,6 +2697,10 @@ class SpinBore(wx.Frame):
         self.plot_bore_data()
         self.Show()
         self.Centre()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
 
         # Bind method to check/resize the window when the frame is moved
         self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
@@ -2459,7 +2728,11 @@ class SpinBore(wx.Frame):
                 self.width * 0.0104,
                 (self.height - self.bore_sizer.GetMinSize()[1] - 100) * 0.0104,
             )
-            self.UpdateBoreFrame()
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateBoreFrame()
         event.Skip()
 
     def OnSizeFrame(self, event):
@@ -2480,7 +2753,12 @@ class SpinBore(wx.Frame):
         event.Skip()
 
     def UpdateBoreFrame(self):
-        # Updates the plots in the frame
+        # Updates the plots in the frame. The lines showing where the selected
+        # peaks sit along the bore dimension are drawn here so that they are
+        # there whatever has just been redrawn, and stay for as long as the
+        # peaks are selected
+        self.plot_peak_bore_lines()
+
         self.canvas_bore.draw()
         self.canvas_bore.Refresh()
         self.canvas_bore.Update()
@@ -2495,51 +2773,77 @@ class SpinBore(wx.Frame):
 
         # Make a slider to change the contour levels
         self.bore_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.bore_contour_label = wx.StaticBox(self, -1, "Contour Max")
+        self.bore_contour_label = wx.StaticBox(self.bore_sizer_2D_label, -1, "Contour Max")
         self.bore_contour_sizer = wx.StaticBoxSizer(
             self.bore_contour_label, wx.VERTICAL
         )
         self.bore_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.bore_contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.bore_slider.Bind(wx.EVT_SLIDER, self.OnBoreSlider)
         self.bore_contour_sizer.Add(self.bore_slider)
         self.bore_sizer_2D.Add(self.bore_contour_sizer)
 
         # Button to transpose the 2D data
-        self.bore_transpose_button = wx.Button(self, -1, "Transpose")
+        self.bore_transpose_button = wx.Button(self.bore_sizer_2D_label, -1, "Transpose")
         self.bore_transpose_button.Bind(wx.EVT_BUTTON, self.OnTransposeButtonBore)
         self.bore_sizer_2D.AddSpacer(10)
         self.bore_sizer_2D.Add(self.bore_transpose_button, 0, wx.ALIGN_CENTER_VERTICAL)
+
+        # The plane which is shown can be changed from here as well as from the
+        # 3D window, as the bore is looked down from whichever plane is shown
+        self.bore_orientation_label = wx.StaticBox(self, -1, "Data Orientation")
+        self.bore_orientation_sizer = wx.StaticBoxSizer(
+            self.bore_orientation_label, wx.VERTICAL
+        )
+        options = list(self.main_frame.orientation_chooser.GetItems())
+        self.bore_orientation_chooser = wx.ComboBox(
+            self.bore_orientation_label,
+            value=options[self.orientation_selection] if options else "",
+            choices=options,
+            style=wx.CB_READONLY,
+            size=(220, 24),
+        )
+        self.bore_orientation_chooser.SetSelection(self.orientation_selection)
+        self.bore_orientation_chooser.Bind(
+            wx.EVT_COMBOBOX, self.OnBoreOrientationCombo
+        )
+        self.bore_orientation_chooser.SetToolTip(
+            "The plane which is shown, written as (across, up), bore. Changing "
+            "it reads the projection of the new plane and turns the 3D window "
+            "to match. Any peaklist which is loaded is put into the order of "
+            "the new plane, as the peaks themselves do not move."
+        )
+        self.bore_orientation_sizer.Add(self.bore_orientation_chooser)
 
         # Sizer containing all 1D bore related items
         self.bore_sizer_1D_label = wx.StaticBox(self, -1, "1D Plot")
         self.bore_sizer_1D = wx.StaticBoxSizer(self.bore_sizer_1D_label, wx.HORIZONTAL)
 
         # Slider to change the scaling of the bore intensity
-        self.bore_intensity_label = wx.StaticBox(self, -1, "Intensity")
+        self.bore_intensity_label = wx.StaticBox(self.bore_sizer_1D_label, -1, "Intensity")
         self.bore_intensity_sizer = wx.StaticBoxSizer(
             self.bore_intensity_label, wx.VERTICAL
         )
         self.bore_intensity_slider = FloatSlider(
-            self, id=-1, value=1, minval=-1, maxval=10, res=0.01, style=wx.SL_HORIZONTAL
+            self.bore_intensity_label, id=-1, value=1, minval=-1, maxval=10, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.bore_intensity_slider.Bind(wx.EVT_SLIDER, self.OnIntensitySlider)
         self.bore_intensity_sizer.Add(self.bore_intensity_slider)
         self.bore_sizer_1D.Add(self.bore_intensity_sizer)
 
-        self.bore_overlay_sizer_label = wx.StaticBox(self, -1, "Overlay")
+        self.bore_overlay_sizer_label = wx.StaticBox(self.bore_sizer_1D_label, -1, "Overlay")
         self.bore_overlay_sizer = wx.StaticBoxSizer(
             self.bore_overlay_sizer_label, wx.HORIZONTAL
         )
 
         # Toggle amino acid projections
-        self.bore_toggle_button = wx.CheckBox(self, -1, "Show Amino Acid Predictions")
+        self.bore_toggle_button = wx.CheckBox(self.bore_overlay_sizer_label, -1, "Show Amino Acid Predictions")
         self.bore_toggle_button.Bind(wx.EVT_CHECKBOX, self.OnToggleAminoAcid)
 
         # Have a combo box with 1H, 13C, 15N
         self.bore_combo_box = wx.ComboBox(
-            self, -1, choices=["1H", "13C", "15N"], style=wx.CB_READONLY
+            self.bore_overlay_sizer_label, -1, choices=["1H", "13C", "15N"], style=wx.CB_READONLY
         )
         self.bore_combo_box.Bind(wx.EVT_COMBOBOX, self.OnNucleusSelection)
         self.bore_overlay_sizer.Add(
@@ -2550,7 +2854,7 @@ class SpinBore(wx.Frame):
 
         # Have a combobox for free/protein
         self.bore_free_protein_combo_box = wx.ComboBox(
-            self, -1, choices=["Free", "Protein"], style=wx.CB_READONLY
+            self.bore_overlay_sizer_label, -1, choices=["Free", "Protein"], style=wx.CB_READONLY
         )
         self.bore_free_protein_combo_box.Bind(
             wx.EVT_COMBOBOX, self.OnFreeProteinSelection
@@ -2562,7 +2866,7 @@ class SpinBore(wx.Frame):
 
         # Combobox for amino acid selection
         self.bore_amino_acid_combo_box = wx.ComboBox(
-            self,
+            self.bore_overlay_sizer_label,
             -1,
             choices=[
                 "Alanine (A)",
@@ -2606,12 +2910,12 @@ class SpinBore(wx.Frame):
         )
 
         # Make a slider to change the contour levels
-        self.bore_strip_contour_label = wx.StaticBox(self, -1, "Contour Max")
+        self.bore_strip_contour_label = wx.StaticBox(self.bore_sizer_stripplot_label, -1, "Contour Max")
         self.bore_strip_contour_sizer = wx.StaticBoxSizer(
             self.bore_strip_contour_label, wx.VERTICAL
         )
         self.bore_strip_slider = FloatSlider(
-            self, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
+            self.bore_strip_contour_label, id=-1, value=1, minval=0, maxval=3, res=0.01, style=wx.SL_HORIZONTAL
         )
         self.bore_strip_slider.Bind(wx.EVT_SLIDER, self.OnBoreSliderStripPlot)
         self.bore_strip_contour_sizer.Add(self.bore_strip_slider)
@@ -2628,6 +2932,8 @@ class SpinBore(wx.Frame):
         self.bore_sizer_row2.AddSpacer(10)
         self.bore_sizer_row2.Add(self.bore_sizer_strip)
         self.bore_sizer_row2.AddSpacer(10)
+        self.bore_sizer_row2.Add(self.bore_orientation_sizer, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.bore_sizer_row2.AddSpacer(10)
         self.bore_sizer_row2.Add(self.read_peaks_button, 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.main_bore_sizer.Add(self.bore_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
@@ -2641,11 +2947,197 @@ class SpinBore(wx.Frame):
 
         self.title = 'SpinBore - ' + self.main_frame.parent.title
 
+        for window in wx.GetTopLevelWindows():
+            if (
+                isinstance(window, wx.Frame)
+                and window.GetTitle() == "3D Peak List - " + self.title
+            ):
+                if window.IsBeingDeleted() == True:
+                    # The window is on its way out, so a new one is needed
+                    continue
+
+                # The window already exists, holding the peaklist which is
+                # shown, so it is brought back rather than made again
+                window.Show()
+                window.Raise()
+                window.SetFocus()
+                return
+
         self.peak_lists3D = PeakListWindow3D(
             title="3D Peak List - " + self.title, parent=self
         )
         self.peak_lists3D.Show()
 
+
+    def OnBoreOrientationCombo(self, event):
+        """
+        Show the plane of another data orientation, as can be done from the 3D
+        window. The 3D window is turned to the same orientation, since it holds
+        the data which the bore dimension is read from.
+        """
+
+        self.change_projection(self.bore_orientation_chooser.GetSelection())
+
+    def change_projection(self, selection):
+        """
+        Show the plane of the given data orientation: read its projection, turn
+        the 3D window to match, and put any peaklist which is loaded into the
+        order of the new plane.
+        """
+
+        if selection == self.orientation_selection:
+            return
+
+        projection = self.main_frame.find_projection_file(selection)
+
+        if projection == None:
+            dlg = wx.MessageDialog(
+                self,
+                "There is no projection file for this plane. The projection "
+                "files are named after the two dimensions they hold, such as "
+                "15N.1H.dat, and one of them has to be in this directory for "
+                "the plane to be shown.",
+                "Warning",
+                wx.OK | wx.ICON_WARNING,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            # Leaving the box showing the plane which is actually being shown
+            self.bore_orientation_chooser.SetSelection(self.orientation_selection)
+            return
+
+        # The 3D window holds the data of the bore dimension, so it is turned to
+        # the same orientation. It is told not to turn this window back again.
+        self.changing_projection = True
+        try:
+            self.main_frame.orientation_chooser.SetSelection(selection)
+            options = list(self.main_frame.orientation_chooser.GetItems())
+            if selection < len(options):
+                if self.main_frame.orientation_chooser.GetValue() != options[selection]:
+                    self.main_frame.orientation_chooser.SetValue(options[selection])
+            self.main_frame.OnOrientationCombo(None)
+        finally:
+            self.changing_projection = False
+
+        self.show_projection(projection, selection)
+
+    def follow_orientation(self):
+        """
+        Show the plane which the 3D window has been turned to. The 3D window
+        calls this when its own orientation is changed, so that the two always
+        show the same plane.
+        """
+
+        selection = self.main_frame.orientation_chooser.GetSelection()
+
+        if selection == self.orientation_selection:
+            return
+
+        projection = self.main_frame.find_projection_file(selection)
+
+        if projection == None:
+            # Nothing can be shown for this plane, so the window is left showing
+            # the plane it has along with a warning that the two now differ
+            dlg = wx.MessageDialog(
+                self,
+                "There is no projection file for the plane the 3D window has "
+                "been turned to, so the bore window still shows "
+                + str(self.projection_file)
+                + ". The peaks of the bore window belong to the plane it is "
+                "showing, not to the 3D window.",
+                "Warning",
+                wx.OK | wx.ICON_WARNING,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        self.show_projection(projection, selection)
+
+    def show_projection(self, projection, selection):
+        """
+        Read a projection file and draw everything again from it: the plane, the
+        bore dimension, the strip plot and any peaklist which is loaded.
+        """
+
+        # The dimension which was looked down the bore of, so that the peaks can
+        # be told whether it is a different one now
+        try:
+            previous_bore = self.ax_bore_2.get_ylabel()
+        except (AttributeError, RuntimeError):
+            previous_bore = ""
+
+        self.projection_file = projection
+        self.orientation_selection = selection
+
+        try:
+            self.bore_orientation_chooser.SetSelection(selection)
+        except (AttributeError, RuntimeError):
+            pass
+
+        self.nmrdata = ReadProjection(projection)
+        self.check_for_transpose()
+
+        # The plots are made again from the new projection, so the handlers of
+        # the old ones are let go of first rather than left on the canvas
+        for name in ["click_press_connect", "key_press_connect"]:
+            try:
+                self.fig_bore.canvas.mpl_disconnect(getattr(self, name))
+            except (AttributeError, RuntimeError):
+                continue
+
+        self.selected_bore_peaks = []
+        self.fig_bore.clear()
+        self.plot_bore_data()
+
+        # A peaklist holds a shift for each of the three dimensions, and which
+        # dimension is shown where has changed, so its columns are put back into
+        # the order of the plots
+        self.adjust_peaklists(previous_bore)
+
+        self.OnBoreSlider(wx.EVT_BUTTON)
+        self.toolbar_bore.update()
+
+    def adjust_peaklists(self, previous_bore=""):
+        """
+        Put any peaklist which is loaded into the order of the plane which is
+        now shown. The peaks do not move: each of their three shifts belongs to
+        a dimension, and it is only which dimension is shown where that has
+        changed.
+        """
+
+        window = None
+        for child in wx.GetTopLevelWindows():
+            if (
+                isinstance(child, wx.Frame)
+                and child.GetTitle() == "3D Peak List - " + self.title
+                and child.IsBeingDeleted() == False
+            ):
+                window = child
+                break
+
+        if window == None:
+            return None
+
+        answer = window.realign_peaklists(
+            previous_bore != window.find_axis_labels()[2]
+        )
+
+        if answer != None and len(answer["refused"]) > 0:
+            dlg = wx.MessageDialog(
+                self,
+                "The shifts of "
+                + ", ".join(answer["refused"])
+                + " do not fit the plane which is now shown, so they have been "
+                "left as they were. This happens when a peaklist has no shift "
+                "in one of the dimensions of the new plane.",
+                "Peaklists",
+                wx.OK | wx.ICON_WARNING,
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+
+        return answer
 
     def check_for_transpose(self):
         """
@@ -2658,15 +3150,31 @@ class SpinBore(wx.Frame):
         to true)
         """
 
-        main_frame_axes = self.main_frame.orientation_chooser.GetValue()[1:].split(')')[0].split(',')
-        projection_axes = self.nmrdata.axislabels
+        # The orientation is shown as "(x,y),z" and the labels of the main
+        # window carry their units, so the names alone are compared
+        main_frame_axes = [
+            self.main_frame.axis_name(label)
+            for label in self.main_frame.orientation_chooser.GetValue()[1:]
+            .split(")")[0]
+            .split(",")
+        ]
 
-        self.swap_labels = False
+        # axislabels[1] is shown on the x axis and axislabels[0] on the y axis
+        projection_axes = [
+            self.main_frame.axis_name(self.nmrdata.axislabels[1]),
+            self.main_frame.axis_name(self.nmrdata.axislabels[0]),
+        ]
 
         if(main_frame_axes!=projection_axes):
             # transpose the data
             self.nmrdata.dic, self.nmrdata.data = ng.pipe_proc.tp(copy.deepcopy(self.nmrdata.dic), copy.deepcopy(self.nmrdata.data))
-            self.swap_labels = True
+            # The two axes of the data have swapped over, so swap the labels
+            # with them. The labels then always describe the data as it is
+            # currently held, whichever way round the projection was read.
+            self.nmrdata.axislabels = [
+                self.nmrdata.axislabels[1],
+                self.nmrdata.axislabels[0],
+            ]
 
 
     def plot_bore_data(self):
@@ -2679,6 +3187,10 @@ class SpinBore(wx.Frame):
 
         self.click_press_connect = self.fig_bore.canvas.mpl_connect(
             "button_press_event", self.on_click_bore
+        )
+
+        self.key_press_connect = self.fig_bore.canvas.mpl_connect(
+            "key_press_event", self.on_key_bore
         )
 
         self.cmap = "#e41a1c"
@@ -2713,12 +3225,8 @@ class SpinBore(wx.Frame):
             colors=self.cmap_neg,
             linewidths=0.5,
         )
-        if(self.swap_labels==False):
-            self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
-            self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
-        else:
-            self.ax_bore.set_xlabel(self.nmrdata.axislabels[0])
-            self.ax_bore.set_ylabel(self.nmrdata.axislabels[1])
+        self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
+        self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
         self.ax_bore.set_xlim(max(self.ppms_0), min(self.ppms_0))
         self.ax_bore.set_ylim(max(self.ppms_1), min(self.ppms_1))
 
@@ -2741,14 +3249,15 @@ class SpinBore(wx.Frame):
             max(self.main_frame.ppms_2), min(self.main_frame.ppms_2)
         )
 
-        # Find the label of the 3rd dimension
-        labels = self.main_frame.nmrdata.axislabels
-        for i, label in enumerate(labels):
-            if (
-                label != self.nmrdata.axislabels[0]
-                and label != self.nmrdata.axislabels[1]
-            ):
+        # Find the label of the 3rd dimension. The labels of the main window
+        # have the units added to them, so the names alone are compared.
+        projection_names = [
+            self.main_frame.axis_name(label) for label in self.nmrdata.axislabels
+        ]
+        for label in self.main_frame.nmrdata.axislabels:
+            if self.main_frame.axis_name(label) not in projection_names:
                 self.ax_bore_2.set_ylabel(label)
+                break
 
         (self.cross,) = self.ax_bore.plot(
             self.bore_initial[0], self.bore_initial[1], marker="X", color="k"
@@ -2762,6 +3271,16 @@ class SpinBore(wx.Frame):
         )
 
         self.ax_bore_2.set_title("1D Bore")
+
+        self.plot_peak_bore_lines()
+
+        # The view the window starts with, which q goes back to. The window
+        # keeps its own record of the 1D and strip limits under another name,
+        # which is used for the amino acid overlay
+        self.starting_limits = [
+            (axes, axes.get_xlim(), axes.get_ylim())
+            for axes in [self.ax_bore, self.ax_bore_2]
+        ]
 
         # Plot the strip plot contour plot
         contour_start_strip = (
@@ -2797,43 +3316,10 @@ class SpinBore(wx.Frame):
         # Get the ppm values for the strip plot
         self.ppms_2 = self.main_frame.ppms_2
 
-        self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-        self.ax_bore_3.set_xlim(max(self.ppms_0), min(self.ppms_0))
-        self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-        if(self.swap_labels==False):
-            self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-        else:
-            self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-        if self.Xstrip.shape != self.bore_data_strip1.shape:
-            self.alternative_orientation = True
-            self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-            self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
-            self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-            if(self.swap_labels==False):
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-            else:
-                self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-        self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_strip,
-            colors=self.cmap,
-            linewidths=0.5,
-        )
-        self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_neg_strip,
-            colors=self.cmap_neg,
-            linewidths=0.5,
-        )
-        self.line3 = self.ax_bore_3.axvline(
-            x=self.bore_initial[0], color="black", linewidth=0.5
-        )
-
+        # Which axis the strip plot holds is worked out from the chemical
+        # shifts, as the number of points can be the same for both
         self.ax_bore_3.set_title("Strip Plot")
+        self.draw_strip_plot(keep_limits=False)
 
         self.original_limits = [
             (ax.get_xlim(), ax.get_ylim()) for ax in [self.ax_bore_2, self.ax_bore_3]
@@ -2850,239 +3336,495 @@ class SpinBore(wx.Frame):
         )
         self.UpdateBoreFrame()
 
-    def on_click_bore(self, event):
-        intensity_percent = 10 ** float(self.bore_intensity_slider.GetValue())
-        if self.ax_bore_2.get_title() == "":
-            title = ""
+    def on_mouse_wheel_bore(self, event):
+        """
+        The scroll wheel zooms the plot the cursor is over, as it does in the
+        2D and 3D windows.
+        """
+        if self.toolbar_bore != None:
+            # Logs the position so that the back, forward and home tools work
+            self.toolbar_bore.push_current()
+
+        if self.mouse_wheel_mode == ScrollMode.ZOOM:
+            self.mouse_wheel_zoom_bore(event)
+
+    def mouse_wheel_zoom_bore(self, event):
+        """
+        Zoom in or out of the plot the cursor is over, about the position of
+        the cursor.
+        """
+        mx, my = event.GetPosition()
+
+        scale = self.canvas_bore.GetDPIScaleFactor()
+        mx *= scale
+        my *= scale
+
+        # The canvas measures from the top down and the figure from the bottom up
+        my = self.canvas_bore.GetSize().height * scale - my
+
+        zoom = 1.1 if event.GetWheelRotation() < 0 else 1 / 1.1
+
+        try:
+            renderer = self.canvas_bore.get_renderer()
+        except AttributeError:
+            renderer = None
+
+        for axes in self.fig_bore.axes:
+            if axes.get_window_extent(renderer=renderer).contains(mx, my) == False:
+                continue
+
+            x, y = axes.transData.inverted().transform((mx, my))
+
+            axes.set_xlim([x + (limit - x) * zoom for limit in axes.get_xlim()])
+            axes.set_ylim([y + (limit - y) * zoom for limit in axes.get_ylim()])
+
+        self.canvas_bore.draw_idle()
+
+    def find_plane_swapped(self) -> bool:
+        """
+        Whether the plane is shown the other way round from the way the 3D
+        window holds the data, which is what decides which coordinate of the
+        plane goes with which axis of the 3D data.
+
+        The names of the dimensions settle it, as two dimensions can share the
+        same number of points and even the same chemical shifts, such as the two
+        15N dimensions of an HNCANNH. The chemical shifts are only used when the
+        names do not match, which happens when the labels have been changed.
+        """
+        viewer = self.main_frame
+
+        try:
+            held = [
+                viewer.axis_name(label)
+                for label in viewer.orientation_chooser.GetValue()[1:]
+                .split(")")[0]
+                .split(",")
+            ]
+            across = viewer.axis_name(self.ax_bore.get_xlabel())
+            up = viewer.axis_name(self.ax_bore.get_ylabel())
+
+            if [across, up] == [held[0], held[1]]:
+                return False
+            if [across, up] == [held[1], held[0]]:
+                return True
+        except (AttributeError, IndexError, RuntimeError, TypeError):
+            pass
+
+        try:
+            same = len(self.new_x_ppms) == len(viewer.ppms_0) and np.allclose(
+                self.new_x_ppms[:3], viewer.ppms_0[:3]
+            )
+        except (AttributeError, TypeError, ValueError):
+            same = True
+
+        return same == False
+
+    def find_bore_indexes(self, x, y):
+        """
+        The point of the 3D data which the position marker sits on. The data is
+        held as [bore][first plane axis][second plane axis], and the plane can be
+        shown either way round, so the axis each coordinate belongs to is found
+        by its chemical shifts rather than by its size.
+        """
+        viewer = self.main_frame
+
+        across = viewer.ppms_0
+        up = viewer.ppms_1
+
+        if self.find_plane_swapped() == True:
+            # The plane is shown the other way round from the 3D window
+            x, y = y, x
+
+        return (
+            int(np.argmin(np.abs(np.array(across) - x))),
+            int(np.argmin(np.abs(np.array(up) - y))),
+        )
+
+    def find_strip_axis(self):
+        """
+        The axis the strip plot runs along: its chemical shifts, its name, and
+        whether it is the one shown across the plane.
+
+        The strip is a slice through the first of the two plane axes of the 3D
+        data, so what is left is always the second one. Which of the two is
+        shown across the plane depends on the orientation and on whether the
+        plane has been transposed, which find_plane_swapped works out.
+        """
+        viewer = self.main_frame
+        values = viewer.ppms_1
+
+        # The strip holds the second axis of the 3D data, which is the one
+        # across the plane only when the plane is shown the other way round
+        across = self.find_plane_swapped()
+
+        if across == True:
+            name = self.ax_bore.get_xlabel()
         else:
-            title = self.ax_bore_2.get_title()
+            name = self.ax_bore.get_ylabel()
+
+        return values, name, across
+
+    def find_strip_position(self):
+        """
+        Where the marker is along the axis the strip plot holds, which is one
+        of its two coordinates in the plane depending on which way round the
+        plane is shown.
+        """
+        try:
+            x, y = self.bore_initial
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+        values, name, across = self.find_strip_axis()
+
+        if across == True:
+            return x
+
+        return y
+
+    def set_bore_limits(self) -> None:
+        """
+        Show the whole of the bore dimension in the 1D bore and the strip plot,
+        and the whole of the axis the strip plot holds. The limits are worked
+        out from what is shown rather than kept from when the window was
+        opened, as the plane can be turned and transposed since then.
+        """
+        values, name, across = self.find_strip_axis()
+        bore = self.main_frame.ppms_2
+
+        try:
+            self.ax_bore_2.set_ylim(max(bore), min(bore))
+            self.ax_bore_3.set_xlim(max(values), min(values))
+            self.ax_bore_3.set_ylim(max(bore), min(bore))
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            pass
+
+    def draw_strip_plot(self, keep_limits=True) -> None:
+        """
+        Draw the strip plot: the bore dimension against one of the axes of the
+        plane, at the position of the marker, with a line where the marker is.
+
+        keep_limits leaves the strip zoomed as it was, which is what is wanted
+        when only the contour levels change.
+        """
+        xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
+        title = self.ax_bore_3.get_title()
+        self.ax_bore_3.clear()
+
+        # The naming has to come after the clearing, which wipes it
+        self.update_strip_axis()
+
+        try:
+            self.contour1 = self.ax_bore_3.contour(
+                self.Xstrip,
+                self.Ystrip,
+                self.bore_data_strip1,
+                self.cl_strip,
+                colors=self.cmap,
+                linewidths=0.5,
+            )
+            self.contour1_neg = self.ax_bore_3.contour(
+                self.Xstrip,
+                self.Ystrip,
+                self.bore_data_strip1,
+                self.cl_neg_strip,
+                colors=self.cmap_neg,
+                linewidths=0.5,
+            )
+        except (TypeError, ValueError):
+            # Nothing reaches the contour levels, which leaves an empty strip
+            pass
+
+        position = self.find_strip_position()
+        if position != None:
+            self.line3 = self.ax_bore_3.axvline(
+                x=position, color="black", linewidth=0.5
+            )
+
+        self.ax_bore_3.set_title(title)
+
+        if keep_limits == True:
+            self.ax_bore_3.set_xlim(xlim3)
+            self.ax_bore_3.set_ylim(ylim3)
+        else:
+            self.set_bore_limits()
+
+    def update_strip_axis(self) -> str:
+        """
+        Put the strip plot on the axis it holds, naming it after that dimension,
+        and say which shift of a peaklist belongs to it so that peaks are drawn
+        in the right place on it.
+        """
+        values, name, across = self.find_strip_axis()
+
+        self.ppms_2 = self.main_frame.ppms_2
+        self.Xstrip, self.Ystrip = np.meshgrid(values, self.ppms_2)
+
+        # Kept for anything which still asks whether the strip holds the axis
+        # up the plane rather than the one across it
+        self.alternative_orientation = across == False
+
+        try:
+            self.ax_bore_3.set_xlabel(name)
+        except (AttributeError, RuntimeError):
+            pass
+
+        strip_axis = "shift1" if across == True else "shift2"
+
+        # The peaks drawn on the strip plot follow whichever of the two plane
+        # axes it is showing
+        peaks = getattr(self, "peak_lists3D", None)
+        if peaks != None:
+            try:
+                peaks.bore_xdim = strip_axis
+            except (RuntimeError, AttributeError):
+                pass
+
+        return strip_axis
+
+    def draw_bore_trace(self):
+        """
+        Draw the bore dimension at the position the marker is at. Everything
+        which moves the marker or changes what is shown ends up here, so that
+        the trace and the strip plot always follow the marker.
+        """
+        viewer = self.main_frame
+
+        try:
+            x, y = self.bore_initial
+            first, second = self.find_bore_indexes(x, y)
+            self.bore_initial_index = first, second
+            self.bore_data = np.array(
+                [value for value in viewer.nmrdata.data[:, first, second]]
+            )
+            self.bore_data_strip1 = np.array(
+                [plane[first] for plane in viewer.nmrdata.data]
+            )
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return
+
+        intensity_percent = 10 ** float(self.bore_intensity_slider.GetValue())
+
+        title = self.ax_bore_2.get_title()
+        ylabel = self.ax_bore_2.get_ylabel()
+        self.ax_bore_2.clear()
+        self.ax_bore_2.set_title(title)
+        self.ax_bore_2.plot(
+            self.bore_data, viewer.ppms_2, color="red", linewidth=0.5
+        )
+        self.ax_bore_2.set_ylim(max(viewer.ppms_2), min(viewer.ppms_2))
+        self.ax_bore_2.set_xlim(
+            -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
+            np.max(self.nmrdata.data) / (intensity_percent / 100),
+        )
+        self.ax_bore_2.set_ylabel(ylabel)
+
+        self.line1 = self.ax_bore_2.axhline(y=x, color="black", linewidth=0.5)
+        self.line2 = self.ax_bore_2.axhline(y=y, color="black", linewidth=0.5)
+
+        # The strip plot is taken at the same position
+        self.update_strip_axis()
+
+        self.plot_peak_bore_lines()
+
+    def reset_bore_view(self):
+        """
+        Go back to the view the bore window started with and stop showing what
+        is selected: the peak which is selected, the peaks shown down the bore
+        and the positions a peak being resolved could have.
+        """
+        peaks = getattr(self, "peak_lists3D", None)
+
+        if peaks != None:
+            try:
+                peaks.selected_peak_indexes = ["N/A"]
+                peaks.selected_peakname = ""
+            except (RuntimeError, AttributeError):
+                pass
+
+        self.selected_bore_peaks = []
+        self.candidate_shifts = []
+
+        # Back to the view the window started with. The tools keep their own
+        # history, which is empty until they have been used, so the limits the
+        # window was drawn with are kept as well
+        try:
+            self.toolbar_bore.home()
+        except Exception:
+            pass
+
+        for axes, xlimits, ylimits in getattr(self, "starting_limits", []):
+            try:
+                axes.set_xlim(xlimits)
+                axes.set_ylim(ylimits)
+            except (RuntimeError, ValueError):
+                pass
+
+        self.OnBoreSlider(wx.EVT_BUTTON)
+
+    def on_key_bore(self, event):
+        """
+        The keyboard shortcuts for the navigation tools, as the 2D and 3D
+        windows have. Selecting a tool turns off any peak picking mode, which
+        the peak window arranges by following the tools.
+        """
+        if event.key == "z":
+            self.toolbar_bore.zoom()
+        if event.key == "p":
+            self.toolbar_bore.pan()
+        if event.key == "q":
+            self.reset_bore_view()
+        if event.key == "b":
+            self.toolbar_bore.back()
+        if event.key == "f":
+            self.toolbar_bore.forward()
+
+    def on_click_bore(self, event):
+        """
+        Move the position marker to where the plane was clicked, and show the
+        bore dimension and the strip plot there.
+
+        Which way round the plane is shown compared with the 3D data is worked
+        out in one place, from the chemical shifts of the axes, so that it is
+        right whatever the orientation, whether the plane has been transposed,
+        and however many points each dimension holds.
+        """
         if event.inaxes == self.ax_bore:
-            # print(event.xdata, event.ydata)
             self.cross.set_xdata([event.xdata])
             self.cross.set_ydata([event.ydata])
 
-            # Change the bore slice shown on the plot on the right
-            if len(self.new_x_ppms) != len(self.main_frame.ppms_0):
-                self.bore_initial = event.xdata, event.ydata
-                self.bore_initial_index = np.argmin(
-                    np.abs(self.main_frame.ppms_1 - self.bore_initial[0])
-                ), np.argmin(np.abs(self.main_frame.ppms_0 - self.bore_initial[1]))
-                self.bore_data = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    self.bore_data.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[1]][
-                            self.bore_initial_index[0]
-                        ]
-                    )
-                self.bore_data = np.array(self.bore_data)
-                ylabel = self.ax_bore_2.get_ylabel()
-                self.ax_bore_2.clear()
-                self.ax_bore_2.set_title(title)
-                self.ax_bore_2.plot(
-                    self.bore_data, self.main_frame.ppms_2, color="red", linewidth=0.5
-                )
-                self.ax_bore_2.set_ylim(
-                    max(self.main_frame.ppms_2), min(self.main_frame.ppms_2)
-                )
-                self.ax_bore_2.set_xlim(
-                    -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
-                    np.max(self.nmrdata.data) / (intensity_percent / 100),
-                )
-                self.ax_bore_2.set_ylabel(ylabel)
+            self.bore_initial = event.xdata, event.ydata
 
-                self.line1 = self.ax_bore_2.axhline(
-                    y=event.xdata, color="black", linewidth=0.5
-                )
-                self.line2 = self.ax_bore_2.axhline(
-                    y=event.ydata, color="black", linewidth=0.5
-                )
+            # The 1D bore and the data of the strip plot
+            self.draw_bore_trace()
 
-                self.bore_data_strip1 = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    # Get the contour data for the strip plot
-                    self.bore_data_strip1.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[1]]
-                    )
-
-                self.bore_data_strip1 = np.array(self.bore_data_strip1)
-
-                # Get the ppm values for the strip plot
-                self.ppms_2 = self.main_frame.ppms_2
-
-                title = self.ax_bore_3.get_title()
-                xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
-                self.ax_bore_3.clear()
-
-                self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-                if(self.swap_labels==False):
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-                else:
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-                if self.Xstrip.shape != self.bore_data_strip1.shape:
-                    self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-                    self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
-                    self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-                    if(self.swap_labels==False):
-                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-                    else:
-                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_strip,
-                    colors=self.cmap,
-                    linewidths=0.5,
-                )
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_neg_strip,
-                    colors=self.cmap_neg,
-                    linewidths=0.5,
-                )
-
-                self.line3 = self.ax_bore_3.axvline(
-                    x=self.bore_initial[0], color="black", linewidth=0.5
-                )
-                self.ax_bore_3.set_xlim(xlim3)
-                self.ax_bore_3.set_title(title)
-                self.ax_bore_3.set_ylim(ylim3)
-
-                # for window in wx.GetTopLevelWindows():
-                #     if (
-                #         isinstance(window, wx.Frame)
-                #         and window.GetTitle() == "3D Peak List - " + self.title
-                #     ):
-                #         if(self.selected_bore_peaks!=[]):
-                #             # Plot these bore peaks
-                #             xvals = []
-                #             yvals = []
-                #             names = []
-                #             for index in self.selected_bore_peaks:
-                #                 names.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['peak_names'][index])
-                #                 xvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift1'][index])
-                #                 yvals.append(self.peak_lists3D.peak_list_dictionary[self.peak_lists3D.peak_list_choices[0]]['shift3'][index])
-
-                #             self.scatter_strip = self.ax_bore_3.scatter(xvals, yvals, s=5,
-                #             marker="o",
-                #             picker=5,
-                #             zorder=2)
-
-                #     # Annotation for hover
-                #             self.annotations_strip = self.ax_bore_3.annotate(
-                #                 "",
-                #                 xy=(0, 0),
-                #                 xytext=(15, 15),
-                #                 textcoords="offset points",
-                #                 bbox=dict(boxstyle="round", fc="w"),
-                #                 arrowprops=dict(arrowstyle="->"))
-                #             self.annotations[-1].set_visible(False)
-
-                #             # Connect event
-                #             self.hover_connect_strip = self.canvas_bore.mpl_connect(
-                #                 "motion_notify_event", self.on_hover_strip
-                #             )
-
-            else:
-                self.bore_initial = event.xdata, event.ydata
-                self.bore_initial_index = np.argmin(
-                    np.abs(self.main_frame.ppms_0 - self.bore_initial[0])
-                ), np.argmin(np.abs(self.main_frame.ppms_1 - self.bore_initial[1]))
-                self.bore_data = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    self.bore_data.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[0]][
-                            self.bore_initial_index[1]
-                        ]
-                    )
-                self.bore_data = np.array(self.bore_data)
-                ylabel = self.ax_bore_2.get_ylabel()
-                self.ax_bore_2.clear()
-                self.ax_bore_2.set_title(title)
-                self.ax_bore_2.plot(
-                    self.bore_data, self.main_frame.ppms_2, color="red", linewidth=0.5
-                )
-                self.ax_bore_2.set_ylim(
-                    max(self.main_frame.ppms_2), min(self.main_frame.ppms_2)
-                )
-                self.ax_bore_2.set_xlim(
-                    -(np.max(self.nmrdata.data) / 8) / (intensity_percent / 100),
-                    np.max(self.nmrdata.data) / (intensity_percent / 100),
-                )
-                self.ax_bore_2.set_ylabel(ylabel)
-                self.line1 = self.ax_bore_2.axhline(
-                    y=event.xdata, color="black", linewidth=0.5
-                )
-                self.line2 = self.ax_bore_2.axhline(
-                    y=event.ydata, color="black", linewidth=0.5
-                )
-
-                self.bore_data_strip1 = []
-                for i in range(len(self.main_frame.ppms_2)):
-                    # Get the contour data for the strip plot
-                    self.bore_data_strip1.append(
-                        self.main_frame.nmrdata.data[i][self.bore_initial_index[0]]
-                    )
-
-                self.bore_data_strip1 = np.array(self.bore_data_strip1)
-
-                # Get the ppm values for the strip plot
-                self.ppms_2 = self.main_frame.ppms_2
-
-                self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_0, self.ppms_2)
-                if(self.swap_labels==False):
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-                else:
-                    self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-                if self.Xstrip.shape != self.bore_data_strip1.shape:
-                    self.Xstrip, self.Ystrip = np.meshgrid(self.ppms_1, self.ppms_2)
-                    self.ax_bore_3.set_xlim(max(self.ppms_1), min(self.ppms_1))
-                    self.ax_bore_3.set_ylim(max(self.ppms_2), min(self.ppms_2))
-                    if(self.swap_labels==False):
-                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[0])
-                    else:
-                        self.ax_bore_3.set_xlabel(self.nmrdata.axislabels[1])
-
-                title = self.ax_bore_3.get_title()
-                xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
-                self.ax_bore_3.clear()
-
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_strip,
-                    colors=self.cmap,
-                    linewidths=0.5,
-                )
-                self.ax_bore_3.contour(
-                    self.Xstrip,
-                    self.Ystrip,
-                    self.bore_data_strip1,
-                    self.cl_neg_strip,
-                    colors=self.cmap_neg,
-                    linewidths=0.5,
-                )
-
-                self.line3 = self.ax_bore_3.axvline(
-                    x=self.bore_initial[1], color="black", linewidth=0.5
-                )
-                self.ax_bore_3.set_xlim(xlim3)
-                self.ax_bore_3.set_title(title)
-                self.ax_bore_3.set_ylim(ylim3)
+            # The strip plot itself, put on the axis it holds
+            self.draw_strip_plot(keep_limits=False)
+            self.overlay_peaklist()
 
             self.OverlayBore()
-            self.ax_bore_2.set_ylim(self.original_limits[0][1])
-            self.ax_bore_3.set_xlim(self.original_limits[1][0])
-            self.ax_bore_3.set_ylim(self.original_limits[1][1])
-        # try:
-        #     self.overlay_peaklist()
-        # except:
-        #     pass
-        # self.canvas_bore.draw_idle()
+
+            # The amino acid overlay can move the limits, so the bore and the
+            # strip are put back on the dimensions they show
+            self.set_bore_limits()
+
         self.UpdateBoreFrame()
+
+    def show_bore_position(self, x, y):
+        """
+        Move the position marker to a place on the plane and show the bore
+        dimension there, as though the user had clicked it. This is used when a
+        peak is added so that the bore of the new peak is shown straight away.
+        """
+        self.on_click_bore(BorePosition(self.ax_bore, x, y))
+
+    def find_peak_bore_lines(self):
+        """
+        Where the peaks which are selected in the plane sit along the bore
+        dimension, as [name, chemical shift]. Only the selected peaks are
+        shown, and a peak which still has the chemical shift of zero it was
+        given when it was added has not been placed along the bore, so it is
+        left out.
+        """
+        peaks = getattr(self, "peak_lists3D", None)
+        if peaks == None:
+            return []
+
+        peaklist = peaks.current_peaklist_box.GetValue()
+        if peaklist not in peaks.peak_list_dictionary:
+            return []
+
+        dictionary = peaks.peak_list_dictionary[peaklist]
+
+        selected = [
+            index for index in peaks.selected_peak_indexes if index != "N/A"
+        ]
+        for index in getattr(self, "selected_bore_peaks", []):
+            if index not in selected:
+                selected.append(index)
+
+        lines = []
+        for index in selected:
+            try:
+                peakname = dictionary["peak_name"][index]
+                shift3 = dictionary["shift3"][index]
+            except (IndexError, TypeError):
+                continue
+
+            if shift3 == 0:
+                # The peak has not been given a position along the bore
+                continue
+
+            lines.append([peakname, shift3])
+
+        return lines
+
+    def plot_peak_bore_lines(self):
+        """
+        Show where each of those peaks sits along the bore dimension as a
+        dotted line across the 1D bore plot.
+        """
+        for line in getattr(self, "peak_bore_lines", []):
+            try:
+                line.remove()
+            except (ValueError, AttributeError, NotImplementedError):
+                # The plot has been cleared since the line was drawn
+                pass
+
+        self.peak_bore_lines = []
+
+        try:
+            # The positions a peak being resolved could have, so that they can
+            # be compared with the trace
+            for shift in getattr(self, "candidate_shifts", []):
+                self.peak_bore_lines.append(
+                    self.ax_bore_2.axhline(
+                        y=shift, color="grey", linewidth=0.8, linestyle="--"
+                    )
+                )
+
+            for peakname, shift3 in self.find_peak_bore_lines():
+                self.peak_bore_lines.append(
+                    self.ax_bore_2.axhline(
+                        y=shift3, color="darkviolet", linewidth=0.8, linestyle=":"
+                    )
+                )
+                self.peak_bore_lines.append(
+                    self.ax_bore_2.text(
+                        self.ax_bore_2.get_xlim()[0],
+                        shift3,
+                        peakname,
+                        color="darkviolet",
+                        fontsize=6,
+                        verticalalignment="bottom",
+                    )
+                )
+        except (AttributeError, IndexError, TypeError, ValueError):
+            # The bore plot is being rebuilt
+            pass
+
+    def find_bore_peaks_shown(self):
+        """
+        The selected peaks which are shown down the bore dimension, leaving out
+        any which the peaklist no longer holds. The peaks are selected by their
+        position in the peaklist, so loading a different peaklist or removing
+        peaks can leave a selection which no longer points at anything.
+        """
+        selected = getattr(self, "selected_bore_peaks", [])
+
+        try:
+            dictionary = self.peak_lists3D.peak_list_dictionary[
+                self.peak_lists3D.peak_list_choices[0]
+            ]
+            number_of_peaks = len(dictionary["peak_name"])
+        except (AttributeError, KeyError, IndexError, TypeError):
+            return []
+
+        return [
+            index
+            for index in selected
+            if isinstance(index, (int, np.integer)) and index < number_of_peaks
+        ]
 
     def overlay_peaklist(self):
         """
@@ -3095,6 +3837,10 @@ class SpinBore(wx.Frame):
                 isinstance(window, wx.Frame)
                 and window.GetTitle() == "3D Peak List - " + self.title
             ):
+                # A peaklist which has been loaded since the peaks were
+                # selected may not have those peaks in it any more
+                self.selected_bore_peaks = self.find_bore_peaks_shown()
+
                 if len(self.selected_bore_peaks) > 0:
                     # Plot these bore peaks
                     xvals = []
@@ -3116,13 +3862,10 @@ class SpinBore(wx.Frame):
                             colors.append('k')
                 
 
-                        s = self.peak_lists3D.bore_xdim 
-                        if(self.alternative_orientation == True):
-                            if(s == 'shift1'):
-                                s = 'shift2'
-                            else:
-                                s = 'shift1'
-                        
+                        # bore_xdim already names the shift the strip plot
+                        # holds, so it is used as it is
+                        s = self.peak_lists3D.bore_xdim
+
                         xvals.append(
                             self.peak_lists3D.peak_list_dictionary[
                                 self.peak_lists3D.peak_list_choices[0]
@@ -3202,6 +3945,8 @@ class SpinBore(wx.Frame):
                     fontsize=6,
                 )
 
+            self.plot_peak_bore_lines()
+
         self.UpdateBoreFrame()
 
     def OnBoreSliderStripPlot(self, event):
@@ -3217,46 +3962,9 @@ class SpinBore(wx.Frame):
             * self.contour_factor_strip ** np.flip(np.arange(self.contour_num_strip))
         )
 
-        try:
-            xvalue = self.line3.get_ydata()
-        except:
-            xvalue = "1"
-
-        xlim3, ylim3 = self.ax_bore_3.get_xlim(), self.ax_bore_3.get_ylim()
-        xlabel = self.ax_bore_3.get_xlabel()
-        title = self.ax_bore_3.get_title()
-        self.ax_bore_3.clear()
-        self.contour1 = self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_strip,
-            colors=self.cmap,
-            linewidths=0.5,
-        )
-        self.contour1_neg = self.ax_bore_3.contour(
-            self.Xstrip,
-            self.Ystrip,
-            self.bore_data_strip1,
-            self.cl_neg_strip,
-            colors=self.cmap_neg,
-            linewidths=0.5,
-        )
-        self.line3 = self.ax_bore_3.axvline(
-            x=self.bore_initial[1], color="black", linewidth=0.5
-        )
-        self.ax_bore_3.set_xlim(xlim3)
-        self.ax_bore_3.set_ylim(ylim3)
-        self.ax_bore_3.set_xlabel(xlabel)
-        self.ax_bore_3.set_title(title)
-
-        if xvalue != "1":
-            if self.transposed2D == False:
-                xvalue = self.bore_initial[0]
-            else:
-                xvalue = self.bore_initial[1]
-
-            self.line3 = self.ax_bore_3.axvline(x=xvalue, color="black", linewidth=0.5)
+        # Only the contour levels have changed, so the strip stays zoomed as it
+        # was
+        self.draw_strip_plot(keep_limits=True)
 
         self.overlay_peaklist()
 
@@ -3296,14 +4004,14 @@ class SpinBore(wx.Frame):
 
         self.ax_bore.set_xlim(xlim)
         self.ax_bore.set_ylim(ylim)
-        if(self.swap_labels==False):
-            self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
-            self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
-        else:
-            self.ax_bore.set_xlabel(self.nmrdata.axislabels[0])
-            self.ax_bore.set_ylabel(self.nmrdata.axislabels[1])
+        self.ax_bore.set_xlabel(self.nmrdata.axislabels[1])
+        self.ax_bore.set_ylabel(self.nmrdata.axislabels[0])
 
         self.add_peaklist()
+
+        # The bore dimension is drawn at the position the marker is at, so that
+        # it always shows what the marker points at
+        self.draw_bore_trace()
 
         self.OnBoreSliderStripPlot(wx.EVT_BUTTON)
 
@@ -3370,6 +4078,7 @@ class SpinBore(wx.Frame):
                     
                     if (
                         self.peak_lists3D.select_peak_button.GetValue() == True
+                        or self.peak_lists3D.select_peaks_button.GetValue() == True
                     ):
                                 cs = []
                                 for i, peak in enumerate(dictionary["peak_name"]):
@@ -3486,13 +4195,9 @@ class SpinBore(wx.Frame):
                     + ")"
                 )
 
-                s = self.peak_lists3D.bore_xdim 
-                if(self.alternative_orientation == True):
-                    if(s == 'shift1'):
-                        s = 'shift2'
-                    else:
-                        s = 'shift1'
-                
+                # bore_xdim already names the shift the strip plot holds
+                s = self.peak_lists3D.bore_xdim
+
                 x = dictionary[s][self.selected_bore_peaks[index]]
                 y = dictionary["shift3"][self.selected_bore_peaks[index]]
                 self.annotations_strip.xy = (x, y)
@@ -4192,13 +4897,11 @@ class Projection3DNotebook(wx.Notebook):
         if self.parent.parent.parent.path != "":
             os.chdir(self.parent.parent.parent.path)
         # Search for the projections in the current directory (.dat files)
-        self.projection_files = []
-        for file in os.listdir():
-            if file.endswith(".dat"):
-                self.projection_files.append(file)
-        for file in self.projection_files:
-            if "prof" in file:
-                self.projection_files.remove(file)
+        self.projection_files = sorted(
+            file
+            for file in os.listdir()
+            if file.endswith(".dat") and "prof" not in file
+        )
 
         self.nmrdata = []
         for file in self.projection_files:

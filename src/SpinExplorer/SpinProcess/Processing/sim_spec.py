@@ -1,9 +1,22 @@
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Literal, Optional
 import numpy as np
 from numpy.typing import NDArray
+from typing import Union, Literal 
+from dataclasses import dataclass, field
+import matplotlib.pyplot as plt
+import nmrglue as ng # type: ignore
 from scipy.stats import truncnorm # type: ignore
+
+from typing import Literal, Optional
+import numpy as np
+from datetime import datetime
+
+from SpinExplorer.SpinProcess.Processing.ist import apply_sampling_schedule_to_2D_signal, generate_sampling_schedule_poisson, generate_sampling_schedule_poisson_nd, ist_2d, read_sched
+from SpinExplorer.SpinProcess.Processing.ist import apply_sampling_schedule_to_2D_signal_ist, write_sched, inflate_spectra_2D_signal_ist, apply_sampling_schedule_to_nd_signal_ist, inflate_spectra_nd_signal_ist
+from SpinExplorer.SpinProcess.Processing.ist import ist_3d, apply_sampling_schedule_nd
+
+
+
+# ── Per-dimension parameters ───────────────────────────────────────────────────
 
 @dataclass
 class DimParams:
@@ -388,11 +401,6 @@ def general_signals_vector(amp, freq, r2, times):
             (1j * freq[:, None] - r2[:, None]) * times
             )).astype(np.complex64)
 
-def generate_1d_spec_from_vals(num_signals:int, amp_vals: NDArray, freq_vals: NDArray, 
-                                 r2_vals: NDArray, max_time:float, num_points:int):
-    
-    return np.sum([generate_signal(amp,freq,r2, max_time, num_points) for (amp,freq,r2) in zip(amp_vals,freq_vals,r2_vals)], axis = 0)
-
 def generate_1d_spec_from_ranges(num_signals:int, amp_dist: DistributionParam, freq_dist: DistributionParam, 
                                  r2_dist: DistributionParam, max_time:float, num_points:int):
     
@@ -400,78 +408,14 @@ def generate_1d_spec_from_ranges(num_signals:int, amp_dist: DistributionParam, f
     amp_vals,freq_vals,r2_vals = [d.draw(num_signals) for d in (amp_dist,freq_dist,r2_dist)]
     return np.sum([generate_signal(amp,freq,r2, max_time, num_points) for (amp,freq,r2) in zip(amp_vals,freq_vals,r2_vals)], axis = 0)
 
-def generate_signs_array(n: int, minus_one_fraction: float) -> np.ndarray:
-    """
-    Generate a NumPy array of length n containing +1 and -1 values.
-
-    Parameters
-    ----------
-    n : int
-        Length of the output array.
-    minus_one_fraction : float
-        Fraction of elements that should be -1 (between 0 and 1 inclusive).
-
-    Returns
-    -------
-    np.ndarray
-        Array of length n with randomly distributed +1 and -1 values.
-    """
-    if not (0.0 <= minus_one_fraction <= 1.0):
-        raise ValueError(f"minus_one_fraction must be between 0 and 1, got {minus_one_fraction}")
-
-    n_minus = round(n * minus_one_fraction)
-    arr = np.ones(n, dtype=int)
-    minus_indices = np.random.choice(n, size=n_minus, replace=False)
-    arr[minus_indices] = -1
-
-    return arr
-
-def generate_2d_spec_with_vals(num_signals: int, amp_vals1: NDArray, freq_vals1: NDArray, r2_vals1: NDArray,
-                               sw1: float, num_points1: int, 
-                               amp_vals2: NDArray, freq_vals2: NDArray, r2_vals2: NDArray,
-                               sw2: float, num_points2: int, 
-                               neg_signs: Optional[NDArray] = None):
-    
-        if neg_signs is not None:
-            amp_vals1*=neg_signs
-
-        max_time1 = (num_points1 - 1) / sw1
-        max_time2 = (num_points2 - 1) / sw2
-        
-        times1 = np.linspace(0, max_time1, num_points1, dtype=np.float32)
-        times2 = np.linspace(0, max_time2, num_points2, dtype=np.float32)
-
-        sigs_direct    = general_signals_vector(amp_vals1, freq_vals1, r2_vals1, times1)  # (num_signals, num_points1)
-        sigs_indirect  = general_signals_vector(amp_vals2, freq_vals2, r2_vals2, times2)  # (num_signals, num_points2)
-
-        cos_indirect = sigs_indirect.real  # (num_signals, num_points2)
-        sin_indirect = sigs_indirect.imag  # (num_signals, num_points2)
-
-        # Vectorised outer product summed over signals — shape (num_points2, num_points1)
-        fid_2d_r = np.einsum('si,sj->ij', cos_indirect, sigs_direct, optimize=True)
-        fid_2d_i = np.einsum('si,sj->ij', sin_indirect, sigs_direct, optimize=True)
-
-        n_indirect, n_direct = fid_2d_r.shape
-        fid_interleaved = np.empty((n_indirect * 2, n_direct), dtype=np.complex64)
-        fid_interleaved[0::2] = fid_2d_r  # cos-modulated rows
-        fid_interleaved[1::2] = fid_2d_i  # sin-modulated rows
-
-        return fid_interleaved
-
-
 def generate_2d_spec_from_ranges(num_signals:int, amp_dist1: DistributionParam, freq_dist1: DistributionParam, r2_dist1: DistributionParam,
                                  sw1:float, num_points1: int,
                                  amp_dist2: DistributionParam, freq_dist2: DistributionParam, r2_dist2: DistributionParam,
-                                 sw2:float, num_points2: int,
-                                 neg_signs: Optional[NDArray] = None):
-                                 
+                                 sw2:float, num_points2: int):
     
     amp_vals1,freq_vals1,r2_vals1 = [d.draw(num_signals) for d in (amp_dist1,freq_dist1,r2_dist1)]
     amp_vals2,freq_vals2,r2_vals2 = [d.draw(num_signals) for d in (amp_dist2,freq_dist2,r2_dist2)]
-
-    if neg_signs is not None:
-        amp_vals1*=neg_signs
-
+    
     max_time1 = (num_points1 - 1) / sw1
     max_time2 = (num_points2 - 1) / sw2
     
@@ -493,7 +437,34 @@ def generate_2d_spec_from_ranges(num_signals:int, amp_dist1: DistributionParam, 
     fid_interleaved[0::2] = fid_2d_r  # cos-modulated rows
     fid_interleaved[1::2] = fid_2d_i  # sin-modulated rows
 
+    # fid_2d_r = np.sum([
+    #     np.outer(np.real(generate_signal(amp2, freq2, r2_2, max_time2, int(num_points2))),
+    #              generate_signal(amp1, freq1, r2_1, max_time1, num_points1))
+    #     for (amp1, freq1, r2_1, amp2, freq2, r2_2) 
+    #     in zip(amp_vals1, freq_vals1, r2_vals1, amp_vals2, freq_vals2, r2_vals2)
+    # ], axis=0)  # shape: (num_points2, num_points1)
+
+    # fid_2d_i = np.sum([
+    #     np.outer(np.imag(generate_signal(amp2, freq2, r2_2, max_time2, int(num_points2))),
+    #              generate_signal(amp1, freq1, r2_1, max_time1, num_points1))
+    #     for (amp1, freq1, r2_1, amp2, freq2, r2_2) 
+    #     in zip(amp_vals1, freq_vals1, r2_vals1, amp_vals2, freq_vals2, r2_vals2)
+    # ], axis=0)  
+
+    # # Hypercomplex combination along indirect dimension (axis=0)
+    # # Split real/imag of indirect dimension before FT
+
+    # n_indirect, n_direct = fid_2d_r.shape
+
+    # # NMRPipe expects each row as interleaved [re0, im0, re1, im1, ...]
+    # # so the direct dimension doubles in size on disk
+
+    # fid_interleaved = np.empty((n_indirect * 2, n_direct), dtype=np.complex64)
+    # fid_interleaved[0::2] = fid_2d_r.astype(np.complex64)  # cos-modulated rows
+    # fid_interleaved[1::2] = fid_2d_i.astype(np.complex64)  # sin-modulated rows
+
     return fid_interleaved
+
 
 def generate_3d_spec_from_ranges(num_signals: int,
                                  amp_dist1: DistributionParam, freq_dist1: DistributionParam, r2_dist1: DistributionParam,
@@ -501,21 +472,18 @@ def generate_3d_spec_from_ranges(num_signals: int,
                                  amp_dist2: DistributionParam, freq_dist2: DistributionParam, r2_dist2: DistributionParam,
                                  sw2: float, num_points2: int,
                                  amp_dist3: DistributionParam, freq_dist3: DistributionParam, r2_dist3: DistributionParam,
-                                 sw3: float, num_points3: int,
-                                 neg_signs: Optional[NDArray] = None):
+                                 sw3: float, num_points3: int):
 
     amp_vals1, freq_vals1, r2_vals1 = [d.draw(num_signals) for d in (amp_dist1, freq_dist1, r2_dist1)]
     amp_vals2, freq_vals2, r2_vals2 = [d.draw(num_signals) for d in (amp_dist2, freq_dist2, r2_dist2)]
     amp_vals3, freq_vals3, r2_vals3 = [d.draw(num_signals) for d in (amp_dist3, freq_dist3, r2_dist3)]
-
-    if neg_signs is not None:
-            amp_vals1*=neg_signs
 
     max_time1 = (num_points1 - 1) / sw1
     max_time2 = (num_points2 - 1) / sw2
     max_time3 = (num_points3 - 1) / sw3
 
     # Four hypercomplex components for 3D States:
+    # indirect dim 2 (slowest) × indirect dim 1 × direct
     fid_rr = np.zeros((num_points3, num_points2, num_points1), dtype=complex)  # cos2 × cos1 × direct
     fid_ri = np.zeros((num_points3, num_points2, num_points1), dtype=complex)  # cos2 × sin1 × direct
     fid_ir = np.zeros((num_points3, num_points2, num_points1), dtype=complex)  # sin2 × cos1 × direct
@@ -535,32 +503,231 @@ def generate_3d_spec_from_ranges(num_signals: int,
     cos2 = np.real(sig_indirect2)  
     sin2 = np.imag(sig_indirect2)  
 
-
-    # note that here the axis order is: (num_points3,num_points2,num_points1)
-    fid_rr = np.einsum('si,sj,sk->ijk', cos2, cos1, sig_direct, optimize = True) 
+    fid_rr = np.einsum('si,sj,sk->ijk', cos2, cos1, sig_direct, optimize = True)
     fid_ri = np.einsum('si,sj,sk->ijk', cos2, sin1, sig_direct, optimize = True)
     fid_ir = np.einsum('si,sj,sk->ijk', sin2, cos1, sig_direct, optimize = True)
     fid_ii = np.einsum('si,sj,sk->ijk', sin2, sin1, sig_direct, optimize = True)
 
-    # in 3d every hypercomplex point is associated with four 1D spectra. Let's first interleave
-    # real and imaginary points along the num_points 3 axis.
-    # We get two lots of this one corresponding to real in the num_points2 axis and one to imaginary
-    # in the num_points2 axis to give the final spectra.
-    # Note that for writing NMR pipe files we interleave real and complex points in all indirect 
-    # dimensions but for the directly detected dimension 
-    fid_3d_c = np.zeros(shape = (2*num_points3, 2*num_points2, num_points1), dtype = np.complex64)
+    # NMRPipe hypercomplex interleaving for 3D:
+    # The two indirect dimensions are interleaved as pairs of rows.
+    # For each indirect2 point, there are 4 rows:
+    #   [cos2_cos1, cos2_sin1, sin2_cos1, sin2_sin1]
+    # shape: (num_points3 * 4, num_points2, num_points1) — no wait,
+    # NMRPipe streams 3D as a series of 2D planes, so we interleave
+    # along the slowest indirect dim (axis=0) with factor 2,
+    # and along the faster indirect dim (axis=1) with factor 2.
 
-    fid_3d_1 = np.zeros(shape = (2*num_points3, num_points2, num_points1), dtype = np.complex64)
+    n3, n2, n1 = fid_rr.shape
 
-    fid_3d_1[0::2,:,:] = fid_rr
-    fid_3d_1[1::2,:,:] = fid_ir
+    # Interleave faster indirect (dim2/axis=1): cos1/sin1 pairs per row
+    # giving shape (n3, n2*2, n1)
+    fid_indirect1_interleaved = np.empty((n3, n2 * 2, n1), dtype=np.complex64)
+    fid_indirect1_interleaved[:, 0::2, :] = fid_rr.astype(np.complex64)  # cos2_cos1
+    fid_indirect1_interleaved[:, 1::2, :] = fid_ri.astype(np.complex64)  # cos2_sin1
 
-    fid_3d_2 = np.zeros(shape = (2*num_points3, num_points2, num_points1),dtype = np.complex64)
-    fid_3d_2[0::2,:,:] = fid_ri
-    fid_3d_2[1::2,:,:] = fid_ii
+    fid_indirect1_interleaved_sin = np.empty((n3, n2 * 2, n1), dtype=np.complex64)
+    fid_indirect1_interleaved_sin[:, 0::2, :] = fid_ir.astype(np.complex64)  # sin2_cos1
+    fid_indirect1_interleaved_sin[:, 1::2, :] = fid_ii.astype(np.complex64)  # sin2_sin1
 
-    fid_3d_c[:,0::2,:] = fid_3d_1
-    fid_3d_c[:,1::2,:] = fid_3d_2
- 
+    # Interleave slowest indirect (dim3/axis=0): cos2/sin2 pairs
+    # giving final shape (n3*2, n2*2, n1)
+    fid_interleaved = np.empty((n3 * 2, n2 * 2, n1), dtype=np.complex64)
+    fid_interleaved[0::2, :, :] = fid_indirect1_interleaved        # cos2 rows
+    fid_interleaved[1::2, :, :] = fid_indirect1_interleaved_sin    # sin2 rows
 
-    return fid_3d_c
+    return fid_interleaved
+
+
+def write_as_nmrpipe(array: NDArray, spec_dic: dict, outfile: str):
+    #print(array.shape)
+    ng.pipe.write(outfile, spec_dic, array, overwrite=True)
+
+def direct_dimension_process(infile: str):
+    dic, data = ng.pipe.read(infile)
+    dic, data = ng.pipe_proc.em(dic,data, lb = 5.0, c = 0.5)
+    dic, data = ng.pipe_proc.zf(dic, data, zf = 1)
+    dic, data = ng.pipe_proc.ft(dic, data)
+    dic, data = ng.pipe_proc.ps(dic, data, p0=0.0, p1=0.0)
+    dic, data = ng.pipe_proc.di(dic, data)
+    dic, data = ng.pipe_proc.tp(dic, data)
+
+    return dic, data
+
+def direct_dimension_process_3d(infile: str):
+    dic, data = ng.pipe.read(infile)
+    dic, data = ng.pipe_proc.em(dic,data, lb = 5.0, c = 0.5)
+    dic, data = ng.pipe_proc.zf(dic, data, zf = 1)
+    dic, data = ng.pipe_proc.ft(dic, data)
+    dic, data = ng.pipe_proc.ps(dic, data, p0=0.0, p1=0.0)
+    dic, data = ng.pipe_proc.di(dic, data)
+
+    return dic, data
+
+
+# import time 
+# start = time.time()
+
+sig_dist = DistributionParam(50,100,'uniform','int')
+amp_dist = DistributionParam(0.2,1.0,'normal', 'float', 0.5, 0.2)
+freq_dist = DistributionParam(-5000.0*2.0*np.pi,5000.0*2.0*np.pi,'uniform','float')
+freq_dist2 = DistributionParam(-900.0*2.0*np.pi,900.0*2.0*np.pi,'uniform','float')
+freq_dist3 = DistributionParam(-1000.0*2.0*np.pi, 1000.0*2.0*np.pi, 'uniform','float')
+r2_dist = DistributionParam(10.0,20.0,'normal','float',12.0,4.0)
+sw1 = 12500.
+sw2 = 2000.0
+sw3 = 3000.0
+num_points1 = 512
+num_points2 = 20
+num_points3 = 10
+num_sigs = int(sig_dist.single())
+
+
+
+num_points1 = 64
+num_points2 = 40
+num_points3 = 20
+trial_3d = generate_3d_spec_from_ranges(num_sigs, amp_dist,freq_dist,r2_dist,sw1,num_points1,
+                                         amp_dist,freq_dist2,r2_dist,sw2,num_points2,
+                                         amp_dist, freq_dist3, r2_dist,sw3, num_points3)
+
+dim1 = DimParams(label='1H',  sw=sw1, obs=800.56,
+                    car=4.86, td_size=num_points1)
+dim2 = DimParams(label='15N', sw=sw2,  obs=81.13,
+                    car=117.18,  td_size=num_points2,
+                    aq_sign=0.0)
+dim3 = DimParams(label='13C', sw=sw3,  obs=200.14,
+                    car=35.0,  td_size=num_points3,
+                    aq_sign=0.0)
+
+sampling_sched = generate_sampling_schedule_poisson_nd(0.25, [num_points3,num_points2], 2)
+write_sched(sampling_sched,'sched')
+header = NMRPipeHeader(dims=[dim1, dim2, dim3], data=trial_3d)
+dic = header.build()
+sampling_sched = read_sched('sched')
+write_as_nmrpipe(trial_3d, dic, 'test_3d.fid')
+
+#nus_data, nus_dic = apply_sampling_schedule_to_nd_signal_ist(trial_3d,dic, sampling_sched)
+#write_as_nmrpipe(nus_data, nus_dic, 'hms_3d.fid')
+#print(nus_data.shape)
+#nus_data, nus_dic = inflate_spectra_nd_signal_ist(nus_data, nus_dic, sampling_sched, [num_points3, num_points2])
+
+
+nus_dic,nus_data = direct_dimension_process_3d('test_3d.fid')
+nus_data = apply_sampling_schedule_nd(nus_data, sampling_sched,indirect_axes=(0,1))
+
+write_as_nmrpipe(nus_data, nus_dic, 'nus_3d.ft1')
+
+nus_data = np.transpose(nus_data, axes=(2,0,1))
+
+recon_data = ist_3d(nus_data, sampling_sched,mode=1,max_iter = 1000)
+recon_data = np.transpose(recon_data, axes=(1,2,0))
+
+ng.pipe.write('nus_3d_recon.ft1', nus_dic, recon_data, True)
+
+
+
+def check_3d_proc(array_3d:NDArray, indirect_axes):
+    signal_ft = np.fft.fftn(array_3d, axes=indirect_axes)
+    return signal_ft
+
+def plot_2d_nmr_contour(spectrum: NDArray,
+                        min_contour_fraction: float = 0.1,
+                        n_levels: int = 10,
+                        fac: float = 1.2,
+                        pos_color: str = 'blue',
+                        neg_color: str = 'red',
+                        ax: Optional[plt.Axes] = None,
+                        figsize: tuple = (8, 8)) -> plt.Axes:
+    """
+    Contour plot of 2D NMR data with geometrically spaced contour levels.
+
+    Parameters
+    ----------
+    spectrum              : 2D numpy array of spectral intensities
+    min_contour_fraction  : minimum contour level as fraction of max intensity (default 0.1)
+    n_levels              : number of contour levels for positive and negative (default 10)
+    fac                   : multiplicative spacing between contour levels (default 1.2)
+    pos_color             : colour for positive contours (default 'blue')
+    neg_color             : colour for negative contours (default 'red')
+    ax                    : existing matplotlib axes to plot on (default None — creates new)
+    figsize               : figure size if creating new axes (default (8, 8))
+
+    Returns
+    -------
+    ax : matplotlib Axes object
+    """
+    max_val = np.max(np.abs(spectrum))
+    cl_start = min_contour_fraction * max_val
+
+    # Geometrically spaced contour levels: cl_start * fac^0, fac^1, ..., fac^(n-1)
+    levels = cl_start * fac ** np.arange(n_levels)
+
+    pos_levels = levels          #  positive contours
+    neg_levels = -levels[::-1]   #  negative contours (mirrored, highest first)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax.contour(spectrum,  levels=pos_levels, colors=pos_color, linewidths=0.8)
+    ax.contour(spectrum,  levels=neg_levels, colors=neg_color, linewidths=0.8)
+
+    ax.set_xlabel('Direct dimension')
+    ax.set_ylabel('Indirect dimension')
+
+    return ax
+
+#dic, data = ng.pipe.read('test_3d.ft1')
+#dic, data = ng.pipe_proc.tp(dic, data)
+
+# print(data.shape)
+# signal_ft = check_3d_proc(data, indirect_axes=(2,))
+# signal_ft = np.transpose(signal_ft, axes = (0,2,1))
+# print(signal_ft.shape)
+# signal_ft = check_3d_proc(signal_ft, indirect_axes=(2,))
+
+
+"""
+dic, data = ng.pipe.read('test_3d.fid')
+#dic,data = ng.pipe_proc.tp(dic,data)
+
+lb = 10.0
+
+apod = np.exp(-np.pi * np.arange(data.shape[-1]) * lb/sw1).astype(data.dtype)
+
+data[...,:] = data[...,:]*apod
+data = np.fft.fftshift(np.fft.fft(data), axes = -1)
+data = np.real(data)
+plt.plot(data[0,0,:])
+plt.show()
+data = np.transpose(data, axes=(2,0,1))
+data = data[...,0::2] + 1.0j*data[...,1::2]
+
+apod = np.exp(-np.pi * np.arange(data.shape[-1]) * lb/sw2).astype(data.dtype)
+data[...,:] = data[...,:]*apod
+
+n_zeros = 128-data.shape[-1]
+zeros = np.zeros((*data.shape[:-1], n_zeros), dtype=data.dtype)
+data = np.concatenate([data, zeros], axis=-1)
+
+data = np.fft.fftshift(np.fft.fft(data), axes = -1)
+data = np.real(data)
+print(data.shape)
+
+data = np.transpose(data, axes=(0,2,1))
+
+apod = np.exp(-np.pi * np.arange(data.shape[-1]) * lb/sw3).astype(data.dtype)
+data[...,:] = data[...,:]*apod
+
+n_zeros = 128-data.shape[-1]
+zeros = np.zeros((*data.shape[:-1], n_zeros), dtype=data.dtype)
+data = np.concatenate([data, zeros], axis=-1)
+
+data = data[...,0::2] + 1.0j*data[...,1::2]
+data = np.fft.fftshift(np.fft.fft(data), axes = -1)
+#data = np.real(data)
+print(data.shape)
+
+for i in range(data.shape[0]):
+    ax = plot_2d_nmr_contour(np.real(data[i,:,:]), min_contour_fraction=0.1, n_levels=12, fac = 1.2)
+    plt.show()
+"""

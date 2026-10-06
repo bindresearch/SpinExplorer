@@ -131,7 +131,9 @@ class SpinExplorer(wx.Frame):
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 840
-        self.height = 800
+        # Tall enough to show the whole window, without making it taller than
+        # the screen (and never smaller than it used to be)
+        self.height = max(800, min(850, self.monitorHeight - 80))
 
 
         # Setup the dock/task bar with the logo
@@ -165,12 +167,18 @@ class SpinExplorer(wx.Frame):
     def create_main_sizer(self):
         
         bmp = SpinExplorerHeader.GetBitmap()
+        img = bmp.ConvertToImage()
+        bmp = wx.Bitmap(img)
+        bmp.SetScaleFactor(2)
         top = wx.StaticBitmap(self, -1, bitmap=bmp)
         self.main_sizer.Add(top, 0, wx.ALIGN_CENTER_HORIZONTAL, 10)
 
 
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         bmp1 = SpinConverterButton.GetBitmap()
+        img1 = bmp1.ConvertToImage()
+        bmp1 = wx.Bitmap(img1)
+        bmp1.SetScaleFactor(2)
         left = wx.BitmapButton(self, -1, bitmap=bmp1)
         left.Bind(wx.EVT_BUTTON, self.OnClickSpinConverter)
         button_sizer.Add(left, 0, wx.ALIGN_CENTER_VERTICAL, 10)
@@ -178,6 +186,9 @@ class SpinExplorer(wx.Frame):
         button_sizer.AddSpacer(20)
 
         bmp2 = SpinProcessButton.GetBitmap()
+        img2 = bmp2.ConvertToImage()
+        bmp2 = wx.Bitmap(img2)
+        bmp2.SetScaleFactor(2)
         middle = wx.BitmapButton(self, -1, bitmap=bmp2)
         middle.Bind(wx.EVT_BUTTON, self.OnClickSpinProcess)
         button_sizer.Add(middle, 0, wx.ALIGN_CENTER_VERTICAL, 10)
@@ -185,6 +196,9 @@ class SpinExplorer(wx.Frame):
         button_sizer.AddSpacer(20)
 
         bmp3 = SpinViewButton.GetBitmap()
+        img3 = bmp3.ConvertToImage()
+        bmp3 = wx.Bitmap(img3)
+        bmp3.SetScaleFactor(2)
         right = wx.BitmapButton(self, -1, bitmap=bmp3)
         right.Bind(wx.EVT_BUTTON, self.OnClickSpinView)
         button_sizer.Add(right, 0, wx.ALIGN_CENTER_VERTICAL, 10)
@@ -197,12 +211,12 @@ class SpinExplorer(wx.Frame):
         self.load_spectra_box_label = wx.StaticBox(self, -1, "Select data directory:")
         self.load_spectra_box = wx.StaticBoxSizer(self.load_spectra_box_label, wx.HORIZONTAL)
 
-        self.listbox = wx.ListBox(self, style=wx.LB_SINGLE, size=(300,125))
+        self.listbox = wx.ListBox(self.load_spectra_box_label, style=wx.LB_SINGLE, size=(300,125))
 
         self.listbox.Bind(wx.EVT_LISTBOX, self.OnListBoxPress)
 
         self.left_box = wx.BoxSizer(wx.VERTICAL)
-        text = wx.StaticText(self, label="Recently opened:")
+        text = wx.StaticText(self.load_spectra_box_label, label="Recently opened:")
 
         self.left_box.Add(text)
         self.left_box.AddSpacer(5)
@@ -213,29 +227,29 @@ class SpinExplorer(wx.Frame):
 
         self.rightbox = wx.BoxSizer(wx.VERTICAL)
 
-        self.file_button = wx.Button(self, -1, "Open File Browser", size=(300,20))
+        self.file_button = wx.Button(self.load_spectra_box_label, -1, "Open File Browser", size=(300,20))
         self.file_button.Bind(wx.EVT_BUTTON, self.OnOpenFileBrowser)
         self.rightbox.AddSpacer(10)
         self.rightbox.Add(self.file_button)
 
         self.rightbox.AddSpacer(10)
-        text2 = wx.StaticText(self, label="Selected Directory:")
+        text2 = wx.StaticText(self.load_spectra_box_label, label="Selected Directory:")
         self.rightbox.Add(text2)
-        self.directory_box = wx.TextCtrl(self, -1, '', size=(300,20), style=wx.CB_READONLY)
+        self.directory_box = wx.TextCtrl(self.load_spectra_box_label, -1, '', size=(300,20), style=wx.CB_READONLY)
         self.rightbox.AddSpacer(10)
         self.rightbox.Add(self.directory_box)
 
         self.rightbox.AddSpacer(10)
 
-        self.text3 = wx.StaticText(self, label="Title for selected experiment:")
+        self.text3 = wx.StaticText(self.load_spectra_box_label, label="Title for selected experiment:")
         
         
         self.rightbox.Add(self.text3)
 
-        self.title_text = wx.TextCtrl(self, id=-1, value="", style=wx.TE_MULTILINE | wx.CB_READONLY, size=(300,25))
+        self.title_text = wx.TextCtrl(self.load_spectra_box_label, id=-1, value="", style=wx.TE_MULTILINE | wx.TE_READONLY, size=(300,75))
 
         self.rightbox.AddSpacer(5)
-        self.rightbox.Add(self.title_text, wx.ALIGN_CENTER_VERTICAL)
+        self.rightbox.Add(self.title_text, 0, wx.EXPAND)
 
 
         self.load_spectra_box.Add(self.rightbox, 1, wx.ALIGN_CENTER_VERTICAL)
@@ -317,6 +331,9 @@ class SpinExplorer(wx.Frame):
         self.bottom_box.Add(self.copyright_statement1, 1, wx.ALIGN_CENTER_HORIZONTAL)
 
         bmp = Logo.GetBitmap()
+        img = bmp.ConvertToImage()
+        bmp = wx.Bitmap(img)
+        bmp.SetScaleFactor(2)
         logo = wx.StaticBitmap(self, -1, bitmap=bmp)
         
 

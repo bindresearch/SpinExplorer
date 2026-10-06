@@ -13,19 +13,19 @@ license = "MIT"
 license-files = ["LICEN[CS]E*"]
 
 dependencies = [
-    "wxPython == 4.2.4",
+    "wxPython == 4.2.5",
     "numpy == 2.3.5",
-    "matplotlib == 3.10.8",
+    "matplotlib == 3.11.1",
     "nmrglue == 0.11",
-    "scipy == 1.16.3",
+    "scipy == 1.18.0",
     "darkdetect == 0.8.0",
     "appdirs == 1.4.4",
     "natsort == 8.4.0",
     "pyyaml == 6.0.3",
-    "pandas == 3.0.1",
+    "pandas == 3.0.5",
     "pyfftw == 0.15.1",
     "joblib == 1.5.3",
-    "scikit-learn==1.8.0"
+    "scikit-learn==1.9.0"
 ]
 
 [tool.setuptools]

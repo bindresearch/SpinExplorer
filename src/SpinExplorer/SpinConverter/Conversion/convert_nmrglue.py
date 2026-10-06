@@ -24,13 +24,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE."""
 
 import numpy as np
+
+from SpinExplorer.SpinExplorer_CL_tools import quadrature
 import nmrglue as ng
 from typing import Dict
 from numpy.typing import NDArray
 import wx
 import traceback
-from SpinExplorer.SpinProcess.Processing.ist import inflate_spectra_nd_signal_ist
-from SpinExplorer.SpinProcess.Processing.ist import read_sched
+from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import (
+    inflate_spectra_2D_signal,
+    inflate_spectra_3D_signal,
+    read_sched,
+)
 
 
 class Convert_nmrglue:
@@ -43,27 +48,7 @@ class Convert_nmrglue:
         self.params = params
         self.nmrdata = nmrdata
 
-        sizes = []
-
-        if(len(self.app.format.N_complex_boxes)>1):
-            if(self.app.shared_format.NUS_tickbox.GetValue() == False):
-                for i, box in enumerate(self.app.format.N_complex_boxes):
-                    size = int(box.GetValue())
-                    if i == 0:
-                        size = int(size / 2)
-                    sizes.append(size)
-                sizes.reverse()
-
-            else:
-                sampling_schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
-                sizes = [len(sampling_schedule)*4, int(self.app.format.N_real_boxes[0].GetValue())]
-        else:
-            for i, box in enumerate(self.app.format.N_complex_boxes):
-                size = int(box.GetValue())
-                if i == 0:
-                    size = int(size / 2)
-                sizes.append(size)
-            sizes.reverse()
+        sizes = self.find_data_shape()
 
 
         C = ng.convert.converter()
@@ -120,6 +105,38 @@ class Convert_nmrglue:
         dlg.ShowModal()
         dlg.Destroy()
 
+    def find_data_shape(self) -> list:
+        """
+        The shape of the data as it was recorded, which is needed to read it
+        in. For non-uniformly sampled data only the points in the sampling
+        schedule were recorded, so the data is smaller than the size given in
+        the interface and is expanded after it has been read.
+        """
+        if len(self.app.format.N_complex_boxes) > 1:
+            if self.app.shared_format.NUS_tickbox.GetValue() == True:
+                sampling_schedule = np.asarray(
+                    read_sched(self.app.shared_format.nusfile_input.GetValue())
+                )
+                # Each sampled point of a single indirect dimension is recorded
+                # as a cos/sin pair, and each sampled point of two indirect
+                # dimensions as four hypercomplex combinations
+                if sampling_schedule.ndim == 1:
+                    rows = len(sampling_schedule) * 2
+                else:
+                    rows = len(sampling_schedule) * 4
+
+                return [rows, int(self.app.format.N_real_boxes[0].GetValue())]
+
+        sizes = []
+        for i, box in enumerate(self.app.format.N_complex_boxes):
+            size = int(box.GetValue())
+            if i == 0:
+                size = int(size / 2)
+            sizes.append(size)
+        sizes.reverse()
+
+        return sizes
+
     def perform_conversion(self, C, u, dic, data):
         """
         Performing any necessary data reshuffling and then
@@ -159,7 +176,6 @@ class Convert_nmrglue:
                 else:
                     p0_only=True
                 dic, data = self.remove_digital_filter_fid(dic, data,p0_only)
-
             C.from_bruker(dic, data, u)
         else:
             C.from_varian(dic, data, u)
@@ -181,6 +197,13 @@ class Convert_nmrglue:
             pdic["FD2DPHASE"] = 0
 
         pdic['FDCOMMENT'] = 'nmrglue'
+
+        # pdic["FD2DPHASE"] = 2
+        # pdic["FDF1AQSIGN"] = 2
+        # pdic["FDF2AQSIGN"] = 0
+        # pdic["FDF3AQSIGN"] = 2
+
+
 
         ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
 
@@ -348,18 +371,23 @@ class Convert_nmrglue:
         zeros into the missing gaps.
         """
 
-        schedule = read_sched(self.app.shared_format.nusfile_input.GetValue())
+        schedule = np.asarray(read_sched(self.app.shared_format.nusfile_input.GetValue()))
 
-        schedule = np.asarray(schedule)
-        schedule = schedule[:, ::-1]
-
-        # max points is an array of the maximum points in each dimension (equal to the value in the N real boxes)
-        if(len(self.app.format.N_complex_boxes)==2):
+        # max points is the maximum number of points in each indirect dimension
+        # (equal to the value in the N real boxes)
+        if schedule.ndim == 1:
+            # 2D data, a single indirect dimension sampled as cos/sin pairs
             max_points = int(self.app.format.N_real_boxes[-1].GetValue())
+
+            data, dic = inflate_spectra_2D_signal(
+                data, dic, sampling_schedule=schedule, max_points=max_points
+            )
         else:
+            schedule = schedule[:, ::-1]
+
             max_points = [int(self.app.format.N_real_boxes[-1].GetValue()), int(self.app.format.N_real_boxes[-2].GetValue())]
 
-        data, dic = inflate_spectra_nd_signal_ist(data, dic, sampling_schedule=schedule, max_points=max_points)
+            data, dic = inflate_spectra_3D_signal(data, dic, sampling_schedule=schedule, max_points=max_points, acq_ord = 0)
 
         return dic, data
             
@@ -538,48 +566,15 @@ class Convert_nmrglue:
 
         # Finding which dimensions in udic are Rance-Kay
         rance_kay_dimensions = []
-        for i, box in enumerate(self.app.format.acqusition_combo_boxes):
-            box = box.GetValue().strip()
-            if box == "Echo-AntiEcho" or box == "Rance-Kay":
+        for i, val in enumerate(self.acq_modes):
+            if val == "Echo-AntiEcho" or val == "Rance-Kay":
                 rance_kay_dimensions.append((len(data.shape) - 1) - i)
 
-        # Creating an empty array to store the reshuffled data
-        shuffled_data = np.empty(data.shape, data.dtype)
-        # If final dimension is Rance-Kay/Echo-AntiEcho
-        if rance_kay_dimensions == [0]:
-            for i in range(0, data.shape[0], 2):
-                shuffled_data[i] = (
-                    1.0 * (data[i].real - data[i + 1].real)
-                    + 1.0 * (data[i].imag - data[i + 1].imag) * 1j
-                )
-                if rotate_phase is True:
-                    shuffled_data[i + 1] = (
-                        -1.0 * (data[i].imag + data[i + 1].imag)
-                        + 1.0 * (data[i].real + data[i + 1].real) * 1j
-                    )
-                else:
-                    shuffled_data[i + 1] = (
-                        1.0 * (data[i].real + data[i + 1].real)
-                        + 1.0 * (data[i].imag + data[i + 1].imag) * 1j
-                    )
-
-        # If second to last dimension is Rance-Kay/Echo-AntiEcho
-        elif rance_kay_dimensions == [1]:
-            if len(data.shape) == 3:
-                for i in range(0, data.shape[1], 2):
-                    shuffled_data[:, i, :] = (
-                        1.0 * (data[:, i, :].real - data[:, i + 1, :].real)
-                        + 1.0 * (data[:, i, :].imag - data[:, i + 1, :].imag) * 1j
-                    )
-                    if rotate_phase is True:
-                        shuffled_data[:, i + 1, :] = (
-                            -1.0 * (data[:, i, :].imag + data[:, i + 1, :].imag)
-                            + 1.0 * (data[:, i, :].real + data[:, i + 1, :].real) * 1j
-                        )
-                    else:
-                        shuffled_data[:, i + 1, :] = (
-                            1.0 * (data[:, i, :].real + data[:, i + 1, :].real)
-                            + 1.0 * (data[:, i, :].imag + data[:, i + 1, :].imag) * 1j
-                        )
+        # Each of those dimensions is combined in turn. A triple-resonance 3D
+        # can have both of its indirect dimensions collected this way, so there
+        # can be more than one of them.
+        shuffled_data = quadrature.shuffle_rance_kay(
+            data, rance_kay_dimensions, rotate_phase=rotate_phase
+        )
 
         return dic, shuffled_data
