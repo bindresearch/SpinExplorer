@@ -186,6 +186,76 @@ class SharedFormatting:
                             str(self.params.references_other[index])
                         )
 
+
+    def on_save_reference(self, new_carrier_ppm):
+            if self.nmrdata.spectrometer == "Bruker":
+                self.params.calculate_carrier_frequency_bruker(carrier=new_carrier_ppm)
+            else:
+                self.params.calculate_carrier_frequency_varian(carrier=new_carrier_ppm)
+
+    
+    
+            if self.nmrdata.spectrometer == "Bruker":
+                # Get all the indexes of the current direct/indirect dimension carrier frequency boxes
+                j = 0
+                for i in range(len(self.app.format.carrier_combo_boxes)):
+                    if self.app.format.carrier_combo_boxes[i] == 200:
+                        j += 1
+                    else:
+                        label = self.app.format.carrier_combo_boxes[i].GetValue()
+                        index = 0
+    
+                        if i == 0:
+                            for k in range(len(self.params.references_proton_labels)):
+                                if label == self.params.references_proton_labels[k]:
+                                    index = k
+                                    break
+                            self.app.format.carrier_frequency_boxes[i].SetValue(
+                                str(self.params.references_proton[index])
+                            )
+    
+                        else:
+                            for k in range(len(self.params.references_other_labels)):
+                                if label == self.params.references_other_labels[k]:
+                                    index = k
+                                    break
+                            self.app.format.carrier_frequency_boxes[i].SetValue(
+                                str(self.params.references_other[index])
+                            )
+            else:
+                # Get all the indexes of the current direct/indirect dimension carrier frequency boxes
+                j = 0
+                for i in range(len(self.app.format.carrier_combo_boxes)):
+                    if (
+                        self.app.format.carrier_combo_boxes[i].GetValue() == "ID"
+                        or self.app.format.carrier_combo_boxes[i].GetValue() == "Other"
+                        or self.app.format.carrier_combo_boxes[i].GetValue() == "Manual"
+                        or self.app.format.acqusition_combo_boxes[i].GetValue() == "Real"
+                    ):
+                        j += 1
+                    else:
+                        label = self.app.format.carrier_combo_boxes[i].GetValue()
+                        index = 0
+    
+                        if i == 0:
+                            for k in range(len(self.params.references_proton_labels)):
+                                if label == self.params.references_proton_labels[k]:
+                                    index = k
+                                    break
+                            self.app.format.carrier_frequency_boxes[i].SetValue(
+                                str(self.params.references_proton[index])
+                            )
+    
+                        else:
+                            for k in range(len(self.params.references_other_labels)):
+                                if label == self.params.references_other_labels[k]:
+                                    index = k
+                                    break
+                            self.app.format.carrier_frequency_boxes[i].SetValue(
+                                str(self.params.references_other[index])
+                            )
+    
+
     def create_intensity_scaling_box(self):
         self.scaling_box = wx.StaticBox(self.app, -1, label="Intensity Scaling")
         self.scaling_box_sizer_total = wx.StaticBoxSizer(self.scaling_box, wx.VERTICAL)
@@ -470,6 +540,15 @@ class SharedFormatting:
         self.add_button.Bind(wx.EVT_BUTTON, self.app.on_add_fids)
         self.fid_conversion_box.AddSpacer(20)
         self.fid_conversion_box.Add(self.add_button)
+
+
+        # Have a button to reference the spectrum based on a reference spectrum
+        self.reference_button = wx.Button(
+            self.app, label="Reference", size=(175, 20)
+        )
+        self.reference_button.Bind(wx.EVT_BUTTON, self.app.on_reference)
+        self.fid_conversion_box.AddSpacer(20)
+        self.fid_conversion_box.Add(self.reference_button)
 
 
         self.app.extra_boxes.AddSpacer(20)

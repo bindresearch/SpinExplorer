@@ -65,6 +65,7 @@ from SpinExplorer.SpinConverter.StoringParameters.read_parameters import Read_js
 from SpinExplorer.SpinConverter.Conversion.convert_pipe import Convert_pipe
 from SpinExplorer.SpinConverter.Conversion.convert_nmrglue import Convert_nmrglue
 from SpinExplorer.SpinConverter.Conversion.add_fid import Add_fid
+from SpinExplorer.SpinConverter.Conversion.reference import ReferenceSpectrum
 
 from SpinExplorer.SpinExpLogo import SpinExpLogo
 
@@ -377,6 +378,26 @@ class SpinConverter(wx.Frame):
         If the addition fails, an error message pops out and no addition takes place
         """
         add_fid = Add_fid(self, self.nmrdata)
+
+
+    def on_reference(self, event) -> None:
+        """
+        Creating a popout where users can update their carrier frequencies
+        in order to ensure the spectrum is referenced (e.g. determine the
+        movement in ppm to ensure that DSS is at 0.0 ppm)
+        """
+
+        # Reference spectrum selection window
+        with wx.FileDialog(self, "Choose a data file containing a referenced spectrum file (.ft)", style=wx.DD_DEFAULT_STYLE) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return 
+            
+            try:
+                file = fileDialog.GetPath()
+            except:
+                return
+
+        reference_data = ReferenceSpectrum(self, file)
 
 
 

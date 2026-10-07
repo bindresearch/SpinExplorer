@@ -39,7 +39,7 @@ from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import (
 
 
 class Convert_nmrglue:
-    def __init__(self, app, params, nmrdata) -> None:
+    def __init__(self, app, params, nmrdata, save=True) -> None:
         """
         This class will perform the conversion of the NMR data
         to nmrPipe format using nmrglue.
@@ -63,7 +63,7 @@ class Convert_nmrglue:
         u = self.create_conversion_dictionary()
 
         try:
-            self.perform_conversion(C, u, dic, data)
+            self.perform_conversion(C, u, dic, data, save)
             # Give an output to say that the conversion was successful
             self.success_output_message()
 
@@ -137,7 +137,7 @@ class Convert_nmrglue:
 
         return sizes
 
-    def perform_conversion(self, C, u, dic, data):
+    def perform_conversion(self, C, u, dic, data, save=True):
         """
         Performing any necessary data reshuffling and then
         performing the data conversion to nmrPipe format before
@@ -147,8 +147,6 @@ class Convert_nmrglue:
         if len(self.app.format.N_real_boxes) == 2:
             # If have 2D data but nmrglue has read it in as a 1D, need to split it up
             if len(data.shape) == 1:
-                print(data.shape)
-                print(self.app.format.N_real_boxes[-1].GetValue())
                 data = np.array(
                     np.split(data, int(self.app.format.N_real_boxes[-1].GetValue()))
                 )
@@ -205,9 +203,11 @@ class Convert_nmrglue:
         # pdic["FDF2AQSIGN"] = 0
         # pdic["FDF3AQSIGN"] = 2
 
+        # Allow other areas of the application to access the converted data
+        self.dic, self.data = pdic, pdata
 
-
-        ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
+        if(save==True):
+            ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
 
     def create_conversion_dictionary(self) -> Dict:
         """
