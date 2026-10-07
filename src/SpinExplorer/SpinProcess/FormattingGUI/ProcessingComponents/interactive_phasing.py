@@ -55,6 +55,8 @@ class InteractivePhasingFrame(wx.Frame):
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
         self.width = 1.0 * self.monitorWidth
         self.height = 0.85 * self.monitorHeight
+        self.display_index = wx.Display.GetFromWindow(main_frame.app)
+        self.display_index_current = self.display_index
         self.phasing_frame = wx.Frame.__init__(
             self,
             None,
@@ -83,6 +85,63 @@ class InteractivePhasingFrame(wx.Frame):
         self.nmr_spectrum = self.fids[self.fid_index]
 
         self.create_canvas()
+
+                # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        # Bind method to check/resize the window when the frame is moved
+        self.Bind(wx.EVT_MOVE, self.OnMoveFrame)
+
+        # Bind method to resize the window when the frame is resized
+        self.Bind(wx.EVT_SIZE, self.OnSizeFrame)
+
+    def OnMoveFrame(self, event):
+        # Get the new default display if the frame is moved
+        displays = (wx.Display(i) for i in range(wx.Display.GetCount()))
+        sizes = [display.GetGeometry().GetSize() for display in displays]
+        display_index = wx.Display.GetFromWindow(self)
+        if display_index != self.display_index_current:
+            self.display_index_current = display_index
+            self.width = int(1.0 * sizes[display_index][0])
+            self.height = int(0.875 * sizes[display_index][1])
+            self.SetSize((self.width, self.height))
+            self.canvas.SetSize(
+                (
+                    self.width * 0.0104,
+                    (self.height - self.sizer.GetMinSize()[1] - 100)
+                    * 0.0104,
+                )
+            )
+            self.fig.set_size_inches(
+                self.width * 0.0104,
+                (self.height - self.sizer.GetMinSize()[1] - 100)
+                * 0.0104,
+            )
+        # Resize to ensure that the canvas gets the correct DPI of the current display
+        w, h = self.GetSize()
+        self.SetSize(w + 1, h)
+        self.SetSize(w, h)
+        self.UpdateFrame()
+        event.Skip()
+
+    def OnSizeFrame(self, event):
+        # Get the new frame size
+        self.width, self.height = self.GetSize()
+        self.SetSize((self.width, self.height))
+        self.canvas.SetSize(
+            (
+                self.width * 0.0104,
+                (self.height - self.sizer.GetMinSize()[1] - 100)
+                * 0.0104,
+            )
+        )
+        self.fig.set_size_inches(
+            self.width * 0.0104,
+            (self.height - self.sizer.GetMinSize()[1] - 100) * 0.0104,
+        )
+        self.UpdateFrame()
+        event.Skip()
 
     def find_fids(self, spectrum):
         """
