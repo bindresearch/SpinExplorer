@@ -319,7 +319,7 @@ class ParameterExtractorVarian:
             elif line[0] == "temp":
                 include_temp_value = True
 
-    def calculate_carrier_frequency_varian(self) -> None:
+    def calculate_carrier_frequency_varian(self, carrier=None) -> None:
         """
         Calculate the carrier frequency for each dimension
         If the direct dimension is proton calculate based on
@@ -331,8 +331,11 @@ class ParameterExtractorVarian:
             or self.label_direct == "H1"
             or self.label_direct == "H"
         ):
-            # return water chemical shift in range 0-100oC
-            self.water_ppm = 7.83 - self.temperature / 96.9
+            if(carrier==None):
+                # return water chemical shift in range 0-100oC
+                self.water_ppm = 7.83 - self.temperature / 96.9
+            else:
+                self.water_ppm = carrier
 
             self.references_proton = [self.water_ppm, 0]
             self.references_proton_labels = ["H2O", "Manual"]

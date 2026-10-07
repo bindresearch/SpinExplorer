@@ -596,17 +596,18 @@ class ParameterExtractorBruker:
         be reversed.
         """
 
-        self.size_indirect.reverse()
-        self.sw_indirect.reverse()
-        freq1 = self.nucleus_frequencies[1]
-        freq2 = self.nucleus_frequencies[2]
-        self.nucleus_frequencies[1] = freq2
-        self.nucleus_frequencies[2] = freq1
-        self.acqusition_modes_indirect.reverse()
-        lab1 = self.labels_correct_order[1]
-        lab2 = self.labels_correct_order[2]
-        self.labels_correct_order[1] = lab2
-        self.labels_correct_order[2] = lab1
+        if(len(self.size_indirect)>1):
+            self.size_indirect.reverse()
+            self.sw_indirect.reverse()
+            freq1 = self.nucleus_frequencies[1]
+            freq2 = self.nucleus_frequencies[2]
+            self.nucleus_frequencies[1] = freq2
+            self.nucleus_frequencies[2] = freq1
+            self.acqusition_modes_indirect.reverse()
+            lab1 = self.labels_correct_order[1]
+            lab2 = self.labels_correct_order[2]
+            self.labels_correct_order[1] = lab2
+            self.labels_correct_order[2] = lab1
 
 
     def find_gamma_bruker(self) -> None:
@@ -913,7 +914,7 @@ class ParameterExtractorBruker:
                 self.temperature = float(line[1])
                 break
 
-    def calculate_carrier_frequency_bruker(self) -> None:
+    def calculate_carrier_frequency_bruker(self, carrier=None) -> None:
         """
         Calculate the carrier frequency for each dimension. If the direct
         dimension is proton, calculate the carrier based on water and include
@@ -927,7 +928,10 @@ class ParameterExtractorBruker:
                 or self.labels_correct_order[0] == "H1"
                 or self.labels_correct_order[0] == "H"
             ):
-                self.water_ppm = 7.83 - self.temperature / 96.9
+                if(carrier==None):
+                    self.water_ppm = 7.83 - self.temperature / 96.9
+                else:
+                    self.water_ppm = carrier
 
                 # Use O1/BF1 to calculate a second carrier frequency in case not centred on water
                 for j in range(len(self.acqus_file_lines)):
@@ -967,8 +971,10 @@ class ParameterExtractorBruker:
                 or self.labels_correct_order[0] == "H1"
                 or self.labels_correct_order[0] == "H"
             ):
-                # return water chemical shift in range 0-100oC
-                self.water_ppm = 7.83 - self.temperature / 96.9
+                if(carrier==None):
+                    self.water_ppm = 7.83 - self.temperature / 96.9
+                else:
+                    self.water_ppm = carrier
 
             # Use O1/BF1 to calculate a second carrier frequency in case not centred on water
             for j in range(len(self.acqus_file_lines)):
