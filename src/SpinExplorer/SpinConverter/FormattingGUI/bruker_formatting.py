@@ -49,17 +49,17 @@ class FormatParametersBruker:
         self.title_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.title_sizer.AddSpacer(250)
         self.N_complex_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.N_complex_txt = wx.StaticText(self.app, label="Number complex points:")
+        self.N_complex_txt = wx.StaticText(self.app.panel, label="Number complex points:")
         self.N_complex_boxes = []
         for i in range(len(self.params.size_indirect) + 1):
             self.title_sizer.Add(
-                wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
             )
             self.title_sizer.AddSpacer(145)
             if i == 0:
                 self.N_complex_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.size_direct_complex),
                         size=(200, 20),
                     )
@@ -75,7 +75,7 @@ class FormatParametersBruker:
                     # size_indirect = self.params.size_indirect.reverse()
                     size = str(self.params.size_indirect[i - 1])
                 self.N_complex_boxes.append(
-                    wx.TextCtrl(self.app, value=size, size=(200, 20))
+                    wx.TextCtrl(self.app.panel, value=size, size=(200, 20))
                 )
         self.N_complex_sizer.AddSpacer(20)
         self.N_complex_sizer.Add(self.N_complex_txt)
@@ -90,7 +90,7 @@ class FormatParametersBruker:
 
         # Create the boxes for the real point numbers
         self.N_real_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.N_real_txt = wx.StaticText(self.app, label="Number real points:        ")
+        self.N_real_txt = wx.StaticText(self.app.panel, label="Number real points:        ")
         self.N_real_boxes = []
 
 
@@ -99,7 +99,7 @@ class FormatParametersBruker:
                 if i == 0:
                     self.N_real_boxes.append(
                         wx.TextCtrl(
-                            self.app,
+                            self.app.panel,
                             value=str(int(self.params.size_direct / 2)),
                             size=(200, 20),
                         )
@@ -119,7 +119,7 @@ class FormatParametersBruker:
                     except:
                         size = str(int(self.params.size_indirect[i - 1] / 2))
                     self.N_real_boxes.append(
-                        wx.TextCtrl(self.app, value=size, size=(200, 20))
+                        wx.TextCtrl(self.app.panel, value=size, size=(200, 20))
                     )
 
         else:
@@ -127,7 +127,7 @@ class FormatParametersBruker:
                 if i == 0:
                     self.N_real_boxes.append(
                         wx.TextCtrl(
-                            self.app,
+                            self.app.panel,
                             value=str(int(self.params.size_direct / 2)),
                             size=(200, 20),
                         )
@@ -141,7 +141,7 @@ class FormatParametersBruker:
                     else:
                         real_size = str(int(self.params.size_indirect[i - 1] / 2))
                     self.N_real_boxes.append(
-                        wx.TextCtrl(self.app, value=real_size, size=(200, 20))
+                        wx.TextCtrl(self.app.panel, value=real_size, size=(200, 20))
                     )
 
         self.N_real_sizer.AddSpacer(20)
@@ -163,7 +163,7 @@ class FormatParametersBruker:
         #     except:
         #         size = str(self.params.size_indirect[i - 1])
         #     self.N_real_boxes.append(
-        #         wx.TextCtrl(self.app, value=size), size=(200, 20)
+        #         wx.TextCtrl(self.app.panel, value=size), size=(200, 20)
         #     )
         # else:
         #     try:
@@ -176,7 +176,7 @@ class FormatParametersBruker:
         #         size = str(int(self.params.size_indirect[i - 1] / 2))
         #     self.N_real_boxes.append(
         #         wx.TextCtrl(
-        #             self.app,
+        #             self.app.panel,
         #             value=str(
         #                 int(
         #                     self.nmrdata.nmr_data.shape[
@@ -198,7 +198,7 @@ class FormatParametersBruker:
         """
         self.acquisition_mode_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.acquisition_mode_txt = wx.StaticText(
-            self.app, label="Acquisition mode:           "
+            self.app.panel, label="Acquisition mode:           "
         )
         self.acquisition_mode_options_direct = ["DQD", "Complex", "Sequential", "Real"]
         
@@ -226,7 +226,7 @@ class FormatParametersBruker:
             if i == 0:
                 self.acqusition_combo_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=self.acquisition_mode_options_direct[choice_direct],
                         choices=self.acquisition_mode_options_direct,
                         size=(200, 20),
@@ -239,7 +239,7 @@ class FormatParametersBruker:
             else:
                 self.acqusition_combo_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=self.acquisition_mode_options_indirect[
                             indirect_mapping[
                                 self.params.acqusition_modes_indirect[i - 1]
@@ -274,7 +274,7 @@ class FormatParametersBruker:
                 #     if detected_value == "":
                 #         self.acqusition_combo_boxes.append(
                 #             wx.ComboBox(
-                #                 self.app,
+                #                 self.app.panel,
                 #                 value=self.acquisition_mode_options_indirect[0],
                 #                 choices=self.acquisition_mode_options_indirect,
                 #                 size=(200, 20),
@@ -288,7 +288,7 @@ class FormatParametersBruker:
                 #     else:
                 #         self.acqusition_combo_boxes.append(
                 #             wx.ComboBox(
-                #                 self.app,
+                #                 self.app.panel,
                 #                 value=detected_value,
                 #                 choices=self.acquisition_mode_options_indirect,
                 #                 size=(200, 20),
@@ -317,7 +317,7 @@ class FormatParametersBruker:
         """
         self.sweep_width_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.sweep_width_txt = wx.StaticText(
-            self.app, label="Sweep width (Hz):          "
+            self.app.panel, label="Sweep width (Hz):          "
         )
         self.sweep_width_boxes = []
         choices = [str(self.params.sw_direct)]
@@ -327,7 +327,7 @@ class FormatParametersBruker:
             if i == 0:
                 self.sweep_width_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.sw_direct),
                         choices=choices,
                         size=(200, 20),
@@ -336,7 +336,7 @@ class FormatParametersBruker:
             else:
                 self.sweep_width_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.sw_indirect[i - 1]),
                         choices=choices,
                         size=(200, 20),
@@ -359,27 +359,27 @@ class FormatParametersBruker:
         """
         self.nuclei_frequency_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.nuclei_frequency_txt = wx.StaticText(
-            self.app, label="Nuclei frequency (MHz):"
+            self.app.panel, label="Nuclei frequency (MHz):"
         )
         self.nuclei_frequency_boxes = []
         for i in range(len(self.params.size_indirect) + 1):
             if i == 0:
                 self.nuclei_frequency_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.nucleus_frequencies[0]),
                         size=(200, 20),
                     )
                 )
             elif self.acqusition_combo_boxes[i].GetValue() == "Real":
                 self.nuclei_frequency_boxes.append(
-                    wx.TextCtrl(self.app, value=str(1), size=(200, 20))
+                    wx.TextCtrl(self.app.panel, value=str(1), size=(200, 20))
                 )
                 self.params.labels_correct_order[i] = "ID"
             else:
                 self.nuclei_frequency_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.nucleus_frequencies[i]),
                         size=(200, 20),
                     )
@@ -403,7 +403,7 @@ class FormatParametersBruker:
         # Add a section for axis labels
         self.nucleus_type_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.nucleus_type_txt = wx.StaticText(
-            self.app, label="Label:                              "
+            self.app.panel, label="Label:                              "
         )
         self.nucleus_type_boxes = []
         j = 0
@@ -411,20 +411,20 @@ class FormatParametersBruker:
             if i == 0:
                 self.nucleus_type_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=self.params.labels_correct_order[0],
                         size=(200, 20),
                     )
                 )
             elif self.acqusition_combo_boxes[i].GetValue() == "Real":
                 self.nucleus_type_boxes.append(
-                    wx.TextCtrl(self.app, value="ID", size=(200, 20))
+                    wx.TextCtrl(self.app.panel, value="ID", size=(200, 20))
                 )
                 j += 1
             else:
                 self.nucleus_type_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=self.params.labels_correct_order[i],
                         size=(200, 20),
                     )
@@ -448,7 +448,7 @@ class FormatParametersBruker:
         """
         self.carrier_frequency_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.carrier_frequency_txt = wx.StaticText(
-            self.app, label="Carrier frequency (ppm):"
+            self.app.panel, label="Carrier frequency (ppm):"
         )
         self.carrier_frequency_boxes = []
         self.carrier_combo_boxes = []
@@ -467,12 +467,12 @@ class FormatParametersBruker:
                 ):
                     self.carrier_frequency_boxes.append(
                         wx.TextCtrl(
-                            self.app, value=str(self.params.water_ppm), size=(200, 20)
+                            self.app.panel, value=str(self.params.water_ppm), size=(200, 20)
                         )
                     )
                     self.carrier_combo_boxes.append(
                         wx.ComboBox(
-                            self.app,
+                            self.app.panel,
                             value=self.params.references_proton_labels[0],
                             choices=self.params.references_proton_labels,
                             size=(200, 20),
@@ -482,14 +482,14 @@ class FormatParametersBruker:
                 else:
                     self.carrier_frequency_boxes.append(
                         wx.TextCtrl(
-                            self.app,
+                            self.app.panel,
                             value=str(self.params.references_proton[i]),
                             size=(200, 20),
                         )
                     )
                     self.carrier_combo_boxes.append(
                         wx.ComboBox(
-                            self.app,
+                            self.app.panel,
                             value=self.params.references_proton_labels[0],
                             choices=self.params.references_proton_labels,
                             size=(200, 20),
@@ -498,11 +498,11 @@ class FormatParametersBruker:
                     )
             elif self.params.labels_correct_order[i] == "ID":
                 self.carrier_frequency_boxes.append(
-                    wx.TextCtrl(self.app, value="0.00", size=(200, 20))
+                    wx.TextCtrl(self.app.panel, value="0.00", size=(200, 20))
                 )
                 self.carrier_combo_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value="N/A",
                         choices=self.options_other_dimensions,
                         size=(200, 20),
@@ -521,14 +521,14 @@ class FormatParametersBruker:
 
                 self.carrier_frequency_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.references_other[main_index]),
                         size=(200, 20),
                     )
                 )
                 self.carrier_combo_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=self.params.references_other_labels[main_index],
                         choices=self.options_other_dimensions,
                         size=(200, 20),
@@ -549,7 +549,7 @@ class FormatParametersBruker:
         self.carrier_combo_box_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.carrier_combo_box_sizer.AddSpacer(20)
         self.carrier_combo_box_txt = wx.StaticText(
-            self.app, label="Referencing Mode:          "
+            self.app.panel, label="Referencing Mode:          "
         )
         self.carrier_combo_box_sizer.Add(self.carrier_combo_box_txt)
         self.carrier_combo_box_sizer.AddSpacer(17)
@@ -610,7 +610,7 @@ class FormatParametersBruker:
         """
         Creating a box to insert all of the Bruker digital filter information
         """
-        self.digital_filter_box = wx.StaticBox(self.app, -1, label="Digital Filter")
+        self.digital_filter_box = wx.StaticBox(self.app.panel, -1, label="Digital Filter")
         self.digital_filter_box_sizer_total = wx.StaticBoxSizer(
             self.digital_filter_box, wx.VERTICAL
         )
@@ -717,7 +717,7 @@ class FormatParametersBruker:
         nmrPipe based conversions.
         """
         self.app.bottom_left_box = wx.BoxSizer(wx.VERTICAL)
-        self.app.other_options_box = wx.StaticBox(self.app, -1, label="Other Options")
+        self.app.other_options_box = wx.StaticBox(self.app.panel, -1, label="Other Options")
         self.app.other_options_box_sizer_total = wx.StaticBoxSizer(
             self.app.other_options_box, wx.VERTICAL
         )
@@ -778,17 +778,19 @@ class FormatParametersBruker:
             self.nmrdata.params.remove_acquisition_padding = False
 
 
+
     def add_change_aqseq_box(self):
         """
         Sometimes the automatic change detection of aqseq does not work as intended.
         This change acquisition order button allows the 2nd and 3rd dimensions to be
         swapped before conversion takes place.
         """
-        self.aqseq_button = wx.Button(self.app, label='Change acqusition order')
+        self.aqseq_button = wx.Button(self.app.panel, label='Change acqusition order')
         self.aqseq_button.Bind(wx.EVT_BUTTON, self.OnChangeAqseq)
 
         self.app.menu_bar.AddSpacer(10)
-        self.app.menu_bar.Add(self.aqseq_button, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.app.row1.AddSpacer(10)
+        self.app.row1.Add(self.aqseq_button)
 
 
     def OnChangeAqseq(self, event):

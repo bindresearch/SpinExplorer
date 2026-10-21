@@ -41,6 +41,7 @@ print("")
 # Import relevant external modules
 import sys
 import wx
+import wx.lib.scrolledpanel as scrolled
 import subprocess
 import darkdetect
 import warnings
@@ -149,6 +150,8 @@ class SpinConverter(wx.Frame):
             wx.DefaultPosition,
             size=(int(self.width), int(self.height)),
         )
+
+        self.panel = scrolled.ScrolledPanel(self)
 
         self.file_parser = False
 
@@ -288,8 +291,12 @@ class SpinConverter(wx.Frame):
             self.format.get_carrier_frequencies_bruker()
             if len(self.format.N_complex_boxes) > 1:
                 self.shared_format.acquisition_2D_mode_combo_box()
+                self.row1 = wx.BoxSizer(wx.HORIZONTAL)
+                self.shared_format.add_swap_interleaved_order()
             if(len(self.format.N_complex_boxes) > 2):
                 self.format.add_change_aqseq_box()
+            if len(self.format.N_complex_boxes) > 1:
+                self.menu_bar.Add(self.row1, 0, wx.ALIGN_CENTER_HORIZONTAL)
             self.shared_format.create_temperature_box()
             self.format.create_bruker_digital_filter_box()
             self.shared_format.create_conversion_box()
@@ -325,11 +332,16 @@ class SpinConverter(wx.Frame):
         self.main_sizer.Add(self.parameters_sizer, 0, wx.CENTER)
         self.main_sizer.Add(self.extra_sizers, 0, wx.CENTER)
 
-        self.SetSizerAndFit(self.main_sizer)
+
+        self.panel.SetSizer(self.main_sizer)
+        self.panel.SetupScrolling()
+        # self.SetSizerAndFit(self.main_sizer)
 
         # Get the width and height of the main_sizer
         self.width, self.height = self.main_sizer.GetSize()
-        self.SetSize((int(self.width * 1.25), int(self.height * 1.25)))
+        width = min(self.monitorWidth, self.width*1.25)
+        height = min(self.monitorHeight*0.9, self.height*1.25)
+        self.SetSize((int(width), int(height)))
         self.Centre()
 
     def on_save_parameters(self, event) -> None:

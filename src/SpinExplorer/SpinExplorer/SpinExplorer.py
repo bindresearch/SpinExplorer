@@ -45,6 +45,7 @@ import wx.adv
 import os
 import json
 import wx.lib.agw.hyperlink as hl
+import wx.lib.scrolledpanel as scrolled
 from appdirs import user_data_dir
 
 # cache_dir = os.path.expanduser("~/.SpinExplorer_mpl_cache")
@@ -133,7 +134,7 @@ class SpinExplorer(wx.Frame):
         self.width = 840
         # Tall enough to show the whole window, without making it taller than
         # the screen (and never smaller than it used to be)
-        self.height = max(800, min(850, self.monitorHeight - 80))
+        self.height = min(850, self.monitorHeight - 80)
 
 
         # Setup the dock/task bar with the logo
@@ -146,6 +147,8 @@ class SpinExplorer(wx.Frame):
             self, None, wx.ID_ANY,'SpinExplorer', wx.DefaultPosition, size=(self.width, self.height)
         )
 
+        self.panel = scrolled.ScrolledPanel(self)
+
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.main_sizer.AddSpacer(10)
         self.create_main_sizer()
@@ -155,7 +158,10 @@ class SpinExplorer(wx.Frame):
         self.recently_opened_file = os.path.join(self.package_directory, "recently_opened.json")
         self.recent_directories = self.load_recent_directories()
 
-        self.SetSizer(self.main_sizer)
+        self.panel.SetSizer(self.main_sizer)
+        self.panel.SetupScrolling()
+        # self.SetSizer(self.main_sizer)
+        
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.SetIcon(SpinExpLogo.GetIcon())
         self.Show()
@@ -170,7 +176,7 @@ class SpinExplorer(wx.Frame):
         img = bmp.ConvertToImage()
         bmp = wx.Bitmap(img)
         bmp.SetScaleFactor(2)
-        top = wx.StaticBitmap(self, -1, bitmap=bmp)
+        top = wx.StaticBitmap(self.panel, -1, bitmap=bmp)
         self.main_sizer.Add(top, 0, wx.ALIGN_CENTER_HORIZONTAL, 10)
 
 
@@ -179,7 +185,7 @@ class SpinExplorer(wx.Frame):
         img1 = bmp1.ConvertToImage()
         bmp1 = wx.Bitmap(img1)
         bmp1.SetScaleFactor(2)
-        left = wx.BitmapButton(self, -1, bitmap=bmp1)
+        left = wx.BitmapButton(self.panel, -1, bitmap=bmp1)
         left.Bind(wx.EVT_BUTTON, self.OnClickSpinConverter)
         button_sizer.Add(left, 0, wx.ALIGN_CENTER_VERTICAL, 10)
 
@@ -189,7 +195,7 @@ class SpinExplorer(wx.Frame):
         img2 = bmp2.ConvertToImage()
         bmp2 = wx.Bitmap(img2)
         bmp2.SetScaleFactor(2)
-        middle = wx.BitmapButton(self, -1, bitmap=bmp2)
+        middle = wx.BitmapButton(self.panel, -1, bitmap=bmp2)
         middle.Bind(wx.EVT_BUTTON, self.OnClickSpinProcess)
         button_sizer.Add(middle, 0, wx.ALIGN_CENTER_VERTICAL, 10)
 
@@ -199,7 +205,7 @@ class SpinExplorer(wx.Frame):
         img3 = bmp3.ConvertToImage()
         bmp3 = wx.Bitmap(img3)
         bmp3.SetScaleFactor(2)
-        right = wx.BitmapButton(self, -1, bitmap=bmp3)
+        right = wx.BitmapButton(self.panel, -1, bitmap=bmp3)
         right.Bind(wx.EVT_BUTTON, self.OnClickSpinView)
         button_sizer.Add(right, 0, wx.ALIGN_CENTER_VERTICAL, 10)
 
@@ -208,7 +214,7 @@ class SpinExplorer(wx.Frame):
 
         # Add a listbox which shows recently opened directories
 
-        self.load_spectra_box_label = wx.StaticBox(self, -1, "Select data directory:")
+        self.load_spectra_box_label = wx.StaticBox(self.panel, -1, "Select data directory:")
         self.load_spectra_box = wx.StaticBoxSizer(self.load_spectra_box_label, wx.HORIZONTAL)
 
         self.listbox = wx.ListBox(self.load_spectra_box_label, style=wx.LB_SINGLE, size=(300,125))
@@ -265,41 +271,41 @@ class SpinExplorer(wx.Frame):
         # Add a bottom box with citations etc
         self.bottom_box = wx.BoxSizer(wx.VERTICAL)
 
-        self.extra_info = wx.StaticText(self, label="This package was developed by Bind Research and the Baldwin Group at the University of Oxford.")
+        self.extra_info = wx.StaticText(self.panel, label="This package was developed by Bind Research and the Baldwin Group at the University of Oxford.")
 
         self.video_link = hl.HyperLinkCtrl(
-            self,
+            self.panel,
             -1,
             "Video Tutorials",
             URL="https://www.youtube.com/@BindResearch",
         )
 
         self.source_code_link = hl.HyperLinkCtrl(
-            self,
+            self.panel,
             -1,
             "Source code",
             URL="https://github.com/bindresearch/SpinExplorer",
         )
 
         
-        self.citation_info = wx.StaticText(self, label="If you use SpinExplorer, please cite the following:")
+        self.citation_info = wx.StaticText(self.panel, label="If you use SpinExplorer, please cite the following:")
 
         self.citation1 = hl.HyperLinkCtrl(
-            self,
+            self.panel,
             -1,
             "SpinExplorer",
             URL="xxx",
         )
 
         self.citation2 = hl.HyperLinkCtrl(
-            self,
+            self.panel,
             -1,
             "nmrglue",
             URL="https://doi.org/10.1007/s10858-013-9718-x",
         )
 
         self.citation3 = hl.HyperLinkCtrl(
-            self,
+            self.panel,
             -1,
             "nmrPipe",
             URL="https://doi.org/10.1007/BF00197809",
@@ -307,8 +313,8 @@ class SpinExplorer(wx.Frame):
 
         self.citation_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.copyright_statement = wx.StaticText(self, label="(c) 2025, James Eaton, Andrew Baldwin - University of Oxford")
-        self.copyright_statement1 = wx.StaticText(self, label="(c) 2025-2026, Bind Research (Version 1.4)")
+        self.copyright_statement = wx.StaticText(self.panel, label="(c) 2025, James Eaton, Andrew Baldwin - University of Oxford")
+        self.copyright_statement1 = wx.StaticText(self.panel, label="(c) 2025-2026, Bind Research (Version 1.4)")
 
         self.citation_box.Add(self.citation1)
         self.citation_box.AddSpacer(10)
@@ -322,23 +328,23 @@ class SpinExplorer(wx.Frame):
         self.link_box.Add(self.source_code_link)
 
 
-        self.bottom_box.Add(self.extra_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.link_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.citation_info, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.citation_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.extra_info, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.link_box, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.citation_info, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.citation_box, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
-        self.bottom_box.Add(self.copyright_statement, 1, wx.ALIGN_CENTER_HORIZONTAL)
-        self.bottom_box.Add(self.copyright_statement1, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.copyright_statement, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.bottom_box.Add(self.copyright_statement1, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
         bmp = Logo.GetBitmap()
         img = bmp.ConvertToImage()
         bmp = wx.Bitmap(img)
         bmp.SetScaleFactor(2)
-        logo = wx.StaticBitmap(self, -1, bitmap=bmp)
+        logo = wx.StaticBitmap(self.panel, -1, bitmap=bmp)
         
 
         self.main_sizer.AddSpacer(5)
-        self.main_sizer.Add(self.bottom_box, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        self.main_sizer.Add(self.bottom_box, 0, wx.ALIGN_CENTER_HORIZONTAL)
         self.main_sizer.Add(logo, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
 
