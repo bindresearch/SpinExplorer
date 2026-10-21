@@ -175,7 +175,8 @@ class Convert_nmrglue:
                     p0_only=False
                 else:
                     p0_only=True
-                dic, data = self.remove_digital_filter_fid(dic, data,p0_only)
+                p0_correction_toggle = self.app.format.add_p0_correction.GetValue()
+                dic, data = self.remove_digital_filter_fid(dic, data,p0_only, p0_correction_toggle)
             C.from_bruker(dic, data, u)
         else:
             C.from_varian(dic, data, u)
@@ -415,7 +416,7 @@ class Convert_nmrglue:
 
         return c
 
-    def remove_digital_filter_fid(self, dic, data: NDArray,p0_only=False) -> NDArray:
+    def remove_digital_filter_fid(self, dic, data: NDArray,p0_only=False, p0_correction_toggle=True) -> NDArray:
         """
         Removing the Bruker digital filter before Fourier transform
         (post_proc=False). This amounts to a circular shift of the
@@ -469,7 +470,8 @@ class Convert_nmrglue:
         # fig = plt.figure()
         # ax = fig.add_subplot(111)
 
-        data = ng.proc_base.ps(data, p0=-ph0)
+        if(p0_correction_toggle==True):
+            data = ng.proc_base.ps(data, p0=-ph0)
         # data = ng.proc_base.ps(data, p0=-ph0, p1=grpdly*360)
         # for i in range(10):
         #     ax.plot(np.linspace(0,1,len(data[0])), data[i])

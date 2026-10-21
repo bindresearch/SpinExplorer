@@ -671,6 +671,7 @@ class FormatParametersBruker:
         self.digital_filter_box_sizer.Add(self.grpdly_box)
 
         # Have a radiobox to either remove the digital filter before processing or during processing
+        self.row2 = wx.BoxSizer(wx.HORIZONTAL)
         self.digital_filter_radio_box = wx.RadioBox(
             self.digital_filter_box,
             choices=[
@@ -685,7 +686,12 @@ class FormatParametersBruker:
         else:
             self.digital_filter_radio_box.SetSelection(1)
         self.digital_filter_box_sizer_total.AddSpacer(10)
-        self.digital_filter_box_sizer_total.Add(self.digital_filter_radio_box)
+        self.row2.Add(self.digital_filter_radio_box)
+        self.add_p0_correction = wx.CheckBox(self.digital_filter_box, 0, label='Auto p0 pre-filter removal')
+        self.add_p0_correction.SetValue(True)
+        self.row2.AddSpacer(10)
+        self.row2.Add(self.add_p0_correction)
+        self.digital_filter_box_sizer_total.Add(self.row2)
 
     def on_digital_filter_checkbox(self, event):
         """
