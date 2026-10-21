@@ -374,6 +374,11 @@ class Populate_dictionary_global:
         # Remove digital filter checkbox
         remove_digital_filter = self.app.format.digital_filter_checkbox.GetValue()
 
+        if(remove_digital_filter==True):
+            auto_p0 = self.app.format.add_p0_correction.GetValue()
+        else:
+            auto_p0 = False
+
         # Remove digital filter before or after fourier transform (0 is before, 1 is after)
         try:
             remove_after_ft = self.app.format.digital_filter_radio_box.GetSelection()
@@ -394,6 +399,7 @@ class Populate_dictionary_global:
             dspfvs
         )
         dictionary["digital filter parameters"]["Group Delay (grpdly)"] = str(grpdly)
+        dictionary["digital filter parameters"]["Auto-p0 before filter removal"] = auto_p0
 
         return dictionary
 

@@ -370,6 +370,10 @@ class InputParameters:
         digital_filter_removal = bool(digital_filter_dict["Remove Digital Filter"])
         self.app.format.digital_filter_checkbox.SetValue(digital_filter_removal)
         self.app.format.on_digital_filter_checkbox(wx.EVT_CHECKBOX)
+        try:
+            auto_p0 = bool(digital_filter_dict["Auto-p0 before filter removal"])
+        except:
+            auto_p0 = True
 
         # Removal of digital filter before/after fourier transform
         removal = digital_filter_dict["Remove Before/After Fourier Transform"]
@@ -387,6 +391,7 @@ class InputParameters:
         self.app.format.decim_value = float(decim)
         self.app.format.dspfvs_value = int(dspfvs)
         self.app.format.grpdly_value = float(grpdly)
+        self.app.format.auto_p0_pre_filter = auto_p0
 
         if digital_filter_removal == True:
             self.app.format.decim_textbox.SetValue(str(decim))
@@ -394,6 +399,9 @@ class InputParameters:
             self.app.format.grpdly_textbox.SetValue(str(grpdly))
 
             self.app.format.digital_filter_radio_box.SetSelection(removal_value)
+            self.app.format.add_p0_correction.SetValue(self.app.format.auto_p0_pre_filter)
+
+            
 
     def input_other_options(self):
         """
