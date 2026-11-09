@@ -84,7 +84,6 @@ else:
     platform = "windows"
     height = 30
 
-
 # James Eaton, 10/06/2025, University of Oxford
 # James Eaton, 25/09/2025, Bind Research
 
@@ -172,10 +171,22 @@ class SpinExplorer(wx.Frame):
 
     def create_main_sizer(self):
         
+        # bmp = SpinExplorerHeader.GetBitmap()
+        # img = bmp.ConvertToImage()
+        # bmp = wx.Bitmap(img)
+        # if(platform=='mac'):
+        #     bmp.SetScaleFactor(2)
+        # else:
+        #     bmp.SetScaleFactor(8)
+       
+
+        scale = self.panel.GetContentScaleFactor()  # 1.0 on standard Windows, 2.0 on Retina, 1.25/1.5 on scaled Windows
         bmp = SpinExplorerHeader.GetBitmap()
         img = bmp.ConvertToImage()
+        w, h = img.GetSize()
+        img = img.Scale(int(w / 2 * scale), int(h / 2 * scale), wx.IMAGE_QUALITY_HIGH)
         bmp = wx.Bitmap(img)
-        bmp.SetScaleFactor(2)
+        bmp.SetScaleFactor(scale)
         top = wx.StaticBitmap(self.panel, -1, bitmap=bmp)
         self.main_sizer.Add(top, 0, wx.ALIGN_CENTER_HORIZONTAL, 10)
 
@@ -184,7 +195,13 @@ class SpinExplorer(wx.Frame):
         bmp1 = SpinConverterButton.GetBitmap()
         img1 = bmp1.ConvertToImage()
         bmp1 = wx.Bitmap(img1)
-        bmp1.SetScaleFactor(2)
+        # if(platform=='mac'):
+        #     bmp1.SetScaleFactor(2)
+        w, h = img1.GetSize()
+        img1 = img1.Scale(int(w / 2 * scale), int(h / 2 * scale), wx.IMAGE_QUALITY_HIGH)
+        bmp1 = wx.Bitmap(img1)
+        bmp1.SetScaleFactor(scale)
+
         left = wx.BitmapButton(self.panel, -1, bitmap=bmp1)
         left.Bind(wx.EVT_BUTTON, self.OnClickSpinConverter)
         button_sizer.Add(left, 0, wx.ALIGN_CENTER_VERTICAL, 10)
@@ -194,7 +211,11 @@ class SpinExplorer(wx.Frame):
         bmp2 = SpinProcessButton.GetBitmap()
         img2 = bmp2.ConvertToImage()
         bmp2 = wx.Bitmap(img2)
-        bmp2.SetScaleFactor(2)
+        # if(platform=='mac'):
+        #     bmp2.SetScaleFactor(2)
+        w, h = img2.GetSize()
+        img2 = img2.Scale(int(w / 2 * scale), int(h / 2 * scale), wx.IMAGE_QUALITY_HIGH)
+        bmp2 = wx.Bitmap(img2)
         middle = wx.BitmapButton(self.panel, -1, bitmap=bmp2)
         middle.Bind(wx.EVT_BUTTON, self.OnClickSpinProcess)
         button_sizer.Add(middle, 0, wx.ALIGN_CENTER_VERTICAL, 10)
@@ -204,7 +225,11 @@ class SpinExplorer(wx.Frame):
         bmp3 = SpinViewButton.GetBitmap()
         img3 = bmp3.ConvertToImage()
         bmp3 = wx.Bitmap(img3)
-        bmp3.SetScaleFactor(2)
+        # if(platform=='mac'):
+        #     bmp3.SetScaleFactor(2)
+        w, h = img3.GetSize()
+        img3 = img3.Scale(int(w / 2 * scale), int(h / 2 * scale), wx.IMAGE_QUALITY_HIGH)
+        bmp3 = wx.Bitmap(img3)
         right = wx.BitmapButton(self.panel, -1, bitmap=bmp3)
         right.Bind(wx.EVT_BUTTON, self.OnClickSpinView)
         button_sizer.Add(right, 0, wx.ALIGN_CENTER_VERTICAL, 10)
@@ -339,7 +364,11 @@ class SpinExplorer(wx.Frame):
         bmp = Logo.GetBitmap()
         img = bmp.ConvertToImage()
         bmp = wx.Bitmap(img)
-        bmp.SetScaleFactor(2)
+        # if(platform=='mac'):
+        #     bmp.SetScaleFactor(2)
+        w, h = img.GetSize()
+        img = img.Scale(int(w / 2 * scale), int(h / 2 * scale), wx.IMAGE_QUALITY_HIGH)
+        bmp = wx.Bitmap(img)
         logo = wx.StaticBitmap(self.panel, -1, bitmap=bmp)
         
 
