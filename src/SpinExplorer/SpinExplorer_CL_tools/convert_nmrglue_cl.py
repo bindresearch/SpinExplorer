@@ -246,7 +246,7 @@ class Convert_nmrglue:
         """
         Performing any necessary data reshuffling and then
         performing the data conversion to nmrPipe format before
-        saving as test.fid
+        saving as spectrum.fid
         """
 
         if len(self.real_sizes) == 2:
@@ -302,7 +302,7 @@ class Convert_nmrglue:
             pdic["FD2DPHASE"] = 0
 
         pdic['FDCOMMENT'] = 'nmrglue'
-        ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
+        ng.pipe.write("spectrum.fid", pdic, pdata, overwrite=True)
 
     def create_conversion_dictionary(self) -> Dict:
         """

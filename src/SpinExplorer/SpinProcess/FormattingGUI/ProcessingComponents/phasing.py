@@ -199,11 +199,11 @@ class PhasingDirect:
         # if self.parent.parent.file_parser == True:
         #     os.chdir(self.parent.parent.path)
 
-        if os.path.exists("./test.fid") == False and os.path.exists("fids") == False:
+        if os.path.exists("./spectrum.fid") == False and os.path.exists("fids") == False:
             # Error and exit
             self.error_message = wx.MessageDialog(
                 self,
-                """No NMRPipe FID file found in the current directory. 
+                """No FID file found in the current directory. 
                 Please ensure that the file is named test.fid (or folder 
                 fids for 3D data) and is in the current directory.""",
                 "Error",
@@ -212,7 +212,7 @@ class PhasingDirect:
             self.error_message.ShowModal()
             return False
 
-        dic, data = ng.pipe.read("test.fid")
+        dic, data = ng.pipe.read("spectrum.fid")
         proc_glue = ProcessNMRGlue(
             self.parent.parent,
             self.parent.parent.tabs,

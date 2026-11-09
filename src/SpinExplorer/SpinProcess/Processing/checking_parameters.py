@@ -292,12 +292,21 @@ class CheckingParameters:
                 # self.change_to_cwd()
                 return False
             try:
-                node_list = dimension_tab.baseline_correction.baseline_correction_node_list_textcontrol.GetValue().split(
-                    ","
-                )
+                node_lst = str(dimension_tab.baseline_correction.baseline_correction_node_list_textcontrol.GetValue())
+                if '[' in node_lst:
+                    node_lst.replace('[', '')
+                if(']' in node_lst):
+                    node_lst.replace(']', '')
+                if('\'' in node_lst):
+                    node_lst.replace('\'', '')
+                if('\"' in node_lst):
+                    node_lst.replace('\"', '')
+                node_list = node_lst.replace('[','').replace(']', '').split(',')
+                print(node_list)
                 node_list_final = []
                 for node in node_list:
-                    node_list_final.append(float(node))
+                    print(node)
+                    node_list_final.append(float(node.replace(' ', '').replace('[', '').replace(']', '')))
 
                 if len(node_list_final) == 0:
                     dlg = wx.MessageDialog(

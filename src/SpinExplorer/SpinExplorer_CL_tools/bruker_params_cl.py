@@ -760,7 +760,7 @@ class ParameterExtractorBruker:
                             val = fn_mode
                         
                         self.acqusition_modes_indirect.append(int(val))
-                        if int(val) == 0 or int(val) == 1:
+                        if int(val) == 0 or int(val) == 1 or int(val)==7:
                             self.pseudo_flag += 1
                         break
 
@@ -775,9 +775,11 @@ class ParameterExtractorBruker:
                             else:
                                 val = fn_mode
                             self.acqusition_modes_indirect.append(int(val))
-                            if int(val) == 0 or int(val) == 1:
+                            if int(val) == 0 or int(val) == 1 or int(val)==7:
                                 self.pseudo_flag += 1
                             break
+
+            print('pseudo_flag', self.pseudo_flag)
 
     def find_temperature_bruker(self) -> None:
         """

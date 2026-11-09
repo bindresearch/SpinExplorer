@@ -144,7 +144,7 @@ class GetData:
                 remove_filter = True
     
             config.process_data(
-                pseudo_flag=converted.params.pseudo_flag, filter_removal=remove_filter
+                pseudo_flag=parameters.params.pseudo_flag, filter_removal=remove_filter
             )
     
             if os.path.exists(config.ft_name) == False:

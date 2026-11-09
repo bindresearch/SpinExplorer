@@ -1123,11 +1123,22 @@ class ProcessNMRGlue:
                 return dic, data
 
             # Split the node list
-            node_list = tab.baseline_correction_node_list_textcontrol.GetValue()
-            node_list = node_list.split(",")
+            # node_list = tab.baseline_correction_node_list_textcontrol.GetValue()
+            # node_list = node_list.split(",")
+            node_lst = str(tab.baseline_correction_node_list_textcontrol.GetValue())
+            if '[' in node_lst:
+                node_lst.replace('[', '')
+            if(']' in node_lst):
+                node_lst.replace(']', '')
+            if('\'' in node_lst):
+                node_lst.replace('\'', '')
+            if('\"' in node_lst):
+                node_lst.replace('\"', '')
+            node_list = node_lst.replace(' ', '').split(',')
             node_list_final = []
+            print(node_list)
             for node in node_list:
-                node_list_final.append(float(node))
+                node_list_final.append(float(node.replace(' ', '').replace('[', '').replace(']', '')))
 
             # Convert nodes into points
             node_list_final = np.array(node_list_final)

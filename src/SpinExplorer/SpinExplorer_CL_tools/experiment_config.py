@@ -1598,9 +1598,13 @@ class ExperimentConfigStore:
 
         print("Read {} holding {}".format(self.fid_name, data.shape))
 
+        pseudo_count=0
+        if(pseudo_flag==True):
+            pseudo_count=1
+
         # The processing is written for a given number of dimensions, and doing
         # it to data of another shape would quietly process the wrong axes
-        if len(data.shape) != len(self.dim_configs):
+        if len(data.shape)-pseudo_count != len(self.dim_configs):
             raise ValueError(
                 "the processing for this experiment is written for {} "
                 "dimensions ({}) but the converted data in {} has {}, with "
