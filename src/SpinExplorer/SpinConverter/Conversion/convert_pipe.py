@@ -110,10 +110,10 @@ class Convert_pipe:
         """
         Trying to run NMRPipe conversion script
         """
-        if "test.fid" in os.listdir():
+        if "spectrum.fid" in os.listdir():
             dlg = wx.MessageDialog(
                 self.app,
-                "The test.fid file already exists. Do you want to overwrite it?",
+                "The spectrum.fid file already exists. Do you want to overwrite it?",
                 "Warning",
                 wx.YES_NO | wx.ICON_WARNING,
             )
@@ -407,7 +407,7 @@ class WritePipe:
                 + str(self.app.shared_format.scaling_number.GetValue())
                 + " \\\n"
             )
-        fid_file.write(" -ov -out ./test.fid\n")
+        fid_file.write(" -ov -out ./spectrum.fid\n")
 
         return fid_file
 
@@ -497,7 +497,7 @@ class WritePipe:
                 + str(self.app.shared_format.scaling_number.GetValue())
                 + " \\\n"
             )
-        fid_file.write(" -ov -out ./test.fid\n")
+        fid_file.write(" -ov -out ./spectrum.fid\n")
 
         return fid_file
 
@@ -604,7 +604,7 @@ class WritePipe:
                 + str(self.app.shared_format.scaling_number.GetValue())
                 + " \\\n"
             )
-        fid_file.write(" -ov -out ./test.fid\n")
+        fid_file.write(" -ov -out ./spectrum.fid\n")
 
         return fid_file
     

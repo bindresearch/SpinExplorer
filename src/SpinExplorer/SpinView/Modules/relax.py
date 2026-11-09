@@ -1966,7 +1966,7 @@ class RelaxFit(wx.Frame):
 
     def save_metadata(self, path):
         """
-        Saving the fit metadata to the path\metadata.json
+        Saving the fit metadata to the path metadata.json
         """
 
         noise_region_text = str(self.noise_x_initial) + '-' + str(self.noise_x_final)

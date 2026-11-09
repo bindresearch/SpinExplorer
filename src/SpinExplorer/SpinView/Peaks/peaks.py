@@ -1390,7 +1390,7 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
 
 
     def extract_number(self, s):
-        match = re.match(r"(\d+)", s)
+        match = re.search(r"(\d+)", s)
         return int(match.group(1)) if match else float("inf")
 
 

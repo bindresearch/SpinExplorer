@@ -4,6 +4,8 @@ import traceback
 import nmrglue as ng # type: ignore
 import numpy as np
 from natsort import natsorted
+import shutil
+from pathlib import Path
 
 from SpinExplorer.SpinExplorer_CL_tools.processSpec import FindingParameters
 from SpinExplorer.SpinExplorer_CL_tools.pulse_sequence_parsing import (
@@ -16,7 +18,14 @@ from SpinExplorer.SpinExplorer_CL_tools.make_parameter_file_cl import parameter_
 from SpinExplorer.SpinExplorer_CL_tools.convert_nmrglue_cl import Convert_nmrglue
 from SpinExplorer.SpinExplorer_CL_tools.config_register import registry
 
-# This class reads in the NMRPipe data
+from appdirs import user_data_dir
+
+appname = 'SpinExplorer'
+appauthor = "James Eaton"
+data_dir = user_data_dir(appname, appauthor)
+os.makedirs(data_dir, exist_ok=True)
+
+# This class reads in the data
 class GetData:
     def __init__(self, app, file=""):
 
@@ -83,6 +92,7 @@ class GetData:
         if len(spectrum_file) == 0:
             try:
                 self.file = self.auto_process()
+
             except Exception as problem:
                 self.report_auto_failure(problem)
 
@@ -108,36 +118,102 @@ class GetData:
         self.auto_sequence = PulseSequenceParser().parse()
         print("Pulse programme: {}".format(self.auto_sequence))
 
-        config = registry.get_default_config(self.auto_sequence)
-
-        converted = Convert_nmrglue(parameters.params, parameters)
-
-        # The sizes are what the conversion depends on, so they are worth saying
-        # out loud: a dimension which was not read from the parameter files
-        # leaves the data with fewer dimensions than the experiment has
-        print("Direct dimension: {} points, indirect: {}".format(
-            parameters.params.size_direct, parameters.params.size_indirect))
-        print("Dimensions being converted: {}".format(converted.complex_sizes))
-
-        written = parameter_write_cl(converted, config)
-        written.write_out_dict(written.dictionary)
-
-        if converted.params.remove_filter_before_processing == True:
-            remove_filter = False
-        else:
-            remove_filter = True
-
-        config.process_data(
-            pseudo_flag=converted.params.pseudo_flag, filter_removal=remove_filter
-        )
-
-        if os.path.exists(config.ft_name) == False:
-            raise RuntimeError(
-                "the processing finished without writing " + str(config.ft_name)
+        # Looking to see if the user has previously saved processing parameters for this sequence
+        # in the app directory
+        saved_processing_file = self.find_saved_processing_file()
+        print(saved_processing_file)
+        
+        if(saved_processing_file==None):
+            
+            config = registry.get_default_config(self.auto_sequence)
+            converted = Convert_nmrglue(parameters.params, parameters)
+            
+            # The sizes are what the conversion depends on, so they are worth saying
+            # out loud: a dimension which was not read from the parameter files
+            # leaves the data with fewer dimensions than the experiment has
+            print("Direct dimension: {} points, indirect: {}".format(
+                parameters.params.size_direct, parameters.params.size_indirect))
+            print("Dimensions being converted: {}".format(converted.complex_sizes))
+    
+            written = parameter_write_cl(converted, config)
+            written.write_out_dict(written.dictionary)
+    
+            if converted.params.remove_filter_before_processing == True:
+                remove_filter = False
+            else:
+                remove_filter = True
+    
+            config.process_data(
+                pseudo_flag=converted.params.pseudo_flag, filter_removal=remove_filter
             )
+    
+            if os.path.exists(config.ft_name) == False:
+                raise RuntimeError(
+                    "the processing finished without writing " + str(config.ft_name)
+                )
+            else:
+                dlg = wx.MessageDialog(
+                    self.app,
+                    "The spectrum was processed successfully using the parameters in the default config_register for the pulse sequence " + str(self.auto_sequence),
+                    "Auto-process success",
+                    wx.OK
+                )
+                self.app.Raise()
+                self.app.SetFocus()
+                dlg.ShowModal()
+                dlg.Destroy()
+    
+            return config.ft_name
+        
+        else:
+            print('using saved default parameters')
+            # Copy the saved processing parameters file to the current directory
+            shutil.copy(saved_processing_file, os.path.join(os.getcwd(), 'parameters.json'))
 
-        return config.ft_name
+            from SpinExplorer.SpinConverter.SpinConverter import SpinConverter
+            from SpinExplorer.SpinProcess.SpinProcess import SpinProcess
 
+            # Load SpinConverter silently and run convert - do not load the dimension sizes, 
+            converter = SpinConverter(explorer=True, popout=False, loading_default=True)
+            converter.Hide()
+            converter.on_convert_glue(wx.EVT_BUTTON)
+            converter.Destroy()
+            
+            # Load SpinProcess
+            processer = SpinProcess(explorer=True, popout=False)
+            processer.Hide()
+            processer.notebook.on_process_nmrglue(wx.EVT_BUTTON)
+            processer.Destroy()
+
+            dlg = wx.MessageDialog(
+                self.app,
+                "The spectrum was processed successfully using the saved default parameters for the pulse sequence " + str(self.auto_sequence),
+                "Auto-process success",
+                wx.OK
+            )
+            self.app.Raise()
+            self.app.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
+            return processer.notebook.processing.nmrfile
+
+        
+
+    
+    def find_saved_processing_file(self):
+        self.package_directory = user_data_dir(appname, appauthor)
+        os.makedirs(self.package_directory, exist_ok=True)
+        self.saved_processing_directory = os.path.join(self.package_directory, "saved_processing")
+        os.makedirs(self.saved_processing_directory, exist_ok=True)
+        # search through all saved files to see if the pulseprogram exists
+        for item in Path(self.saved_processing_directory).iterdir():
+            if item.is_file():
+                if(item.name==self.auto_sequence):
+                    return os.path.join(self.saved_processing_directory, item.name)
+
+        return None
+                
+    
     def report_auto_failure(self, problem):
         """
         Say why the raw data could not be processed. The whole of what went
@@ -231,7 +307,7 @@ class GetData:
                 # Give a popout saying the NMRPipe file has not been read properly. Retry processing
                 dlg = wx.MessageDialog(
                     self.tempframe,
-                    "NMRPipe file not read properly. Ensure raw data is downloaded to the local device or please retry processing the data then try again.",
+                    "Data file not read properly. Ensure raw data is downloaded to the local device or please retry processing the data then try again.",
                     "Error",
                     wx.OK | wx.ICON_INFORMATION,
                 )

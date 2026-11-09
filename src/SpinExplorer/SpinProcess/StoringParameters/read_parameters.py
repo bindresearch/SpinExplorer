@@ -32,7 +32,7 @@ from typing import Union, Dict, Any
 
 class Read_json:
 
-    def __init__(self, notebook, nmrdata, dimension_tabs):
+    def __init__(self, notebook, nmrdata, dimension_tabs, popout=True):
         """
         This class will read a parameter.json file and ensure that all of the
         parameters are valid (if not will go back to default parameters).
@@ -41,6 +41,7 @@ class Read_json:
         """
 
         self.notebook = notebook
+        self.popout = popout
 
         # Checking to see if parameters.json is found and if user wants to
         # read in these values
@@ -76,19 +77,21 @@ class Read_json:
         found parameters.json file.
         """
         # Asking the user if they want to overwrite the previous saved state
-        dlg = wx.MessageDialog(
-            self.notebook,
-            "A set of saved parameters has been found (parameters.json). Would you like to read these values?",
-            "Loading parameters",
-            wx.YES_NO | wx.ICON_QUESTION,
-        )
-        result = dlg.ShowModal()
-        if result == wx.ID_NO:
-            dlg.Destroy()
-            return False
-        else:
-            dlg.Destroy()
-            return True
+        if(self.popout==True):
+            dlg = wx.MessageDialog(
+                self.notebook,
+                "A set of saved parameters has been found (parameters.json). Would you like to read these values?",
+                "Loading parameters",
+                wx.YES_NO | wx.ICON_QUESTION,
+            )
+            result = dlg.ShowModal()
+            if result == wx.ID_NO:
+                dlg.Destroy()
+                return False
+            else:
+                dlg.Destroy()
+                return True
+        return True
 
     def read(self, warning=True):
         """

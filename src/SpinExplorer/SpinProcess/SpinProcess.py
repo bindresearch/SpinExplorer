@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinProcess                          ")
 print("-------------------------------------------------------------")
-print("             (version 1.5) 29th September 2026               ")
+print("              (version 1.5) 9th November 2026                ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
@@ -146,7 +146,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 class SpinProcess(wx.Frame):
     def __init__(
-        self, original_frame=None, file_parser=False, path="", cwd="", reprocess=False, explorer=False
+        self, original_frame=None, file_parser=False, path="", cwd="", reprocess=False, explorer=False, popout=True
     ):
         # Get the monitor size and set the window size to 85% of the monitor size
         self.monitorWidth, self.monitorHeight = wx.GetDisplaySize()
@@ -159,6 +159,7 @@ class SpinProcess(wx.Frame):
         self.file_parser = file_parser
         self.path = path
         self.cwd = cwd
+        self.popout=popout
 
         # Get the title for the panels
         self.title = self.GetTitle()
@@ -178,7 +179,7 @@ class SpinProcess(wx.Frame):
         # Read the NMR data in the current directory
         self.nmr_data = ReadFID(self)
 
-        self.notebook = NotebookProcess(self, self.nmr_data)
+        self.notebook = NotebookProcess(self, self.nmr_data, self.popout)
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.main_sizer.AddSpacer(10)
         self.main_sizer.Add(self.notebook, 1, wx.EXPAND)

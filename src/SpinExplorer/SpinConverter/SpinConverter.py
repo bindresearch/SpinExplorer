@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinConverter                        ")
 print("-------------------------------------------------------------")
-print("             (version 1.5) 29th September 2026               ")
+print("              (version 1.5) 9th November 2026                ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
@@ -41,6 +41,7 @@ print("")
 # Import relevant external modules
 import sys
 import wx
+import wx.lib.scrolledpanel as scrolled
 import subprocess
 import darkdetect
 import warnings
@@ -122,16 +123,24 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
 
 class SpinConverter(wx.Frame):
-    def __init__(self, explorer=False):
+    def __init__(self, explorer=False, popout=True, loading_default=False):
         """
         This class creates the GUI showing the found parameters with scope
         for changing the parameters.
+
+        explorer: was SpinConverter started from SpinExplorer for from the command line
+        popout: should popout messaged be shown
+        loading_default: is SpinConverter being ran from auto-process using default parameters for
+                         the current pulse sequence. If so, do not use saved sweep widths, number of points etc
+                         from the parameters.json file
         """
         # Check the platform and if nmrpipe is installed
         self.check_platform()
 
         # Get the title for the panels
         self.title = self.GetTitle()
+
+        self.popout = popout
         
         # Setup the dock/task bar with the logo
         if(explorer==False):
@@ -150,6 +159,8 @@ class SpinConverter(wx.Frame):
             size=(int(self.width), int(self.height)),
         )
 
+        self.panel = scrolled.ScrolledPanel(self)
+
         self.file_parser = False
 
         # Initialise the NMR data and parameter class
@@ -160,7 +171,8 @@ class SpinConverter(wx.Frame):
         self.format_app()
 
         # Reading previously saved parameters if present
-        read = Read_json(self.nmrdata.params, self.nmrdata, self)
+        if(loading_default==False):
+            read = Read_json(self.nmrdata.params, self.nmrdata, self, popout=popout)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -288,8 +300,12 @@ class SpinConverter(wx.Frame):
             self.format.get_carrier_frequencies_bruker()
             if len(self.format.N_complex_boxes) > 1:
                 self.shared_format.acquisition_2D_mode_combo_box()
+                self.row1 = wx.BoxSizer(wx.HORIZONTAL)
+                self.shared_format.add_swap_interleaved_order()
             if(len(self.format.N_complex_boxes) > 2):
                 self.format.add_change_aqseq_box()
+            if len(self.format.N_complex_boxes) > 1:
+                self.menu_bar.Add(self.row1, 0, wx.ALIGN_CENTER_HORIZONTAL)
             self.shared_format.create_temperature_box()
             self.format.create_bruker_digital_filter_box()
             self.shared_format.create_conversion_box()
@@ -325,18 +341,23 @@ class SpinConverter(wx.Frame):
         self.main_sizer.Add(self.parameters_sizer, 0, wx.CENTER)
         self.main_sizer.Add(self.extra_sizers, 0, wx.CENTER)
 
-        self.SetSizerAndFit(self.main_sizer)
+
+        self.panel.SetSizer(self.main_sizer)
+        self.panel.SetupScrolling()
+        # self.SetSizerAndFit(self.main_sizer)
 
         # Get the width and height of the main_sizer
         self.width, self.height = self.main_sizer.GetSize()
-        self.SetSize((int(self.width * 1.25), int(self.height * 1.25)))
+        width = min(self.monitorWidth, self.width*1.25)
+        height = min(self.monitorHeight*0.9, self.height*1.25)
+        self.SetSize((int(width), int(height)))
         self.Centre()
 
     def on_save_parameters(self, event) -> None:
         """
         Saving the current SpinConverter parameters to parameters.json
         """
-        save = Save_json(self.nmrdata.params, self.nmrdata, self)
+        save = Save_json(self.nmrdata.params, self.nmrdata, self, popout=self.popout)
 
     def on_convert_pipe(self, event) -> None:
         """
@@ -367,7 +388,7 @@ class SpinConverter(wx.Frame):
         # Saving conversion parameters
         self.on_save_parameters(wx.EVT_BUTTON)
         # Performing nmrglue conversion
-        glue_conversion = Convert_nmrglue(self, self.nmrdata.params, self.nmrdata)
+        self.glue_conversion = Convert_nmrglue(self, self.nmrdata.params, self.nmrdata, popout=self.popout)
 
     
     def on_add_fids(self, event) -> None:

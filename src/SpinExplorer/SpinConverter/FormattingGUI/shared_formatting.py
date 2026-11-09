@@ -27,6 +27,8 @@ SOFTWARE."""
 import os
 import wx
 import warnings
+import wx.lib.scrolledpanel as scrolled
+import numpy as np
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -44,7 +46,7 @@ class SharedFormatting:
 
     def create_temperature_box(self):
         self.temperature_box_label = wx.StaticBox(
-            self.app, -1, label="Experiment Temperature:"
+            self.app.panel, -1, label="Experiment Temperature:"
         )
         self.temperature_box = wx.StaticBoxSizer(
             self.temperature_box_label, wx.VERTICAL
@@ -77,7 +79,7 @@ class SharedFormatting:
     def on_temperature_change_button(self, event):
         # Create a popout window to change the temperature
         self.temperature_change_window = wx.Frame(
-            self.app,
+            self.app.panel,
             wx.ID_ANY,
             "Change Temperature",
             wx.DefaultPosition,
@@ -257,7 +259,7 @@ class SharedFormatting:
     
 
     def create_intensity_scaling_box(self):
-        self.scaling_box = wx.StaticBox(self.app, -1, label="Intensity Scaling")
+        self.scaling_box = wx.StaticBox(self.app.panel, -1, label="Intensity Scaling")
         self.scaling_box_sizer_total = wx.StaticBoxSizer(self.scaling_box, wx.VERTICAL)
         self.scaling_box_sizer = wx.BoxSizer(wx.HORIZONTAL)
         if self.nmrdata.spectrometer == "Bruker":
@@ -461,7 +463,7 @@ class SharedFormatting:
         """
         self.acquisition_2D_mode_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.acquisition_2D_mode_txt = wx.StaticText(
-            self.app, label="Acquisition Mode 2D:       "
+            self.app.panel, label="Acquisition Mode 2D:       "
         )
         self.acquisition_mode_2D_choices = [
             "States",
@@ -474,7 +476,7 @@ class SharedFormatting:
 
         if self.nmrdata.params.pseudo_flag == 0:
             self.acquisition_2D_mode_box = wx.ComboBox(
-                self.app,
+                self.app.panel,
                 value=self.acquisition_mode_2D_choices[0],
                 choices=self.acquisition_mode_2D_choices,
                 size=(200, 20),
@@ -482,14 +484,14 @@ class SharedFormatting:
         else:
             if len(self.params.size_indirect) == 1:
                 self.acquisition_2D_mode_box = wx.ComboBox(
-                    self.app,
+                    self.app.panel,
                     value=self.acquisition_mode_2D_choices[3],
                     choices=self.acquisition_mode_2D_choices,
                     size=(200, 20),
                 )
             else:
                 self.acquisition_2D_mode_box = wx.ComboBox(
-                    self.app,
+                    self.app.panel,
                     value=self.acquisition_mode_2D_choices[0],
                     choices=self.acquisition_mode_2D_choices,
                     size=(200, 20),
@@ -511,7 +513,7 @@ class SharedFormatting:
             self.fid_conversion_box = wx.BoxSizer(wx.HORIZONTAL)
 
         self.save_parameters_button = wx.Button(
-            self.app, label="Save Parameters", size=(175, 20)
+            self.app.panel, label="Save Parameters", size=(175, 20)
         )
         self.save_parameters_button.Bind(wx.EVT_BUTTON, self.app.on_save_parameters)
         self.fid_conversion_box.AddSpacer(20)
@@ -519,7 +521,7 @@ class SharedFormatting:
 
         # Have a button for convert
         self.convert_button = wx.Button(
-            self.app, label="Convert Data (nmrPipe)", size=(175, 20)
+            self.app.panel, label="Convert Data (nmrPipe)", size=(175, 20)
         )
         self.convert_button.Bind(wx.EVT_BUTTON, self.app.on_convert_pipe)
         self.fid_conversion_box.AddSpacer(20)
@@ -527,7 +529,7 @@ class SharedFormatting:
 
         # Have a button for convert
         self.convert_button2 = wx.Button(
-            self.app, label="Convert Data (nmrglue)", size=(175, 20)
+            self.app.panel, label="Convert Data (nmrglue)", size=(175, 20)
         )
         self.convert_button2.Bind(wx.EVT_BUTTON, self.app.on_convert_glue)
         self.fid_conversion_box.AddSpacer(20)
@@ -535,7 +537,7 @@ class SharedFormatting:
 
         # Have a button to open a popout to add nmr FID's together (post conversion)
         self.add_button = wx.Button(
-            self.app, label="Add FIDs", size=(175, 20)
+            self.app.panel, label="Add FIDs", size=(175, 20)
         )
         self.add_button.Bind(wx.EVT_BUTTON, self.app.on_add_fids)
         self.fid_conversion_box.AddSpacer(20)
@@ -544,7 +546,7 @@ class SharedFormatting:
 
         # Have a button to reference the spectrum based on a reference spectrum
         self.reference_button = wx.Button(
-            self.app, label="Reference", size=(175, 20)
+            self.app.panel, label="Reference", size=(175, 20)
         )
         self.reference_button.Bind(wx.EVT_BUTTON, self.app.on_reference)
         self.fid_conversion_box.AddSpacer(20)
@@ -594,7 +596,7 @@ class SharedFormatting:
             return False
 
     def input_NUS_list_box(self):
-        self.NUS_label = wx.StaticBox(self.app, -1, label="NUS Information")
+        self.NUS_label = wx.StaticBox(self.app.panel, -1, label="NUS Information")
         self.NUS_box = wx.StaticBoxSizer(self.NUS_label, wx.VERTICAL)
         self.NUS_box_2 = wx.BoxSizer(wx.VERTICAL)
 
@@ -688,7 +690,7 @@ class SharedFormatting:
         # get dialog box here
         cwd = os.getcwd()
         dlg = wx.FileDialog(
-            self.app,
+            self.app.panel,
             message="Choose a file",
             defaultDir=cwd,
             defaultFile=self.nusfile,
@@ -713,7 +715,7 @@ class SharedFormatting:
         except:
             # Give popout saying NUS file not read correctly
             dlg = wx.MessageDialog(
-                self.app, "NUS file not read correctly", "Error", wx.OK | wx.ICON_ERROR
+                self.app.panel, "NUS file not read correctly", "Error", wx.OK | wx.ICON_ERROR
             )
             self.Raise()
             self.SetFocus()
@@ -751,6 +753,8 @@ class SharedFormatting:
             self.app.extra_boxes.Remove(self.NUS_box)
             self.app.extra_boxes.Detach(len(self.app.extra_boxes.GetChildren()) - 1)
             self.input_NUS_list_box()
+            self.app.panel.Layout()
+            self.app.panel.Refresh()
             self.app.Layout()
             self.app.Refresh()
         else:
@@ -760,5 +764,298 @@ class SharedFormatting:
             self.app.extra_boxes.Remove(self.NUS_box)
             self.app.extra_boxes.Detach(len(self.app.extra_boxes.GetChildren()) - 1)
             self.input_NUS_list_box()
+            self.app.panel.Layout()
+            self.app.panel.Refresh()
             self.app.Layout()
             self.app.Refresh()
+
+
+    def add_swap_interleaved_order(self):
+        """
+        Creating a button which will allow a user to swap the order of FID points
+        in a pseudo-2D/3D spectrum where a real parameter was randomised and the
+        data is in an order which is difficult to interpret
+
+        1. Ask the user which dimension to reshuffle
+        2. Determine if this axis is real (if not, stop)
+        3. If there are more than 20 points, ask user if they wish to continue
+
+        When conversion is applied:
+          - make sure to save the FID order swapping to parameters.json
+          - swap the order of the FID
+        """
+
+        # Checkbox
+        self.new_order = []
+        self.re_order_axis = wx.CheckBox(self.app.panel, label='Shuffle Axis')
+        self.re_order_axis.SetValue(False)
+
+        self.re_order_axis.Bind(wx.EVT_CHECKBOX, self.find_axis_to_reorder)
+
+        self.app.row1.Add(self.re_order_axis)
+
+
+    def find_axis_to_reorder(self, event):
+
+        if(self.re_order_axis.GetValue()==False):
+            return
+
+        """
+        Asking user which axis to reshuffle
+        """
+        self.axis_selection = AskAxis(self)
+        
+
+
+    def continue_reorder_axis(self, parent):
+        """
+        Checking if the selected axis is real
+        """
+        self.shuffle_dimension = self.axis_selection.shuffle_dimension
+        if(self.app.format.acqusition_combo_boxes[self.shuffle_dimension].GetValue()!='Real'):
+            dlg = wx.MessageDialog(
+                self.app.panel,
+                "Axis shuffling should only be applied to a pseudo dimension (with a real acquisition mode). De-selecting shuffle axis mode.",
+                "Warning",
+                wx.OK | wx.ICON_WARNING,
+            )
+            self.app.Raise()
+            self.app.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.re_order_axis.SetValue(False)
+            parent.Close()
+            return
+
+        parent.Close()
+
+        if(int(self.app.format.N_complex_boxes[self.shuffle_dimension].GetValue())>20):
+            dlg = wx.MessageDialog(
+                self.app.panel,
+                "There are more than 20 points in the selected pseudo/real axis. Do you wish to continue re-shuffling the order of this axis?",
+                "Warning",
+                wx.YES_NO | wx.ICON_WARNING,
+            )
+            self.app.Raise()
+            self.app.SetFocus()
+            res = dlg.ShowModal()
+            if(res==wx.ID_NO):
+                self.re_order_axis.SetValue(False)
+                dlg.Destroy()
+                return
+
+
+        # Ask the user if they have a list that corresponds to the data which needs to be converted to ascending order
+        dlg = wx.MessageDialog(
+            self.app.panel,
+            "Would you like to re-shuffle the data according to a list? (i.e. if an acquisition list e.g. VDLIST was recorded in a randomised manner but you now wish to shuffle the data to be in ascending order according to the VDLIST values))",
+            "Shuffle from list",
+            wx.YES_NO,
+        )
+        self.app.Raise()
+        self.app.SetFocus()
+        res = dlg.ShowModal()
+
+
+        list_of_values = []
+
+        if(res==wx.ID_YES):
+            file = None
+            with wx.FileDialog(self.app.panel, "Choose a list", defaultDir=os.getcwd()) as fileDialog:
+                if fileDialog.ShowModal() == wx.ID_CANCEL:
+                    return 
+
+                file = fileDialog.GetPath()
+
+            if(file!=None):
+                # Reading the file
+                try:
+                    with open(file, 'r') as f:
+                        lines = f.readlines()
+                        for line in lines:
+                            list_of_values.append(float(line.split('\n')[0]))
+
+                except:
+                    dlg2 = wx.MessageDialog(
+                                self.app.panel,
+                                "The list could not be converted to numbers. Please check the list and try again",
+                                "Error",
+                                wx.OK,
+                            )
+                    self.app.Raise()
+                    self.app.SetFocus()
+                    res = dlg2.ShowModal()
+                    dlg2.Destroy()
+                    list_of_values = []
+
+            if(len(list_of_values)!=int(self.app.format.N_complex_boxes[self.shuffle_dimension].GetValue())):
+                dlg3 = wx.MessageDialog(
+                            self.app.panel,
+                            "The number of values in the list does not equal the number of values in the selected dimension to shuffle. Try again with a different list or continue manually.",
+                            "Error",
+                            wx.OK,
+                        )
+                self.app.Raise()
+                self.app.SetFocus()
+                res = dlg3.ShowModal()
+                dlg3.Destroy()
+                list_of_values = []
+            
+        dlg.Destroy()
+
+        
+
+        self.axis_reordering = AxisReordering(self, list_of_values)
+        
+
+
+
+        
+        
+
+
+        
+
+
+
+
+
+class AskAxis(wx.Dialog):
+    def __init__(self, parent):
+        
+        dialog = wx.Dialog.__init__(
+            self,
+            None,
+            wx.ID_ANY,
+            'Shuffle Axis',
+            wx.DefaultPosition,
+            size=(300, 200),
+            style=wx.DEFAULT_DIALOG_STYLE,
+        )
+        self.parent = parent
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.main_sizer.AddSpacer(10)
+
+        self.message = wx.StaticText(
+            self,
+            label="Which axis do you wish shuffle the order of (e.g. if a pseudo axis is in a randomised order\n and you wish to swap FIDs 1, 2, 3, 4 to the \norder 1, 3, 2, 4) to ensure the pseudo-axis\n parameter is increasing along the axis.\n",
+        )
+
+        number_of_dimensions = len(self.parent.app.format.N_complex_boxes)
+        choices = []
+        for i in range(number_of_dimensions):
+            choices.append(str(i+1))
+        self.main_sizer.Add(self.message, 0, wx.ALL, 5)
+        self.dimension_selection = wx.RadioBox(
+            self, choices= choices, majorDimension=1,
+                        style=wx.RA_SPECIFY_ROWS,
+        )
+        self.main_sizer.Add(
+            self.dimension_selection, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
+        )
+        self.ok_button = wx.Button(self, label="OK")
+        self.ok_button.Bind(wx.EVT_BUTTON, self.OnOK)
+        self.main_sizer.Add(self.ok_button, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+        self.SetSizer(self.main_sizer)
+        self.Centre()
+        self.Show()
+
+    def OnOK(self, event):
+        dimension_selection = int(self.dimension_selection.GetSelection())
+        self.shuffle_dimension = dimension_selection
+        self.parent.continue_reorder_axis(self)
+
+
+
+
+class AxisReordering(wx.Dialog):
+    def __init__(self, parent, list_of_values):
+        
+        # dialog = wx.Dialog.__init__(
+        #     self,
+        #     None,
+        #     wx.ID_ANY,
+        #     'Shuffle Axis',
+        #     wx.DefaultPosition,
+        #     size=(300, 200),
+        #     style=wx.DEFAULT_DIALOG_STYLE,
+        # )
+
+        super().__init__(parent.app, title="Reordering axis",
+                         size=(400, 300),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+
+        # Scrolled panel that holds the content
+        panel = scrolled.ScrolledPanel(self, style=wx.TAB_TRAVERSAL)
+        panel.SetupScrolling(scroll_x=False)  # vertical only
+
+
+
+        self.parent = parent
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.main_sizer.AddSpacer(10)
+
+        self.message = wx.StaticText(
+            panel,
+            label="Select the new order of the points in the axis\n",
+        )
+
+        # Find the number of values
+        number_of_points = int(self.parent.app.format.N_complex_boxes[self.parent.shuffle_dimension].GetValue())
+
+        choices = []
+        for i in range(number_of_points):
+            choices.append(str(i+1))
+
+        new_pos = np.array([])
+        if(len(list_of_values)>=1):
+            new_pos = np.argsort(np.argsort(np.array(list_of_values)))
+
+
+
+        
+        self.main_sizer.Add(self.message, 0, wx.ALL, 5)
+
+        self.new_index_list = []
+        rows = []
+        for p, point in enumerate(range(number_of_points)):
+
+            row = wx.BoxSizer(wx.HORIZONTAL)
+
+            if(len(new_pos)>=1):
+                val = str(new_pos[p]+1)
+            else:
+                val = str(point+1)
+            new_index = wx.ComboBox(
+                panel, value=val, choices= choices,
+            )
+            self.new_index_list.append(new_index)
+
+            original_text = wx.StaticText(panel, -1, 'Original index: ' + str(point+1))
+
+            new_text = wx.StaticText(panel, -1, 'New index:')
+
+            row.Add(original_text)
+            row.AddSpacer(20)
+            row.Add(new_text)
+            row.AddSpacer(5)
+            row.Add(new_index)
+
+            self.main_sizer.Add(
+                row, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
+            )
+        self.ok_button = wx.Button(panel, label="OK")
+        self.ok_button.Bind(wx.EVT_BUTTON, self.OnOK)
+        self.main_sizer.Add(self.ok_button, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+        panel.SetSizer(self.main_sizer)
+        self.Centre()
+        self.Show()
+
+    def OnOK(self, event):
+        new_order_list = []
+        for new_index_box in self.new_index_list:
+            new_order_list.append(int(new_index_box.GetValue())-1)
+        self.parent.new_order_list = new_order_list
+        self.Close()
+        
+

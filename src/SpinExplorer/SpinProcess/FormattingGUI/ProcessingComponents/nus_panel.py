@@ -73,8 +73,8 @@ class NonUniformSampling:
         )
         self.ist_data_extension_number_indirect = 0
         self.ist_linear_prediction_only_flag = self.find_ist_linear_prediction_only_flag()
-        self.ist_nus_iterations_indirect = 1000
-        self.ist_threshold_indirect = 0.9
+        self.ist_nus_iterations_indirect = 2000
+        self.ist_threshold_indirect = 0.7
         self.ist_convergence_tolerance_indirect = 1e-6
 
         # Phasing applied to the indirect dimension before NUS reconstruction

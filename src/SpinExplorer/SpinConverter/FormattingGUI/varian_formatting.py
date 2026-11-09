@@ -48,19 +48,19 @@ class FormatParametersVarian:
         self.title_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.title_sizer.AddSpacer(250)
         self.N_complex_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.N_complex_txt = wx.StaticText(self.app, label="Number complex points:")
+        self.N_complex_txt = wx.StaticText(self.app.panel, label="Number complex points:")
         self.N_complex_boxes = []
         if self.params.pseudo_flag == False:
             if self.params.phase == False and self.params.phase2 == False:
                 for i in range(1):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -68,13 +68,13 @@ class FormatParametersVarian:
             elif self.params.phase == True and self.params.phase2 == False:
                 for i in range(2):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -82,7 +82,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -90,13 +90,13 @@ class FormatParametersVarian:
             elif self.params.phase == True and self.params.phase2 == True:
                 for i in range(3):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -104,7 +104,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -112,7 +112,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -120,13 +120,13 @@ class FormatParametersVarian:
             elif self.params.phase == False and self.params.phase2 == True:
                 for i in range(2):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -134,7 +134,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -143,13 +143,13 @@ class FormatParametersVarian:
             if self.params.phase == False and self.params.phase2 == False:
                 for i in range(2):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -157,7 +157,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -166,13 +166,13 @@ class FormatParametersVarian:
             elif self.params.phase == True and self.params.phase2 == False:
                 for i in range(3):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -180,7 +180,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -188,7 +188,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -196,13 +196,13 @@ class FormatParametersVarian:
             elif self.params.phase == True and self.params.phase2 == True:
                 for i in range(4):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -210,7 +210,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -218,7 +218,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -226,7 +226,7 @@ class FormatParametersVarian:
                     if i == 3:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -234,13 +234,13 @@ class FormatParametersVarian:
             elif self.params.phase == False and self.params.phase2 == True:
                 for i in range(3):
                     self.title_sizer.Add(
-                        wx.StaticText(self.app, label="Dimension " + str(i + 1))
+                        wx.StaticText(self.app.panel, label="Dimension " + str(i + 1))
                     )
                     self.title_sizer.AddSpacer(145)
                     if i == 0:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_direct),
                                 size=(200, 20),
                             )
@@ -248,7 +248,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1]) * 2),
                                 size=(200, 20),
                             )
@@ -256,7 +256,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_complex_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -275,14 +275,14 @@ class FormatParametersVarian:
 
         # Create the boxes for the real point numbers
         self.N_real_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.N_real_txt = wx.StaticText(self.app, label="Number real points:        ")
+        self.N_real_txt = wx.StaticText(self.app.panel, label="Number real points:        ")
         self.N_real_boxes = []
         if self.params.pseudo_flag == False:
             for i in range(len(self.N_complex_boxes)):
                 if i == 0:
                     self.N_real_boxes.append(
                         wx.TextCtrl(
-                            self.app,
+                            self.app.panel,
                             value=str(int(self.params.size_direct / 2)),
                             size=(200, 20),
                         )
@@ -294,7 +294,7 @@ class FormatParametersVarian:
                         else:
                             self.N_real_boxes.append(
                                 wx.TextCtrl(
-                                    self.app,
+                                    self.app.panel,
                                     value=str(self.params.size_indirect[i - 1]),
                                     size=(200, 20),
                                 )
@@ -305,7 +305,7 @@ class FormatParametersVarian:
                         else:
                             self.N_real_boxes.append(
                                 wx.TextCtrl(
-                                    self.app,
+                                    self.app.panel,
                                     value=str(self.params.size_indirect[i - 1]),
                                     size=(200, 20),
                                 )
@@ -317,7 +317,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_direct / 2)),
                                 size=(200, 20),
                             )
@@ -325,7 +325,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -336,7 +336,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_direct / 2)),
                                 size=(200, 20),
                             )
@@ -344,7 +344,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_indirect[i - 1]),
                                 size=(200, 20),
                             )
@@ -352,7 +352,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -362,7 +362,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_direct / 2)),
                                 size=(200, 20),
                             )
@@ -370,7 +370,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_indirect[i - 1]),
                                 size=(200, 20),
                             )
@@ -378,7 +378,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.size_indirect[i - 1]),
                                 size=(200, 20),
                             )
@@ -386,7 +386,7 @@ class FormatParametersVarian:
                     if i == 3:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -396,7 +396,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_direct / 2)),
                                 size=(200, 20),
                             )
@@ -404,7 +404,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(int(self.params.size_indirect[i - 1] / 2)),
                                 size=(200, 20),
                             )
@@ -412,7 +412,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.N_real_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 size=(200, 20),
                             )
@@ -433,7 +433,7 @@ class FormatParametersVarian:
         """
         self.acquisition_mode_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.acquisition_mode_txt = wx.StaticText(
-            self.app, label="Acquisition mode:           "
+            self.app.panel, label="Acquisition mode:           "
         )
         self.acquisition_mode_options_direct = ["Complex", "Sequential", "Real", "DQD"]
         self.acquisition_mode_options_indirect = [
@@ -451,7 +451,7 @@ class FormatParametersVarian:
             if self.params.phase == False and self.params.phase2 == False:
                 self.acqusition_combo_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=self.acquisition_mode_options_direct[0],
                         choices=self.acquisition_mode_options_direct,
                         size=(200, 20),
@@ -465,7 +465,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_direct[0],
                                 choices=self.acquisition_mode_options_direct,
                                 size=(200, 20),
@@ -477,7 +477,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -491,7 +491,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_direct[0],
                                 choices=self.acquisition_mode_options_direct,
                                 size=(200, 20),
@@ -503,7 +503,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -515,7 +515,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -530,7 +530,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_direct[0],
                                 choices=self.acquisition_mode_options_direct,
                                 size=(200, 20),
@@ -542,7 +542,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[6],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -556,7 +556,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_direct[0],
                                 choices=self.acquisition_mode_options_direct,
                                 size=(200, 20),
@@ -568,7 +568,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -580,7 +580,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[6],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -594,7 +594,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_direct[0],
                                 choices=self.acquisition_mode_options_direct,
                                 size=(200, 20),
@@ -606,7 +606,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -618,7 +618,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -630,7 +630,7 @@ class FormatParametersVarian:
                     if i == 3:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[6],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -644,7 +644,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_direct[0],
                                 choices=self.acquisition_mode_options_direct,
                                 size=(200, 20),
@@ -656,7 +656,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[0],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -668,7 +668,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.acqusition_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.acquisition_mode_options_indirect[6],
                                 choices=self.acquisition_mode_options_indirect,
                                 size=(200, 20),
@@ -692,7 +692,7 @@ class FormatParametersVarian:
         Creating ComboBoxes for the spectral sweep widths for each dimension.
         """
         self.sweep_width_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.sweep_width_txt = wx.StaticText(self.app, label="Sweep width (Hz):          ")
+        self.sweep_width_txt = wx.StaticText(self.app.panel, label="Sweep width (Hz):          ")
         self.sweep_width_boxes = []
         options_sw = [str(self.params.sw_direct)]
         try:
@@ -713,7 +713,7 @@ class FormatParametersVarian:
             if self.params.phase == False and self.params.phase2 == False:
                 self.sweep_width_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.sw_direct),
                         choices=options_sw,
                         size=(200, 20),
@@ -724,7 +724,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -733,7 +733,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw1"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -744,7 +744,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -753,7 +753,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw1"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -762,7 +762,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw2"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -773,7 +773,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -782,7 +782,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw2"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -794,7 +794,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -803,7 +803,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app, value=str(0), choices=options_sw, size=(200, 20)
+                                self.app.panel, value=str(0), choices=options_sw, size=(200, 20)
                             )
                         )
             elif self.params.phase == True and self.params.phase2 == False:
@@ -811,7 +811,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -820,7 +820,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw1"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -829,7 +829,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app, value=str(0), choices=options_sw, size=(200, 20)
+                                self.app.panel, value=str(0), choices=options_sw, size=(200, 20)
                             )
                         )
             elif self.params.phase == True and self.params.phase2 == True:
@@ -837,7 +837,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -846,7 +846,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw1"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -855,7 +855,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw2"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -864,7 +864,7 @@ class FormatParametersVarian:
                     if i == 3:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app, value=str(0), choices=options_sw, size=(200, 20)
+                                self.app.panel, value=str(0), choices=options_sw, size=(200, 20)
                             )
                         )
             elif self.params.phase == False and self.params.phase2 == True:
@@ -872,7 +872,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_direct),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -881,7 +881,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.sw_indirect["sw2"]),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -890,7 +890,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.sweep_width_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.number_of_arrayed_parameters),
                                 choices=options_sw,
                                 size=(200, 20),
@@ -910,7 +910,7 @@ class FormatParametersVarian:
         Inputting the nucleus frequencies of each dimension
         """
         self.nuclei_frequency_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.nuclei_frequency_txt = wx.StaticText(self.app, label="Nuclei frequency (MHz):")
+        self.nuclei_frequency_txt = wx.StaticText(self.app.panel, label="Nuclei frequency (MHz):")
         self.nuclei_frequency_boxes = []
         options = [str(self.params.nucleus_frequency_direct)] + [
             str(freq) for freq in self.params.nucleus_frequencies_indirect
@@ -919,7 +919,7 @@ class FormatParametersVarian:
             if self.params.phase == False and self.params.phase2 == False:
                 self.nuclei_frequency_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.nucleus_frequency_direct),
                         choices=options,
                         size=(200, 20),
@@ -930,7 +930,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -941,7 +941,7 @@ class FormatParametersVarian:
                             try:
                                 self.nuclei_frequency_boxes.append(
                                     wx.ComboBox(
-                                        self.app,
+                                        self.app.panel,
                                         value=str(
                                             self.params.nucleus_frequencies_indirect[1]
                                         ),
@@ -952,7 +952,7 @@ class FormatParametersVarian:
                             except:
                                 self.nuclei_frequency_boxes.append(
                                     wx.ComboBox(
-                                        self.app,
+                                        self.app.panel,
                                         value=str(1),
                                         choices=options,
                                         size=(200, 20),
@@ -961,7 +961,7 @@ class FormatParametersVarian:
                         else:
                             self.nuclei_frequency_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value=str(
                                         self.params.nucleus_frequencies_indirect[0]
                                     ),
@@ -974,7 +974,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -983,7 +983,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[0]),
                                 choices=options,
                                 size=(200, 20),
@@ -992,7 +992,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[1]),
                                 choices=options,
                                 size=(200, 20),
@@ -1003,7 +1003,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -1012,7 +1012,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[0]),
                                 choices=options,
                                 size=(200, 20),
@@ -1024,7 +1024,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -1033,7 +1033,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app, value="0.0", choices=options, size=(200, 20)
+                                self.app.panel, value="0.0", choices=options, size=(200, 20)
                             )
                         )
             elif self.params.phase == True and self.params.phase2 == False:
@@ -1041,7 +1041,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -1050,7 +1050,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[0]),
                                 choices=options,
                                 size=(200, 20),
@@ -1059,7 +1059,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app, value="0.0", choices=options, size=(200, 20)
+                                self.app.panel, value="0.0", choices=options, size=(200, 20)
                             )
                         )
             elif self.params.phase == True and self.params.phase2 == True:
@@ -1067,7 +1067,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -1076,7 +1076,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[0]),
                                 choices=options,
                                 size=(200, 20),
@@ -1085,7 +1085,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[1]),
                                 choices=options,
                                 size=(200, 20),
@@ -1094,7 +1094,7 @@ class FormatParametersVarian:
                     if i == 3:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app, value="0.0", choices=options, size=(200, 20)
+                                self.app.panel, value="0.0", choices=options, size=(200, 20)
                             )
                         )
             elif self.params.phase == False and self.params.phase2 == True:
@@ -1102,7 +1102,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequency_direct),
                                 choices=options,
                                 size=(200, 20),
@@ -1111,7 +1111,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.nucleus_frequencies_indirect[0]),
                                 choices=options,
                                 size=(200, 20),
@@ -1120,7 +1120,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.nuclei_frequency_boxes.append(
                             wx.ComboBox(
-                                self.app, value="0.0", choices=options, size=(200, 20)
+                                self.app.panel, value="0.0", choices=options, size=(200, 20)
                             )
                         )
 
@@ -1139,7 +1139,7 @@ class FormatParametersVarian:
         """
         self.nucleus_type_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.nucleus_type_txt = wx.StaticText(
-            self.app, label="Label:                              "
+            self.app.panel, label="Label:                              "
         )
         self.nucleus_type_boxes = []
         self.params.labels_indirect.remove("")
@@ -1159,7 +1159,7 @@ class FormatParametersVarian:
             if self.params.phase == False and self.params.phase2 == False:
                 self.nucleus_type_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=self.params.label_direct,
                         choices=options,
                         size=(200, 20),
@@ -1171,7 +1171,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1180,7 +1180,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[0],
                                 choices=options,
                                 size=(200, 20),
@@ -1191,7 +1191,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1200,7 +1200,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[0],
                                 choices=options,
                                 size=(200, 20),
@@ -1209,7 +1209,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[1],
                                 choices=options,
                                 size=(200, 20),
@@ -1220,7 +1220,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1229,7 +1229,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[1],
                                 choices=options,
                                 size=(200, 20),
@@ -1240,7 +1240,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1249,7 +1249,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app, value="ID", choices=options, size=(200, 20)
+                                self.app.panel, value="ID", choices=options, size=(200, 20)
                             )
                         )
         else:
@@ -1258,7 +1258,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1268,7 +1268,7 @@ class FormatParametersVarian:
                         try:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value=self.params.arrayed_parameter,
                                     choices=options,
                                     size=(200, 20),
@@ -1277,7 +1277,7 @@ class FormatParametersVarian:
                         except:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app, value="ID", choices=options, size=(200, 20)
+                                    self.app.panel, value="ID", choices=options, size=(200, 20)
                                 )
                             )
             elif self.params.phase == True and self.params.phase2 == False:
@@ -1285,7 +1285,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1294,7 +1294,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[0],
                                 choices=options,
                                 size=(200, 20),
@@ -1304,7 +1304,7 @@ class FormatParametersVarian:
                         try:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value=self.params.arrayed_parameter,
                                     choices=options,
                                     size=(200, 20),
@@ -1313,7 +1313,7 @@ class FormatParametersVarian:
                         except:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app, value="ID", choices=options, size=(200, 20)
+                                    self.app.panel, value="ID", choices=options, size=(200, 20)
                                 )
                             )
             elif self.params.phase == True and self.params.phase2 == True:
@@ -1321,7 +1321,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1330,7 +1330,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[0],
                                 choices=options,
                                 size=(200, 20),
@@ -1339,7 +1339,7 @@ class FormatParametersVarian:
                     if i == 2:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[1],
                                 choices=options,
                                 size=(200, 20),
@@ -1349,7 +1349,7 @@ class FormatParametersVarian:
                         try:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value=self.params.arrayed_parameter,
                                     choices=options,
                                     size=(200, 20),
@@ -1358,7 +1358,7 @@ class FormatParametersVarian:
                         except:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app, value="ID", choices=options, size=(200, 20)
+                                    self.app.panel, value="ID", choices=options, size=(200, 20)
                                 )
                             )
             elif self.params.phase == False and self.params.phase2 == True:
@@ -1366,7 +1366,7 @@ class FormatParametersVarian:
                     if i == 0:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.label_direct,
                                 choices=options,
                                 size=(200, 20),
@@ -1375,7 +1375,7 @@ class FormatParametersVarian:
                     if i == 1:
                         self.nucleus_type_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.labels_indirect[1],
                                 choices=options,
                                 size=(200, 20),
@@ -1385,7 +1385,7 @@ class FormatParametersVarian:
                         try:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value=self.params.arrayed_parameter,
                                     choices=options,
                                     size=(200, 20),
@@ -1394,7 +1394,7 @@ class FormatParametersVarian:
                         except:
                             self.nucleus_type_boxes.append(
                                 wx.ComboBox(
-                                    self.app, value="ID", choices=options, size=(200, 20)
+                                    self.app.panel, value="ID", choices=options, size=(200, 20)
                                 )
                             )
 
@@ -1415,7 +1415,7 @@ class FormatParametersVarian:
         """
         self.carrier_frequency_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.carrier_frequency_txt = wx.StaticText(
-            self.app, label="Carrier frequency (ppm):"
+            self.app.panel, label="Carrier frequency (ppm):"
         )
         self.carrier_frequency_boxes = []
         self.carrier_combo_boxes = []
@@ -1436,14 +1436,14 @@ class FormatParametersVarian:
             if self.params.phase == False and self.params.phase2 == False:
                 self.carrier_frequency_boxes.append(
                     wx.TextCtrl(
-                        self.app,
+                        self.app.panel,
                         value=str(self.params.references_proton[0]),
                         size=(200, 20),
                     )
                 )
                 self.carrier_combo_boxes.append(
                     wx.ComboBox(
-                        self.app,
+                        self.app.panel,
                         value=self.options_proton[0],
                         choices=self.options_proton,
                         size=(200, 20),
@@ -1455,14 +1455,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_proton[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1471,14 +1471,14 @@ class FormatParametersVarian:
                     if i == 1:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[0],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1489,14 +1489,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.references_proton_labels[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1505,14 +1505,14 @@ class FormatParametersVarian:
                     if i == 1:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[0],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1521,14 +1521,14 @@ class FormatParametersVarian:
                     if i == 2:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[1]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[1],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1539,14 +1539,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.references_proton_labels[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1555,14 +1555,14 @@ class FormatParametersVarian:
                     if i == 1:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[1]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[1],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1575,14 +1575,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.references_proton_labels[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1592,14 +1592,14 @@ class FormatParametersVarian:
                         try:
                             self.carrier_frequency_boxes.append(
                                 wx.TextCtrl(
-                                    self.app,
+                                    self.app.panel,
                                     value=str(self.params.references_other[0]),
                                     size=(200, 20),
                                 )
                             )
                             self.carrier_combo_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value=self.options_other_dimensions[0],
                                     choices=self.options_other_dimensions,
                                     size=(200, 20),
@@ -1607,11 +1607,11 @@ class FormatParametersVarian:
                             )
                         except:
                             self.carrier_frequency_boxes.append(
-                                wx.TextCtrl(self.app, value="0.0", size=(200, 20))
+                                wx.TextCtrl(self.app.panel, value="0.0", size=(200, 20))
                             )
                             self.carrier_combo_boxes.append(
                                 wx.ComboBox(
-                                    self.app,
+                                    self.app.panel,
                                     value="ID",
                                     choices=self.options_other_dimensions,
                                     size=(200, 20),
@@ -1622,14 +1622,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.references_proton_labels[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1638,14 +1638,14 @@ class FormatParametersVarian:
                     if i == 1:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[0],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1653,11 +1653,11 @@ class FormatParametersVarian:
                         )
                     if i == 2:
                         self.carrier_frequency_boxes.append(
-                            wx.TextCtrl(self.app, value="0.0", size=(200, 20))
+                            wx.TextCtrl(self.app.panel, value="0.0", size=(200, 20))
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value="Other",
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1668,14 +1668,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.references_proton_labels[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1684,14 +1684,14 @@ class FormatParametersVarian:
                     if i == 1:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[0],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1700,14 +1700,14 @@ class FormatParametersVarian:
                     if i == 2:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[1]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[1],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1715,11 +1715,11 @@ class FormatParametersVarian:
                         )
                     if i == 3:
                         self.carrier_frequency_boxes.append(
-                            wx.TextCtrl(self.app, value="0.0", size=(200, 20))
+                            wx.TextCtrl(self.app.panel, value="0.0", size=(200, 20))
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value="Other",
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1730,14 +1730,14 @@ class FormatParametersVarian:
                     if i == 0:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_proton[0]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.params.references_proton_labels[0],
                                 choices=self.options_proton,
                                 size=(200, 20),
@@ -1746,14 +1746,14 @@ class FormatParametersVarian:
                     if i == 1:
                         self.carrier_frequency_boxes.append(
                             wx.TextCtrl(
-                                self.app,
+                                self.app.panel,
                                 value=str(self.params.references_other[1]),
                                 size=(200, 20),
                             )
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value=self.options_other_dimensions[1],
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1761,11 +1761,11 @@ class FormatParametersVarian:
                         )
                     if i == 2:
                         self.carrier_frequency_boxes.append(
-                            wx.TextCtrl(self.app, value="0.0", size=(200, 20))
+                            wx.TextCtrl(self.app.panel, value="0.0", size=(200, 20))
                         )
                         self.carrier_combo_boxes.append(
                             wx.ComboBox(
-                                self.app,
+                                self.app.panel,
                                 value="Other",
                                 choices=self.options_other_dimensions,
                                 size=(200, 20),
@@ -1785,7 +1785,7 @@ class FormatParametersVarian:
         self.carrier_combo_box_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.carrier_combo_box_sizer.AddSpacer(20)
         self.carrier_combo_box_txt = wx.StaticText(
-            self.app, label="Referencing Mode:          "
+            self.app.panel, label="Referencing Mode:          "
         )
         self.carrier_combo_box_sizer.Add(self.carrier_combo_box_txt)
         self.carrier_combo_box_sizer.AddSpacer(17)

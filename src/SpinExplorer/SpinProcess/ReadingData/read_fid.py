@@ -62,7 +62,7 @@ class ReadFID:
         if len(fid_files) == 0:
             dlg = wx.MessageDialog(
                 self.app,
-                "No nmrPipe file found in current directory",
+                "No converted FID file (e.g. spectrum.fid) found in current directory",
                 "Error",
                 wx.OK | wx.ICON_ERROR,
             )
@@ -84,7 +84,7 @@ class ReadFID:
 
     def read_fid(self) -> None:
         """
-        Reading the nmrPipe FID file using nmrglue
+        Reading the FID file using nmrglue
         """
         self.dic, self.data = ng.pipe.read(self.fid_file)
 

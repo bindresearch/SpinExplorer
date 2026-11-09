@@ -28,7 +28,7 @@ from typing import Union, Dict, Any
 
 
 class Read_json:
-    def __init__(self, params, nmrdata, app):
+    def __init__(self, params, nmrdata, app, popout=True):
         """
         This class will read a parameter.json file and ensure that all of the
         parameters are valid (if not will go back to original read parameters).
@@ -37,6 +37,7 @@ class Read_json:
         """
 
         self.app = app
+        self.popout=popout
 
         # Checking to see if parameters.json is found and if user wants to
         # read in these values
@@ -73,18 +74,21 @@ class Read_json:
         found parameters.json file.
         """
         # Asking the user if they want to overwrite the previous saved state
-        dlg = wx.MessageDialog(
-            self.app,
-            "A set of saved parameters has been found (parameters.json). Would you like to read these values?",
-            "Warning",
-            wx.YES_NO | wx.ICON_QUESTION,
-        )
-        result = dlg.ShowModal()
-        if result == wx.ID_NO:
-            dlg.Destroy()
-            return False
+        if(self.popout):
+            dlg = wx.MessageDialog(
+                self.app,
+                "A set of saved parameters has been found (parameters.json). Would you like to read these values?",
+                "Warning",
+                wx.YES_NO | wx.ICON_QUESTION,
+            )
+            result = dlg.ShowModal()
+            if result == wx.ID_NO:
+                dlg.Destroy()
+                return False
+            else:
+                dlg.Destroy()
+                return True
         else:
-            dlg.Destroy()
             return True
 
     def read(self, warning=True):
@@ -370,6 +374,10 @@ class InputParameters:
         digital_filter_removal = bool(digital_filter_dict["Remove Digital Filter"])
         self.app.format.digital_filter_checkbox.SetValue(digital_filter_removal)
         self.app.format.on_digital_filter_checkbox(wx.EVT_CHECKBOX)
+        try:
+            auto_p0 = bool(digital_filter_dict["Auto-p0 before filter removal"])
+        except:
+            auto_p0 = True
 
         # Removal of digital filter before/after fourier transform
         removal = digital_filter_dict["Remove Before/After Fourier Transform"]
@@ -387,6 +395,7 @@ class InputParameters:
         self.app.format.decim_value = float(decim)
         self.app.format.dspfvs_value = int(dspfvs)
         self.app.format.grpdly_value = float(grpdly)
+        self.app.format.auto_p0_pre_filter = auto_p0
 
         if digital_filter_removal == True:
             self.app.format.decim_textbox.SetValue(str(decim))
@@ -394,6 +403,9 @@ class InputParameters:
             self.app.format.grpdly_textbox.SetValue(str(grpdly))
 
             self.app.format.digital_filter_radio_box.SetSelection(removal_value)
+            self.app.format.add_p0_correction.SetValue(self.app.format.auto_p0_pre_filter)
+
+            
 
     def input_other_options(self):
         """
@@ -418,6 +430,14 @@ class InputParameters:
             self.params.remove_acquisition_padding
         )
         self.app.format.on_remove_acquisition_padding_checkbox(wx.EVT_CHECKBOX)
+
+        if("shuffle dimension" in other_params_dict):
+            try:
+                self.app.shared_format.shuffle_dimension = other_params_dict["shuffle dimension"]
+                self.app.shared_format.new_order_list = other_params_dict["reshuffle order"]
+                self.app.shared_format.re_order_axis.SetValue(True)
+            except:
+                pass
 
     def input_nus(self):
         """

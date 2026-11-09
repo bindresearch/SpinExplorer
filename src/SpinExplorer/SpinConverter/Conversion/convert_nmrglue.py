@@ -30,6 +30,7 @@ import nmrglue as ng
 from typing import Dict
 from numpy.typing import NDArray
 import wx
+import copy
 import traceback
 from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import (
     inflate_spectra_2D_signal,
@@ -39,7 +40,7 @@ from SpinExplorer.SpinProcess.Processing.IST.sampling_utils import (
 
 
 class Convert_nmrglue:
-    def __init__(self, app, params, nmrdata, save=True) -> None:
+    def __init__(self, app, params, nmrdata, save=True, popout=True) -> None:
         """
         This class will perform the conversion of the NMR data
         to nmrPipe format using nmrglue.
@@ -50,6 +51,7 @@ class Convert_nmrglue:
 
         sizes = self.find_data_shape()
 
+        self.success=True
 
         C = ng.convert.converter()
         # Obtain first guesses of dictionary values
@@ -65,45 +67,48 @@ class Convert_nmrglue:
         try:
             self.perform_conversion(C, u, dic, data, save)
             # Give an output to say that the conversion was successful
-            self.success_output_message()
+            self.success_output_message(popout=popout)
 
         except:
             message = traceback.format_exc()
-            self.fail_output_message(message)
+            self.fail_output_message(message, popout=popout)
+            self.success = False
 
 
-    def success_output_message(self):
+    def success_output_message(self, popout=True):
         """
         Provides an output message to the user to say that the
         conversion is complete.
         """
-        dlg = wx.MessageDialog(
-            self.app,
-            "Data conversion to nmrPipe format using nmrglue is complete.",
-            "Complete",
-            wx.OK,
-        )
-        self.app.Raise()
-        self.app.SetFocus()
-        dlg.ShowModal()
-        dlg.Destroy()
+        if(popout==True):
+            dlg = wx.MessageDialog(
+                self.app,
+                "Data conversion to nmrPipe format using nmrglue is complete.",
+                "Complete",
+                wx.OK,
+            )
+            self.app.Raise()
+            self.app.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
 
 
-    def fail_output_message(self, message):
+    def fail_output_message(self, message, popout=True):
         """
         Provides an output message to the user to say that the
         conversion did not complete correctly
         """
-        dlg = wx.MessageDialog(
-            self.app,
-            "Data conversion to nmrPipe format using nmrglue did not complete correctly. The following error was reported:\n\n" + message,
-            "Error",
-            wx.OK,
-        )
-        self.app.Raise()
-        self.app.SetFocus()
-        dlg.ShowModal()
-        dlg.Destroy()
+        if(popout==True):
+            dlg = wx.MessageDialog(
+                self.app,
+                "Data conversion to nmrPipe format using nmrglue did not complete correctly. The following error was reported:\n\n" + message,
+                "Error",
+                wx.OK,
+            )
+            self.app.Raise()
+            self.app.SetFocus()
+            dlg.ShowModal()
+            dlg.Destroy()
 
     def find_data_shape(self) -> list:
         """
@@ -141,7 +146,7 @@ class Convert_nmrglue:
         """
         Performing any necessary data reshuffling and then
         performing the data conversion to nmrPipe format before
-        saving as test.fid
+        saving as spectrum.fid
         """
 
         if len(self.app.format.N_real_boxes) == 2:
@@ -175,7 +180,8 @@ class Convert_nmrglue:
                     p0_only=False
                 else:
                     p0_only=True
-                dic, data = self.remove_digital_filter_fid(dic, data,p0_only)
+                p0_correction_toggle = self.app.format.add_p0_correction.GetValue()
+                dic, data = self.remove_digital_filter_fid(dic, data,p0_only, p0_correction_toggle)
             C.from_bruker(dic, data, u)
         else:
             C.from_varian(dic, data, u)
@@ -203,11 +209,40 @@ class Convert_nmrglue:
         # pdic["FDF2AQSIGN"] = 0
         # pdic["FDF3AQSIGN"] = 2
 
+        if(len(pdata.shape)>1):
+            # If the data down an axis is to be changed order (shuffled)
+            if(self.app.shared_format.re_order_axis.GetValue()==True):
+                try:
+                    if(self.app.shared_format.new_order_list!=[]):
+                        shuffle_dimension = self.app.shared_format.shuffle_dimension
+                        orig_data = copy.deepcopy(pdata)
+                        for k, new_index in enumerate(self.app.shared_format.new_order_list):
+                            if(len(pdata.shape)-shuffle_dimension-1 == 0):
+                                pdata[new_index] = copy.deepcopy(orig_data[k])
+                            elif(len(pdata.shape)-shuffle_dimension-1 == 1):
+                                pdata[:, new_index] = copy.deepcopy(orig_data[:, k])
+                            elif(len(pdata.shape)-shuffle_dimension-1 == 2):
+                                pdata[:,:,new_index] = copy.deepcopy(orig_data[:,:, k])
+                except:
+                    dlg = wx.MessageDialog(
+                        self.app,
+                        "Data shuffling did not work, returning the original unshuffled data.",
+                        "Error",
+                        wx.OK,
+                    )
+                    pdata = copy.deepcopy(orig_data)
+                    self.app.Raise()
+                    self.app.SetFocus()
+                    dlg.ShowModal()
+                    dlg.Destroy()
+
+
+
         # Allow other areas of the application to access the converted data
         self.dic, self.data = pdic, pdata
 
         if(save==True):
-            ng.pipe.write("test.fid", pdic, pdata, overwrite=True)
+            ng.pipe.write("spectrum.fid", pdic, pdata, overwrite=True)
 
     def create_conversion_dictionary(self) -> Dict:
         """
@@ -415,7 +450,7 @@ class Convert_nmrglue:
 
         return c
 
-    def remove_digital_filter_fid(self, dic, data: NDArray,p0_only=False) -> NDArray:
+    def remove_digital_filter_fid(self, dic, data: NDArray,p0_only=False, p0_correction_toggle=True) -> NDArray:
         """
         Removing the Bruker digital filter before Fourier transform
         (post_proc=False). This amounts to a circular shift of the
@@ -469,7 +504,8 @@ class Convert_nmrglue:
         # fig = plt.figure()
         # ax = fig.add_subplot(111)
 
-        data = ng.proc_base.ps(data, p0=-ph0)
+        if(p0_correction_toggle==True):
+            data = ng.proc_base.ps(data, p0=-ph0)
         # data = ng.proc_base.ps(data, p0=-ph0, p1=grpdly*360)
         # for i in range(10):
         #     ax.plot(np.linspace(0,1,len(data[0])), data[i])
