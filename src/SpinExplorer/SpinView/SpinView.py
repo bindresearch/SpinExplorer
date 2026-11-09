@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                          SpinView                           ")
 print("-------------------------------------------------------------")
-print("             (version 1.5) 29th September 2026               ")
+print("              (version 1.5) 9th November 2026                ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")

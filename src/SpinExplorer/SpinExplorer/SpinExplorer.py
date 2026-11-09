@@ -27,7 +27,7 @@ SOFTWARE."""
 print("-------------------------------------------------------------")
 print("                        SpinExplorer                         ")
 print("-------------------------------------------------------------")
-print("               (version 1.4) 13th March 2026                 ")
+print("             (version 1.5) 9th November 2026                 ")
 print(" (c) 2025 James Eaton, Andrew Baldwin (University of Oxford) ")
 print("                  2025-2026, Bind Research                   ")
 print("                        MIT License                          ")
@@ -294,7 +294,7 @@ class SpinExplorer(wx.Frame):
             self.panel,
             -1,
             "SpinExplorer",
-            URL="xxx",
+            URL="https://github.com/bindresearch/SpinExplorer",
         )
 
         self.citation2 = hl.HyperLinkCtrl(
@@ -314,7 +314,7 @@ class SpinExplorer(wx.Frame):
         self.citation_box = wx.BoxSizer(wx.HORIZONTAL)
 
         self.copyright_statement = wx.StaticText(self.panel, label="(c) 2025, James Eaton, Andrew Baldwin - University of Oxford")
-        self.copyright_statement1 = wx.StaticText(self.panel, label="(c) 2025-2026, Bind Research (Version 1.4)")
+        self.copyright_statement1 = wx.StaticText(self.panel, label="(c) 2025-2026, Bind Research (Version 1.5)")
 
         self.citation_box.Add(self.citation1)
         self.citation_box.AddSpacer(10)

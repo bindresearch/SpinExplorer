@@ -31,7 +31,7 @@ from typing import Dict, Any, Union
 
 class Save_json:
 
-    def __init__(self, notebook, nmrdata, dimension_tabs):
+    def __init__(self, notebook, nmrdata, dimension_tabs, popout_messages=True):
         """
         This object will obtain the current parameters using the populate_dictionary
         classes and then save the resulting dictionary to a .json file
@@ -39,7 +39,7 @@ class Save_json:
 
         self.notebook = notebook
 
-        continue_saving = self.check_saved_json()
+        continue_saving = self.check_saved_json(popout_messages)
         if continue_saving == False:
             return
         else:
@@ -51,11 +51,11 @@ class Save_json:
             if continue_saving == True:
                 # checking to see if conversion parameters are saved
                 # as well as processing parameters
-                saved_conversion_params = self.check_saved_conversion_params()
+                saved_conversion_params = self.check_saved_conversion_params(popout_messages)
                 try:
                     parameter_dictionary["conversion"] = saved_conversion_params
                 except:
-                    self.error_conversion_parameters()
+                    self.error_conversion_parameters(popout_messages)
 
             self.write_json(parameter_dictionary)
 
@@ -71,32 +71,34 @@ class Save_json:
                 indent=4,
             )
 
-    def check_saved_json(self) -> Union[bool, None]:
+    def check_saved_json(self, popout_messages) -> Union[bool, None]:
         """
         Check to see if there are any saved converter.json files
         Ask the user if they want to overwrite the converter.json
         files
         """
-
-        if pathlib.Path("parameters.json").exists() == True:
-            # Asking the user if they want to overwrite the previous saved state
-            dlg = wx.MessageDialog(
-                self.notebook,
-                "A previous set of saved parameters has been found (parameters.json). Would you like to overwrite this?",
-                "Overwrite saved parameters",
-                wx.YES_NO | wx.ICON_QUESTION,
-            )
-            result = dlg.ShowModal()
-            if result == wx.ID_NO:
-                dlg.Destroy()
-                return False
+        if(popout_messages):
+            if pathlib.Path("parameters.json").exists() == True:
+                # Asking the user if they want to overwrite the previous saved state
+                dlg = wx.MessageDialog(
+                    self.notebook,
+                    "A previous set of saved parameters has been found (parameters.json). Would you like to overwrite this?",
+                    "Overwrite saved parameters",
+                    wx.YES_NO | wx.ICON_QUESTION,
+                )
+                result = dlg.ShowModal()
+                if result == wx.ID_NO:
+                    dlg.Destroy()
+                    return False
+                else:
+                    dlg.Destroy()
+                    return True
             else:
-                dlg.Destroy()
-                return True
+                return None
         else:
             return None
 
-    def check_saved_conversion_params(self) -> Union[Dict[str, Any], bool]:
+    def check_saved_conversion_params(self, popout_messages) -> Union[Dict[str, Any], bool]:
         """
         Checking the processing.json file to see if there are connversion
         parameters saved as well as processing parameters.
@@ -111,27 +113,29 @@ class Save_json:
         except:
             # Unable to read the converter.json file effectively
             # Giving a warning to the user and returning
-            message = (
-                "Unable to read parameters.json. Saving without processing parameters."
-            )
-            dlg = wx.MessageDialog(
-                self.notebook, message, "Warning", wx.OK | wx.ICON_ERROR
-            )
-            dlg.ShowModal()
-            dlg.Destroy()
+            if(popout_messages==True):
+                message = (
+                    "Unable to read parameters.json. Saving without processing parameters."
+                )
+                dlg = wx.MessageDialog(
+                    self.notebook, message, "Warning", wx.OK | wx.ICON_ERROR
+                )
+                dlg.ShowModal()
+                dlg.Destroy()
 
             return False
 
-    def error_conversion_parameters(self):
+    def error_conversion_parameters(self, popout_messages=True):
         """
         Will be activated if conversion parameters are found but could
         not be read correctly. The conversion parameters will not be
         included in the parameters.json file.
         """
-        message = "Conversion parameters were found in parameters.json but could not be read correctly. Continuing"
-        dlg = wx.MessageDialog(self.notebook, message, "Warning", wx.OK | wx.ICON_ERROR)
-        dlg.ShowModal()
-        dlg.Destroy()
+        if(popout_messages==True):
+            message = "Conversion parameters were found in parameters.json but could not be read correctly. Continuing"
+            dlg = wx.MessageDialog(self.notebook, message, "Warning", wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
 
 
 class Populate_dictionary_global:

@@ -200,7 +200,7 @@ class FindingParameters:
             except:
                 dlg = wx.MessageDialog(
                     self.tempframe,
-                    "Error: Unable to read the Bruker NMR data. Please check the current directory and try again.",
+                    "Error: Unable to read the Bruker NMR data. Please check the current directory and try again. If using cloud-based storage to store your data, ensure that you have internet connection.",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
                 )
@@ -217,7 +217,7 @@ class FindingParameters:
             except:
                 dlg = wx.MessageDialog(
                     self.tempframe,
-                    "Error: Unable to read the Varian NMR data. Please check the current directory and try again.",
+                    "Error: Unable to read the Varian NMR data. Please check the current directory and try again. If using cloud-based storage to store your data, ensure that you have internet connection.",
                     "Error",
                     wx.OK | wx.ICON_ERROR,
                 )

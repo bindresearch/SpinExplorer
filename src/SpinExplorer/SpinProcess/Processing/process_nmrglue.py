@@ -106,6 +106,8 @@ class ProcessNMRGlue:
         dimension_tabs,
         nmr_data,
         interactive_phasing=False,
+        popout_messages=True,
+        batch_main=False
     ):
         """
         This class will perform nmrglue processing of the nmr data
@@ -114,6 +116,8 @@ class ProcessNMRGlue:
         self.notebook = notebook
         self.dimension_tabs = dimension_tabs
         self.nmr_data = nmr_data
+        self.success = True
+        self.batch_main = batch_main
 
         if interactive_phasing == True:
             # Just initialising the class for bruker digital filter removal
@@ -127,14 +131,19 @@ class ProcessNMRGlue:
             # been applied during conversion
             processing = self.on_run_processing_nmrglue()
             if(processing==False):
-                self.fail_output_message('')
+                if(popout_messages == True):
+                    self.fail_output_message('')
+                self.success=False
             else:
-                self.success_output_message()
+                if(popout_messages == True):
+                    self.success_output_message()
 
         except:
             message = traceback.format_exc()
             print(message)
-            self.fail_output_message(message)
+            if(popout_messages == True):
+                self.fail_output_message(message)
+            self.success=False
 
         if self.notebook.parent.original_frame != None:
             self.notebook.parent.Destroy()
@@ -144,9 +153,13 @@ class ProcessNMRGlue:
         Provides an output message to the user to say that the
         conversion is complete.
         """
+        if(self.batch_main==False):
+            message = "Data processing using nmrglue is complete."
+        else:
+            message = "Data processing of current spectrum using nmrglue completely successfully. Continuing to batch processing."
         dlg = wx.MessageDialog(
             self.notebook,
-            "Data processing using nmrglue is complete.",
+            message,
             "Complete",
             wx.OK,
         )
@@ -162,6 +175,10 @@ class ProcessNMRGlue:
         Provides an output message to the user to say that the
         conversion did not work correctly
         """
+        if(self.batch_main==False):
+            message = "Data processing using nmrglue did not complete correctly. Traceback:\n\n" + message
+        else:
+            message = "Data processing using nmrglue of the current open dataset did not complete correctly. Traceback:\n\n" + message
         dlg = wx.MessageDialog(
             self.notebook,
             "Data processing using nmrglue did not complete correctly. Traceback:\n\n" + message,
@@ -402,6 +419,7 @@ class ProcessNMRGlue:
 
         if(self.popout_window.WasCancelled()==True):
             # Cancel the IST reconstruction)
+            self.popout_window.Destroy()
             return False
     
     def apply_ist_reconstruction(self, dic, data, ndim, dimension_tab):
@@ -583,17 +601,17 @@ class ProcessNMRGlue:
         pseudo_axis = self.nmr_data.pseudo_axis
 
         if dim == 1:
-            nmrfile = "test.ft"
+            nmrfile = "spectrum.ft"
         elif dim == 2 and pseudo_axis == False:
-            nmrfile = "test.ft2"
+            nmrfile = "spectrum.ft2"
         elif dim == 2 and pseudo_axis == True:
-            nmrfile = "test.ft"
+            nmrfile = "spectrum.ft"
         elif dim == 3 and pseudo_axis == True:
-            nmrfile = "test.ft2"
+            nmrfile = "spectrum.ft2"
         elif dim == 3 and pseudo_axis == False:
-            nmrfile = "test.ft3"
+            nmrfile = "spectrum.ft3"
         else:
-            nmrfile = "test.ft"
+            nmrfile = "spectrum.ft"
 
         # Data is now processed to can set all QUAD flags to 1 (Real)
         dic["FDF1QUADFLAG"] = 1.0
@@ -604,6 +622,8 @@ class ProcessNMRGlue:
 
         data = data.real
         data = data.astype(np.float32)
+
+        self.nmrfile = nmrfile
 
         ng.pipe.write(nmrfile, dic, data, overwrite=True)
 

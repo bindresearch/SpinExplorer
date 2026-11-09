@@ -253,17 +253,17 @@ class ProcessNMRPipe:
         """
 
         if dim == 1:
-            nmrfile = "test.ft"
+            nmrfile = "spectrum.ft"
         elif dim == 2 and pseudo_axis == False:
-            nmrfile = "test.ft2"
+            nmrfile = "spectrum.ft2"
         elif dim == 2 and pseudo_axis == True:
-            nmrfile = "test.ft"
+            nmrfile = "spectrum.ft"
         elif dim == 3 and pseudo_axis == True:
-            nmrfile = "test.ft2"
+            nmrfile = "spectrum.ft2"
         elif dim == 3 and pseudo_axis == False:
-            nmrfile = "test.ft3"
+            nmrfile = "spectrum.ft3"
         else:
-            nmrfile = "test.ft"
+            nmrfile = "spectrum.ft"
 
         return nmrfile
 

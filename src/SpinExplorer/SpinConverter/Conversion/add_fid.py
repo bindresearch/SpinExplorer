@@ -201,10 +201,10 @@ class Add_fid(wx.Frame):
             dlg.Destroy()
             return
         
-        if(os.path.exists('./test_add.fid')):
+        if(os.path.exists('./spectrum_add.fid')):
             dlg = wx.MessageDialog(
                 self,
-                "The file test_add.fid already exists. Continuing will overwrite this, would you like to continue?",
+                "The file spectrum_add.fid already exists. Continuing will overwrite this, would you like to continue?",
                 "Warning",
                 wx.YES_NO | wx.ICON_WARNING,
             )
@@ -216,7 +216,7 @@ class Add_fid(wx.Frame):
 
         
 
-        ng.pipe.write('./test_add.fid', dic, data, overwrite=True)
+        ng.pipe.write('./spectrum_add.fid', dic, data, overwrite=True)
         
 
         

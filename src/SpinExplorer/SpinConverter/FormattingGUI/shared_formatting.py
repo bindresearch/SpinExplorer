@@ -27,6 +27,8 @@ SOFTWARE."""
 import os
 import wx
 import warnings
+import wx.lib.scrolledpanel as scrolled
+import numpy as np
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -841,6 +843,69 @@ class SharedFormatting:
                 self.re_order_axis.SetValue(False)
                 dlg.Destroy()
                 return
+
+
+        # Ask the user if they have a list that corresponds to the data which needs to be converted to ascending order
+        dlg = wx.MessageDialog(
+            self.app.panel,
+            "Would you like to re-shuffle the data according to a list? (i.e. if an acquisition list e.g. VDLIST was recorded in a randomised manner but you now wish to shuffle the data to be in ascending order according to the VDLIST values))",
+            "Shuffle from list",
+            wx.YES_NO,
+        )
+        self.app.Raise()
+        self.app.SetFocus()
+        res = dlg.ShowModal()
+
+
+        list_of_values = []
+
+        if(res==wx.ID_YES):
+            file = None
+            with wx.FileDialog(self.app.panel, "Choose a list", defaultDir=os.getcwd()) as fileDialog:
+                if fileDialog.ShowModal() == wx.ID_CANCEL:
+                    return 
+
+                file = fileDialog.GetPath()
+
+            if(file!=None):
+                # Reading the file
+                try:
+                    with open(file, 'r') as f:
+                        lines = f.readlines()
+                        for line in lines:
+                            list_of_values.append(float(line.split('\n')[0]))
+
+                except:
+                    dlg2 = wx.MessageDialog(
+                                self.app.panel,
+                                "The list could not be converted to numbers. Please check the list and try again",
+                                "Error",
+                                wx.OK,
+                            )
+                    self.app.Raise()
+                    self.app.SetFocus()
+                    res = dlg2.ShowModal()
+                    dlg2.Destroy()
+                    list_of_values = []
+
+            if(len(list_of_values)!=int(self.app.format.N_complex_boxes[self.shuffle_dimension].GetValue())):
+                dlg3 = wx.MessageDialog(
+                            self.app.panel,
+                            "The number of values in the list does not equal the number of values in the selected dimension to shuffle. Try again with a different list or continue manually.",
+                            "Error",
+                            wx.OK,
+                        )
+                self.app.Raise()
+                self.app.SetFocus()
+                res = dlg3.ShowModal()
+                dlg3.Destroy()
+                list_of_values = []
+            
+        dlg.Destroy()
+
+        
+
+        self.axis_reordering = AxisReordering(self, list_of_values)
         
 
 
@@ -904,48 +969,93 @@ class AskAxis(wx.Dialog):
 
 
 class AxisReordering(wx.Dialog):
-    def __init__(self, parent):
+    def __init__(self, parent, list_of_values):
         
-        dialog = wx.Dialog.__init__(
-            self,
-            None,
-            wx.ID_ANY,
-            'Shuffle Axis',
-            wx.DefaultPosition,
-            size=(300, 200),
-            style=wx.DEFAULT_DIALOG_STYLE,
-        )
+        # dialog = wx.Dialog.__init__(
+        #     self,
+        #     None,
+        #     wx.ID_ANY,
+        #     'Shuffle Axis',
+        #     wx.DefaultPosition,
+        #     size=(300, 200),
+        #     style=wx.DEFAULT_DIALOG_STYLE,
+        # )
+
+        super().__init__(parent.app, title="Reordering axis",
+                         size=(400, 300),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+
+        # Scrolled panel that holds the content
+        panel = scrolled.ScrolledPanel(self, style=wx.TAB_TRAVERSAL)
+        panel.SetupScrolling(scroll_x=False)  # vertical only
+
+
+
         self.parent = parent
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.main_sizer.AddSpacer(10)
 
         self.message = wx.StaticText(
-            self,
+            panel,
             label="Select the new order of the points in the axis\n",
         )
 
-        number_of_dimensions = len(self.parent.app.format.N_complex_boxes)
+        # Find the number of values
+        number_of_points = int(self.parent.app.format.N_complex_boxes[self.parent.shuffle_dimension].GetValue())
+
         choices = []
-        for i in range(number_of_dimensions):
+        for i in range(number_of_points):
             choices.append(str(i+1))
+
+        new_pos = np.array([])
+        if(len(list_of_values)>=1):
+            new_pos = np.argsort(np.argsort(np.array(list_of_values)))
+
+
+
+        
         self.main_sizer.Add(self.message, 0, wx.ALL, 5)
-        self.dimension_selection = wx.RadioBox(
-            self, choices= choices, majorDimension=1,
-                        style=wx.RA_SPECIFY_ROWS,
-        )
-        self.main_sizer.Add(
-            self.dimension_selection, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
-        )
-        self.ok_button = wx.Button(self, label="OK")
+
+        self.new_index_list = []
+        rows = []
+        for p, point in enumerate(range(number_of_points)):
+
+            row = wx.BoxSizer(wx.HORIZONTAL)
+
+            if(len(new_pos)>=1):
+                val = str(new_pos[p]+1)
+            else:
+                val = str(point+1)
+            new_index = wx.ComboBox(
+                panel, value=val, choices= choices,
+            )
+            self.new_index_list.append(new_index)
+
+            original_text = wx.StaticText(panel, -1, 'Original index: ' + str(point+1))
+
+            new_text = wx.StaticText(panel, -1, 'New index:')
+
+            row.Add(original_text)
+            row.AddSpacer(20)
+            row.Add(new_text)
+            row.AddSpacer(5)
+            row.Add(new_index)
+
+            self.main_sizer.Add(
+                row, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5
+            )
+        self.ok_button = wx.Button(panel, label="OK")
         self.ok_button.Bind(wx.EVT_BUTTON, self.OnOK)
         self.main_sizer.Add(self.ok_button, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
-        self.SetSizer(self.main_sizer)
+        panel.SetSizer(self.main_sizer)
         self.Centre()
         self.Show()
 
     def OnOK(self, event):
-        dimension_selection = int(self.dimension_selection.GetSelection())
-        self.shuffle_dimension = dimension_selection
-        self.parent.continue_reorder_axis(self)
+        new_order_list = []
+        for new_index_box in self.new_index_list:
+            new_order_list.append(int(new_index_box.GetValue())-1)
+        self.parent.new_order_list = new_order_list
+        self.Close()
         
 

@@ -516,7 +516,7 @@ class FormatParametersBruker:
                 for k, reference_label in enumerate(
                     self.params.references_other_labels
                 ):
-                    if nuc_type in reference_label:
+                    if nuc_type.split('_')[0] in reference_label:
                         main_index = k
 
                 self.carrier_frequency_boxes.append(

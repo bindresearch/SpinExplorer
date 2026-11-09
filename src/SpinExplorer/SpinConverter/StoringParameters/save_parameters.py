@@ -29,12 +29,13 @@ from typing import Dict, Any, Union
 
 class Save_json:
 
-    def __init__(self, params, nmrdata, app):
+    def __init__(self, params, nmrdata, app, popout=True):
         """
         This object will obtain the current parameters using the populate_dictionary
         classes and then save the resulting dictionary to a .json file
         """
         self.app = app
+        self.popout = popout
         continue_saving = self.check_saved_json()
         if continue_saving == False:
             return
@@ -70,24 +71,26 @@ class Save_json:
         Ask the user if they want to overwrite the converter.json
         files
         """
-
-        if pathlib.Path("parameters.json").exists() == True:
-            # Asking the user if they want to overwrite the previous saved state
-            dlg = wx.MessageDialog(
-                self.app,
-                "A previous set of saved parameters has been found (parameters.json). Would you like to overwrite this?",
-                "Warning",
-                wx.YES_NO | wx.ICON_QUESTION,
-            )
-            result = dlg.ShowModal()
-            if result == wx.ID_NO:
-                dlg.Destroy()
-                return False
+        if(self.popout==True):
+            if pathlib.Path("parameters.json").exists() == True:
+                # Asking the user if they want to overwrite the previous saved state
+                dlg = wx.MessageDialog(
+                    self.app,
+                    "A previous set of saved parameters has been found (parameters.json). Would you like to overwrite this?",
+                    "Warning",
+                    wx.YES_NO | wx.ICON_QUESTION,
+                )
+                result = dlg.ShowModal()
+                if result == wx.ID_NO:
+                    dlg.Destroy()
+                    return False
+                else:
+                    dlg.Destroy()
+                    return True
             else:
-                dlg.Destroy()
-                return True
+                return None
         else:
-            return None
+            return True
 
     def check_saved_processing_params(self) -> Union[Dict[str, Any], bool]:
         """
@@ -415,6 +418,10 @@ class Populate_dictionary_global:
             "remove acqusition padding"
         ] = remove_acqusition_padding_flag
         dictionary["other parameters"]["bad point threshold"] = bad_point_threshold
+        if(len(self.app.format.N_complex_boxes) > 1):
+            if(self.app.shared_format.re_order_axis.GetValue()==True):
+                dictionary["other parameters"]["shuffle dimension"] = self.app.shared_format.shuffle_dimension
+                dictionary["other parameters"]["reshuffle order"] = self.app.shared_format.new_order_list
         return dictionary
 
     def add_nus_information(self, dictionary: Dict[str, Any]) -> Dict[str, Any]:
