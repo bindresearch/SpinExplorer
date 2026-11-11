@@ -475,6 +475,8 @@ class ProcessNMRGlue:
             dic['FDF1APOD'] = data.shape[1]
             dic["FDSIZE"] = data.shape[1]
 
+            self.popout_window.Destroy()
+
 
             dlg = wx.MessageDialog(
             self.notebook,
@@ -532,6 +534,8 @@ class ProcessNMRGlue:
             dic["FDF3SIZE"] = data.shape[2]
             dic['FDF3TDSIZE'] = data.shape[2]
             dic['FDF3APOD'] = data.shape[2]
+
+            self.popout_window.Destroy()
 
             dlg = wx.MessageDialog(
             self.notebook,

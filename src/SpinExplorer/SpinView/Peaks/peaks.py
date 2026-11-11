@@ -1016,11 +1016,11 @@ class PeakListWindow2D(PeakModeButtons, wx.Frame):
         
         self.peak_picking_type_text = wx.StaticText(self.row_pickpeaks_label,-1,"Option:")
         types = ['Positive Peaks', 'Negative Peaks', 'Positive + Negative Peaks']
-        self.peak_picking_type = wx.ComboBox(self.row_pickpeaks_label, choices = types, style=wx.CB_READONLY)
+        self.peak_picking_type = wx.ComboBox(self.row_pickpeaks_label, value=types[0], choices = types, style=wx.CB_READONLY)
         
         self.peak_picking_algorithm_text = wx.StaticText(self.row_pickpeaks_label,-1,"Algorithm:")
         algorithms = ['thres', 'thres-fast', 'downward', 'connected']
-        self.peak_picking_algorithm_box = wx.ComboBox(self.row_pickpeaks_label, choices=algorithms, style=wx.CB_READONLY)
+        self.peak_picking_algorithm_box = wx.ComboBox(self.row_pickpeaks_label, value=algorithms[0], choices=algorithms, style=wx.CB_READONLY)
 
         self.peaklist_name_text = wx.StaticText(self.row_pickpeaks_label,-1,"Peaklist name:")
         self.peaklist_name_box = wx.TextCtrl(self.row_pickpeaks_label,value='peaks_nmrglue.list',
@@ -4072,11 +4072,11 @@ class PeakListWindow3D(PeakModeButtons, wx.Frame):
         
         self.peak_picking_type_text = wx.StaticText(self.row_pickpeaks_label,-1,"Option:")
         types = ['Positive Peaks', 'Negative Peaks', 'Positive + Negative Peaks']
-        self.peak_picking_type = wx.ComboBox(self.row_pickpeaks_label, choices = types, style=wx.CB_READONLY)
+        self.peak_picking_type = wx.ComboBox(self.row_pickpeaks_label, value=types[0], choices = types, style=wx.CB_READONLY)
         
         self.peak_picking_algorithm_text = wx.StaticText(self.row_pickpeaks_label,-1,"Algorithm:")
         algorithms = ['thres', 'thres-fast', 'downward', 'connected']
-        self.peak_picking_algorithm_box = wx.ComboBox(self.row_pickpeaks_label, choices=algorithms, style=wx.CB_READONLY)
+        self.peak_picking_algorithm_box = wx.ComboBox(self.row_pickpeaks_label, value=algorithms[0],choices=algorithms, style=wx.CB_READONLY)
 
         self.reference_plane_button = wx.ToggleButton(self.row_pickpeaks_label,-1,"Load reference plane (optional)")
         self.reference_plane_button.Bind(wx.EVT_TOGGLEBUTTON, self.OnLoadReferencePlane)

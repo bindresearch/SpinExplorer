@@ -2843,7 +2843,7 @@ class SpinBore(wx.Frame):
 
         # Have a combo box with 1H, 13C, 15N
         self.bore_combo_box = wx.ComboBox(
-            self.bore_overlay_sizer_label, -1, choices=["1H", "13C", "15N"], style=wx.CB_READONLY
+            self.bore_overlay_sizer_label, -1, value="1H", choices=["1H", "13C", "15N"], style=wx.CB_READONLY
         )
         self.bore_combo_box.Bind(wx.EVT_COMBOBOX, self.OnNucleusSelection)
         self.bore_overlay_sizer.Add(
@@ -2854,7 +2854,7 @@ class SpinBore(wx.Frame):
 
         # Have a combobox for free/protein
         self.bore_free_protein_combo_box = wx.ComboBox(
-            self.bore_overlay_sizer_label, -1, choices=["Free", "Protein"], style=wx.CB_READONLY
+            self.bore_overlay_sizer_label, -1, value="Protein", choices=["Free", "Protein"], style=wx.CB_READONLY
         )
         self.bore_free_protein_combo_box.Bind(
             wx.EVT_COMBOBOX, self.OnFreeProteinSelection
@@ -2868,6 +2868,7 @@ class SpinBore(wx.Frame):
         self.bore_amino_acid_combo_box = wx.ComboBox(
             self.bore_overlay_sizer_label,
             -1,
+            value="Alanine (A)",
             choices=[
                 "Alanine (A)",
                 "Arginine (R)",
