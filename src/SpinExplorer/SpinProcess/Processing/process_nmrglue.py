@@ -1134,9 +1134,8 @@ class ProcessNMRGlue:
                 node_lst.replace('\'', '')
             if('\"' in node_lst):
                 node_lst.replace('\"', '')
-            node_list = node_lst.replace(' ', '').split(',')
+            node_list = node_lst.replace(' ', '').replace(' ', '').replace('[', '').replace(']', '').split(',')
             node_list_final = []
-            print(node_list)
             for node in node_list:
                 node_list_final.append(float(node.replace(' ', '').replace('[', '').replace(']', '')))
 

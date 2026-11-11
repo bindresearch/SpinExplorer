@@ -779,7 +779,6 @@ class ParameterExtractorBruker:
                                 self.pseudo_flag += 1
                             break
 
-            print('pseudo_flag', self.pseudo_flag)
 
     def find_temperature_bruker(self) -> None:
         """

@@ -222,7 +222,7 @@ def ist_3d(input_spec: NDArray,
 
 
     
-    results = Parallel(n_jobs = -1, return_as="generator")(delayed(_process_slice_3d)(i) for i in range(input_spec.shape[0]))
+    results = Parallel(n_jobs = -1, return_as="generator", backend='threading')(delayed(_process_slice_3d)(i) for i in range(input_spec.shape[0]))
     for i, result, converged in results:
         if(ist_callback!=None):
             continue_reconstruction = ist_callback(converged)

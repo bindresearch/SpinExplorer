@@ -301,11 +301,9 @@ class CheckingParameters:
                     node_lst.replace('\'', '')
                 if('\"' in node_lst):
                     node_lst.replace('\"', '')
-                node_list = node_lst.replace('[','').replace(']', '').split(',')
-                print(node_list)
+                node_list = node_lst.replace(' ', '').replace(' ', '').replace('[', '').replace(']', '').split(',')
                 node_list_final = []
                 for node in node_list:
-                    print(node)
                     node_list_final.append(float(node.replace(' ', '').replace('[', '').replace(']', '')))
 
                 if len(node_list_final) == 0:

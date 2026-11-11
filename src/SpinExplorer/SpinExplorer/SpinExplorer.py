@@ -44,6 +44,7 @@ import wx
 import wx.adv
 import os
 import json
+import multiprocessing
 import wx.lib.agw.hyperlink as hl
 import wx.lib.scrolledpanel as scrolled
 from appdirs import user_data_dir
@@ -512,6 +513,7 @@ class SpinExplorer(wx.Frame):
 
 
 def main():
+    multiprocessing.freeze_support()
     app = wx.App()
     frame = SpinExplorer()
     app.MainLoop()
